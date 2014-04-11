@@ -204,8 +204,11 @@ typedef enum {
  * if pJumpToAddress is provided then it will be populated with the address the
  * branch or jump would go to.
  */
-int32_t ops_validCodeSegment(uint32_t* uiMIPSword,
+int32_t ops_validCodeSegment(
+		uint32_t* puiCodeBase,
+		uint32_t uiStart,
 		uint32_t uiNumInstructions,
+		uint32_t* pCodeLen,
 		uint32_t* pJumpToAddress);
 
 /*

@@ -56,6 +56,7 @@ void decode(uint32_t addr)
 	uint32_t caddr, branch;
 	int x;
 	caddr = addr;
+	uint32_t uiCodeLen;
 
 	int bOK = 1;
 
@@ -64,21 +65,21 @@ void decode(uint32_t addr)
 		if (find_seg(caddr)) return;	//we have compiled this segment before
 
 		//from the supplied address get the code segment
-		int code_len = ops_validCodeSegment(&ROM_buffer[caddr/4], 1024, &branch);
+		int bValid = ops_validCodeSegment(ROM_buffer, caddr/4, 4096, &uiCodeLen, &branch);
 
 		//for (x=0; x< 200; x++)
 		//	ops_decode((addr+x*4), ROM_buffer[addr/4 + x]);
 
 		// if we have a valid code segment
-		if (code_len > 0)
+		if (bValid > 0)
 		{
 			// get the last code instruction type
-			mips_op_t op_type = ops_type(ROM_buffer[caddr/4 + code_len-1]);
+			mips_op_t op_type = ops_type(ROM_buffer[caddr/4 + uiCodeLen-1]);
 
-			printf("decoding segment 0x%08X with %d instructions\n", caddr, code_len);
+			printf("decoding segment 0x%08X with %d instructions\n", caddr, uiCodeLen);
 
 
-			for (x=0; x< code_len; x++) ops_decode((caddr+x*4), ROM_buffer[caddr/4 + x]);
+			for (x=0; x< uiCodeLen; x++) ops_decode((caddr+x*4), ROM_buffer[caddr/4 + x]);
 
 			//the segment could jump or branch
 			// if it branches then lets recursively follow
@@ -87,12 +88,12 @@ void decode(uint32_t addr)
 			//how do we handle simple loops?
 
 			//This must be a new segment
-			new_seg(addr, code_len, branch);
+			new_seg(addr, uiCodeLen, branch);
 
 			if ((op_type & OPS_JUMP) == OPS_JUMP)
 			{
 				printf("jumping to 0x%08X\n", branch);
-				caddr = caddr + code_len/4 + 4;
+				caddr = caddr + uiCodeLen/4 + 4;
 			}
 			else if ((op_type & OPS_BRANCH) == OPS_BRANCH)
 			{
@@ -101,16 +102,16 @@ void decode(uint32_t addr)
 					decode(branch);
 
 				}
-				caddr = caddr + code_len*4;
+				caddr = caddr + uiCodeLen*4;
 				printf("continue from 0x%08X\n", caddr);
 			}
 			else
 			{
 				printf( "_____________________\n");
-				printf("we have gone wrong. code_len=%d, type=%d\n\t", code_len, op_type);
-				ops_decode((caddr + code_len*4), ROM_buffer[caddr/4 + code_len]);
+				printf("we have gone wrong. code_len=%d, type=%d\n\t", uiCodeLen, op_type);
+				ops_decode((caddr + uiCodeLen*4), ROM_buffer[caddr/4 + uiCodeLen]);
 
-				for (x=0; x < code_len + 4; x++)
+				for (x=0; x < uiCodeLen + 4; x++)
 							ops_decode((caddr+x*4), ROM_buffer[caddr/4 + x]);
 				printf( "_____________________\n");
 
@@ -118,13 +119,21 @@ void decode(uint32_t addr)
 			}
 
 		}
+		else if (0 == uiCodeLen)
+		{
+			printf("segment scan length too short\n");
+		}
 		else
 		{
 			printf( "_____________________\n"
-					"invalid code segment! at 0x%08X\n", caddr);
-			for (x=-2; x < 8; x++)
-				ops_decode((caddr+x*4), ROM_buffer[caddr/4 + x]);
-			printf( "_____________________\n");
+					"invalid code segment! from 0x%08X\n\n", caddr);
+			for (x=-8; x < 2; x++)
+			{
+				if (-1 == x) printf("\n");
+				ops_decode((caddr + (uiCodeLen + x)* 4), ROM_buffer[caddr/4 + uiCodeLen + x]);
+				if (-1 == x) printf("\n");
+			}
+				printf( "_____________________\n");
 
 			bOK = 0;
 		}
@@ -171,15 +180,52 @@ int main(int argc, char* argv[])
 	printf("PC = 0x%x\n\n", sl((unsigned int)ROM_HEADER.PC));
 
 	int address = sizeof(m64p_rom_header);
+	int x,y;
 
-#if 0
-	int x;
-
+#if 1
 	for (x=0; x< romlength/4; x++)
 		ROM_buffer[x] = sl(ROM_buffer[x]);
 #endif
 
-	decode(address);
+
+#if 1
+	for (x=0x40/4; x< 0x240/4; x++ )
+	{
+		ops_decode((x)*4, ROM_buffer[x]);
+	}
+
+	printf("----------------------------\n");
+#endif
+
+#if 1
+	for (x=64/4; x< romlength/4; )
+	//for (x=64; x< 3000; x++)
+	{
+		uint32_t len, br;
+		int bValid = ops_validCodeSegment(ROM_buffer, x, 4096, &len, &br);
+
+		if (bValid && ROM_buffer[x])
+		{
+
+			for (y=x; y < x+ len; y++) ops_decode((y)*4, ROM_buffer[y]);
+			//printf("%3d, br=0x%08X | ", len, br*4);
+
+			printf("\n");
+
+			//ops_decode((x+len-1)*4, ROM_buffer[x+len-1]);
+
+			uiCountSegments++;
+		}
+		else
+		{
+			//printf(".");
+		}
+
+		x += len;
+	}
+#endif
+
+	//decode(address);
 
 	free(ROM_buffer);
 
