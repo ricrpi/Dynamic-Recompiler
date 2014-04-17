@@ -12,45 +12,14 @@
 #include <string.h>
 #include "rom.h"
 #include "memory.h"
-#include "mips.h"
+#include "CodeSegments.h"
+
 
 uint32_t * ROM_buffer = NULL;
 code_seg_t* First_seg = NULL;
 code_seg_t* Last_seg = NULL;
-static uint32_t uiCountSegments = 0;
 
-void new_seg(uint32_t start, uint32_t uiNumInstructions, uint32_t branch)
-{
-	code_seg_t* new_seg;
-	new_seg = malloc(sizeof(code_seg_t));
-
-	if (First_seg == NULL) First_seg = new_seg;
-	else Last_seg->pNext_code_seg = new_seg;
-	Last_seg = new_seg;
-
-	new_seg->pNext_code_seg = NULL;
-	new_seg->pCodeStart = start;
-	new_seg->pBranch = branch;
-	new_seg->uiNumInstructions = uiNumInstructions;
-
-
-
-	uiCountSegments++;
-
-}
-
-uint32_t find_seg(uint32_t address)
-{
-	code_seg_t* seg = First_seg;
-	while(seg != NULL)
-	{
-		if (address == seg->pCodeStart) return 1;
-		seg = seg->pNext_code_seg;
-	}
-
-	return 0;
-}
-
+/*
 void decode(uint32_t addr)
 {
 	uint32_t caddr, branch;
@@ -138,10 +107,11 @@ void decode(uint32_t addr)
 			bOK = 0;
 		}
 	}
-}
+}*/
 
 int main(int argc, char* argv[])
 {
+	code_segment_data_t* segmentData;
 
 	if (argc <= 1)
 	{
@@ -179,8 +149,7 @@ int main(int argc, char* argv[])
 	printf("Version: %x\n", sl(ROM_HEADER.Release));
 	printf("PC = 0x%x\n\n", sl((unsigned int)ROM_HEADER.PC));
 
-	int address = sizeof(m64p_rom_header);
-	int x,y;
+	int x;
 
 #if 1
 	for (x=0; x< romlength/4; x++)
@@ -188,8 +157,8 @@ int main(int argc, char* argv[])
 #endif
 
 
-#if 1
-	for (x=0x40/4; x< 0x240/4; x++ )
+#if 0
+	for (x=0x40/4; x< 0x00001118/4; x++ )
 	{
 		ops_decode((x)*4, ROM_buffer[x]);
 	}
@@ -197,39 +166,37 @@ int main(int argc, char* argv[])
 	printf("----------------------------\n");
 #endif
 
-#if 1
-	for (x=64/4; x< romlength/4; )
-	//for (x=64; x< 3000; x++)
+	segmentData = GenerateCodeSegmentData(ROM_buffer, romlength);
+
+	printf("MIPS Address Length   ARM Address Length    Next\n");
+
+	for (x=0; x < segmentData->count; x++)
 	{
-		uint32_t len, br;
-		int bValid = ops_validCodeSegment(ROM_buffer, x, 4096, &len, &br);
-
-		if (bValid && ROM_buffer[x])
+		if (segmentData->segments[x].ReturnRegister)
 		{
-
-			for (y=x; y < x+ len; y++) ops_decode((y)*4, ROM_buffer[y]);
-			//printf("%3d, br=0x%08X | ", len, br*4);
-
-			printf("\n");
-
-			//ops_decode((x+len-1)*4, ROM_buffer[x+len-1]);
-
-			uiCountSegments++;
+			printf("0x%08X %5d      0x%08X %6d      r%d\n",
+				segmentData->segments[x].MIPScode,
+				segmentData->segments[x].MIPScodeLen,
+				segmentData->segments[x].ARMcode,
+				segmentData->segments[x].ARMcodeLen,
+				segmentData->segments[x].ReturnRegister);
 		}
 		else
 		{
-			//printf(".");
+			printf("0x%08X %5d      0x%08X %6d      0x%08X\n",
+				segmentData->segments[x].MIPScode,
+				segmentData->segments[x].MIPScodeLen,
+				segmentData->segments[x].ARMcode,
+				segmentData->segments[x].ARMcodeLen,
+				(uint32_t*)segmentData->segments[x].next);
 		}
 
-		x += len;
-	}
-#endif
 
-	//decode(address);
+	}
 
 	free(ROM_buffer);
 
-	printf("There are %d code segments\n", uiCountSegments);
+	printf("There are %d code segments\n", segmentData->count);
 
 	printf("\nFinished processing ROM\n");
 	return 0;

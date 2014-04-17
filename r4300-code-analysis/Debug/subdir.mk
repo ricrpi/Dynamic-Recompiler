@@ -4,18 +4,30 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../CodeSegments.c \
+../InstructionSetARM6hf.c \
+../InstructionSetMIPS4.c \
+../OptimizeARM6hf.c \
+../OptimizeMIPS4.c \
 ../main.c \
-../mips.c \
 ../rom.c 
 
 OBJS += \
+./CodeSegments.o \
+./InstructionSetARM6hf.o \
+./InstructionSetMIPS4.o \
+./OptimizeARM6hf.o \
+./OptimizeMIPS4.o \
 ./main.o \
-./mips.o \
 ./rom.o 
 
 C_DEPS += \
+./CodeSegments.d \
+./InstructionSetARM6hf.d \
+./InstructionSetMIPS4.d \
+./OptimizeARM6hf.d \
+./OptimizeMIPS4.d \
 ./main.d \
-./mips.d \
 ./rom.d 
 
 

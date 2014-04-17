@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "memory.h"
-#include "mips.h"
+#include "InstructionSetMIPS4.h"
 
 #define INDEX "%08x"
 
@@ -41,7 +41,7 @@
 #define J_OP "0x%08x // PC = 0x%08x, \traw 0x%08x"
 #define OP_J(val) \
 		(val & 0x03FFFFFF), \
-		((x+4) & 0xF0000000) + ((val & 0x03FFFFFF)*4), \
+		((x+8) & 0xF0000000) + ((val & 0x03FFFFFF)*4), \
 		(val)
 
 #define R_OP ""
@@ -69,38 +69,6 @@ void count_ops(uint32_t* data, uint32_t len)
 }
 
 
-int32_t ops_validCodeSegment(uint32_t* puiCodeBase, uint32_t uiStart, uint32_t uiNumInstructions, uint32_t* pCodeLen, uint32_t* pJumpToAddress)
-{
-	int x;
-
-	for(x=uiStart; x<uiNumInstructions; x++)
-	{
-		int op = ops_type(puiCodeBase[x]);
-
-		if (INVALID == op)
-		{
-			if (pJumpToAddress) *pJumpToAddress = 0;
-			if (pCodeLen) *pCodeLen = x + 1;
-			return 0;
-		}
-		else if ( (op & OPS_JUMP) == OPS_JUMP)
-		{
-			if (pJumpToAddress) *pJumpToAddress = ops_JumpAddressOffset(puiCodeBase[x]);
-			if (pCodeLen) *pCodeLen = x - uiStart + 1;
-			return 1;
-		}
-		else if ( (op & OPS_BRANCH) == OPS_BRANCH)
-		{
-			if (pJumpToAddress) *pJumpToAddress = (uint32_t)(x) + ops_JumpAddressOffset(puiCodeBase[x]);
-			if (pCodeLen) *pCodeLen = x - uiStart + 1;
-			return 1;
-		}
-	}
-	if (pCodeLen) *pCodeLen = uiNumInstructions + 1;
-
-	return 0;
-}
-
 int32_t ops_JumpAddressOffset(uint32_t uiMIPSword)
 {
 	uint32_t op=uiMIPSword>>26;
@@ -111,6 +79,14 @@ int32_t ops_JumpAddressOffset(uint32_t uiMIPSword)
 	case 0x00: //printf("special\n");
 		op2=uiMIPSword&0x3f;
 
+		switch(op2)
+		{
+		case 0x08: return 0; // JR; 	//cannot return whats in a register
+		case 0x09: return 0; // JALR;	//cannot return whats in a register
+		} break;
+
+	case 0x01:
+		op2=(uiMIPSword>>16)&0x1f;
 		switch(op2)
 		{
 		case 0x00: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBLTZ   \t" B_OP "\n",x, OP_B(val)); return;	// I
@@ -149,9 +125,66 @@ mips_op_t ops_type(uint32_t uiMIPSword)
 
 	switch(op)
 	{
-	case 0x00: //printf("special\n");
-		op2=uiMIPSword&0x3f;
+		case 0x00:
+	        op2=uiMIPSword&0x3f;
+	        switch(op2)
+	        {
+	          case 0x00: return SLL;
+	          case 0x02: return SRL;
+	          case 0x03: return SRA;
+	          case 0x04: return SLLV;
+	          case 0x07: return SRAV;
+	          case 0x08: return JR;
+	          case 0x09: return JALR;
+	          case 0x0C: return SYSCALL;
+	          case 0x0D: return BREAK;
+	          case 0x0F: return SYNC;
+	          case 0x10: return MFHI;
+	          case 0x11: return MTHI;
+	          case 0x12: return MFLO;
+	          case 0x13: return MTLO;
+	          case 0x14: return DSLLV;
+	          case 0x16: return DSRLV;
+	          case 0x17: return DSRAV;
+	          case 0x18: return MULT;
+	          case 0x19: return MULTU;
+	          case 0x1A: return DIV;
+	          case 0x1B: return DIVU;
+	          case 0x1C: return DMULT;
+	          case 0x1D: return DMULTU;
+	          case 0x1E: return DDIV;
+	          case 0x1F: return DDIVU;
+	          case 0x20: return ADD;
+	          case 0x21: return ADDU;
+	          case 0x22: return SUB;
+	          case 0x23: return SUBU;
+	          case 0x24: return AND;
+	          case 0x25: return OR;
+	          case 0x26: return XOR;
+	          case 0x27: return NOR;
+	          case 0x2A: return SLT;
+	          case 0x2B: return SLTU;
+	          case 0x2C: return DADD;
+	          case 0x2D: return DADDU;
+	          case 0x2E: return DSUB;
+	          case 0x2F: return DSUBU;
+	          case 0x30: return TGE;
+	          case 0x31: return TGEU;
+	          case 0x32: return TLT;
+	          case 0x33: return TLTU;
+	          case 0x34: return TEQ;
+	          case 0x36: return TNE;
+	          case 0x38: return DSLL;
+	          case 0x3A: return DSRL;
+	          case 0x3B: return DSRA;
+	          case 0x3C: return DSLL32;
+	          case 0x3E: return DSRL32;
+	          case 0x3F: return DSRA32;
+	        }
+	        break;
 
+	case 0x01:
+		op2=(uiMIPSword>>16)&0x1f;
 		switch(op2)
 		{
 		case 0x00: 	return BLTZ;	// I
@@ -364,8 +397,70 @@ void ops_decode(uint32_t x, uint32_t uiMIPSword)
 
 	switch(op)
 	{
-	case 0x00: //printf("special\n");
+	case 0x00:
 		op2=uiMIPSword&0x3f;
+		switch(op2)
+		{
+			case 0x00: printf(INDEX "\tSLL   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x02: printf(INDEX "\tSRL   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x03: printf(INDEX "\tSRA   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x04: printf(INDEX "\tSLLV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x07: printf(INDEX "\tSRAV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x08: printf(INDEX "\tJR    \tr%d\n", x, (uiMIPSword>>21)&0x1f); return;	// J
+			case 0x09: printf(INDEX "\tJALR  \tr%d // PC=r%d, r%d=%d \n", x,
+					(uiMIPSword>>21)&0x1f,
+					(uiMIPSword>>21)&0x1f,
+					(uiMIPSword>>11)&0x1f,
+					x+8); return;	// J
+			case 0x0C: printf(INDEX "\tSYSCALL\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x0D: printf(INDEX "\tBREAK \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x0F: printf(INDEX "\tSYNC  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x10: printf(INDEX "\tMFHI  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x11: printf(INDEX "\tMTHI  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x12: printf(INDEX "\tMFLO  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x13: printf(INDEX "\tMTLO  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x14: printf(INDEX "\tDSLLV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x16: printf(INDEX "\tDSRLV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x17: printf(INDEX "\tDSRAV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x18: printf(INDEX "\tMULT  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x19: printf(INDEX "\tMULTU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1A: printf(INDEX "\tDIV   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1B: printf(INDEX "\tDIVU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1C: printf(INDEX "\tDMULT \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1D: printf(INDEX "\tDMULTU\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1E: printf(INDEX "\tDDIV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1F: printf(INDEX "\tDDIVU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x20: printf(INDEX "\tADD   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x21: printf(INDEX "\tADDU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x22: printf(INDEX "\tSUB   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x23: printf(INDEX "\tSUBU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x24: printf(INDEX "\tAND   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x25: printf(INDEX "\tOR    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x26: printf(INDEX "\tXOR   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x27: printf(INDEX "\tNOR   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2A: printf(INDEX "\tSLT   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2B: printf(INDEX "\tSLTU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2C: printf(INDEX "\tDADD  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2D: printf(INDEX "\tDADDU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2E: printf(INDEX "\tDSUB  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2F: printf(INDEX "\tDSUBU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x30: printf(INDEX "\tTGE   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x31: printf(INDEX "\tTGEU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x32: printf(INDEX "\tTLT   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x33: printf(INDEX "\tTLTU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x34: printf(INDEX "\tTEQ   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x36: printf(INDEX "\tTNE   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x38: printf(INDEX "\tDSLL  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3A: printf(INDEX "\tDSRL  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3B: printf(INDEX "\tDSRA  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3C: printf(INDEX "\tDSLL32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3E: printf(INDEX "\tDSRL32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3F: printf(INDEX "\tDSRA32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+		}
+		break;
+
+	case 0x01:
+		op2=(uiMIPSword>>16)&0x1f;
 
 		switch(op2)
 		{
@@ -400,13 +495,13 @@ void ops_decode(uint32_t x, uint32_t uiMIPSword)
 	case 0x0C: 	printf(INDEX "\tANDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 	case 0x0D: 	printf(INDEX "\tORI    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 	case 0x0E: 	printf(INDEX "\tXORI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0F: 	printf(INDEX "\tLUI    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0F: 	printf(INDEX "\tLUI    \t" I_OP "\t Load upper half of word\n", x, OP_I(uiMIPSword)); return;	// I
 	case 0x10: 	//printf(INDEX "\tcop0\n",x);
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
 		{
-		case 0x00: printf(INDEX "\tMFC0\n",x); return;
-		case 0x04: printf(INDEX "\tMTC0\n",x); return;
+		case 0x00: printf(INDEX "\tMFC0 \t r%d, f%d \t// move f%d to r%d\traw 0x%x\n",x, (uiMIPSword>>16), (uiMIPSword>>11), (uiMIPSword>>16), (uiMIPSword>>11), uiMIPSword); return;
+		case 0x04: printf(INDEX "\tMTC0 \t r%d, f%d \t// move r%d to f%d\traw 0x%x\n",x, (uiMIPSword>>16), (uiMIPSword>>11), (uiMIPSword>>16), (uiMIPSword>>11), uiMIPSword); return;
 		case 0x10: printf(INDEX "\ttlb\n",x);
 			switch(uiMIPSword&0x3f)
 			{
@@ -423,8 +518,8 @@ void ops_decode(uint32_t x, uint32_t uiMIPSword)
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
 		{
-		case 0x00: printf(INDEX "\tMFC1\n",x); return;
-		case 0x01: printf(INDEX "\tDMFC1\n",x); return;
+		case 0x00: printf(INDEX "\tMFC1 \t r%d, f%d \t// move f%d to r%d\traw 0x%x\n",x, (uiMIPSword>>16), (uiMIPSword>>11), (uiMIPSword>>16), (uiMIPSword>>11), uiMIPSword); return;
+		case 0x01: printf(INDEX "\tDMFC1\t r%d, f%d \t// move r%d to f%d\traw 0x%x\n",x, (uiMIPSword>>16), (uiMIPSword>>11), (uiMIPSword>>16), (uiMIPSword>>11), uiMIPSword); return;
 		case 0x02: printf(INDEX "\tCFC1\n",x); return;
 		case 0x04: printf(INDEX "\tMTC1\n",x); return;
 		case 0x05: printf(INDEX "\tDMTC1\n",x); return;

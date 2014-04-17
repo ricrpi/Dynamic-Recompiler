@@ -10,22 +10,66 @@
 
 #include <stdint.h>
 
-#define OPS_JUMP 0x1000
-#define OPS_BRANCH 0x2000
-#define OPS_STR  0x4000
-#define OPS_LDR  0x8000
+#define OPS_JUMP 	0x01000
+#define OPS_BRANCH 	0x02000
+#define OPS_CALL 	0x04000
+#define OPS_STR  	0x08000
+#define OPS_LDR  	0x10000
 
 #define STRIP(x) (x & 0xfff)
 
-typedef struct _code_seg_t
+typedef enum
 {
-	struct _code_seg_t* pNext_code_seg;
-	uint32_t pCodeStart, pBranch;
-	uint32_t uiNumInstructions;
-} code_seg_t;
-
-
-typedef enum {
+	SLL,
+    SRL,
+    SRA,
+    SLLV,
+    SRLV,
+    SRAV,
+    SYSCALL,
+    BREAK,
+    SYNC,
+    MFHI,
+    MTHI,
+    MFLO,
+    MTLO,
+    DSLLV,
+    DSRLV,
+    DSRAV,
+    MULT,
+    MULTU,
+    DIV,
+    DIVU,
+    DMULT,
+    DMULTU,
+    DDIV,
+    DDIVU,
+    ADD,
+    ADDU,
+    SUB,
+    SUBU,
+    AND,
+    OR,
+    XOR,
+    NOR,
+    SLT,
+    SLTU,
+    DADD,
+    DADDU,
+    DSUB,
+    DSUBU,
+    TGE,
+    TGEU,
+    TLT,
+    TLTU,
+    TEQ,
+    TNE,
+    DSLL,
+    DSRL,
+    DSRA,
+    DSLL32,
+    DSRL32,
+    DSRA32,
 	INVALID,
 	TGEI,
 	TGEIU,
@@ -151,8 +195,11 @@ typedef enum {
 
 	//---------------------------
 	J = OPS_JUMP + STRIP(SD)+1,
-	JAL= OPS_BRANCH + STRIP(J)+1,
-	BLTZ ,
+	JR,
+
+	//---------------------------
+
+	BLTZ = OPS_BRANCH + STRIP(JR)+1,
 	BGEZ,
 	BLTZL,
 	BGEZL,
@@ -160,18 +207,24 @@ typedef enum {
 	BNE,
 	BLEZ,
 	BGTZ,
-	BLTZAL,
-	BGEZAL,
-	BLTZALL,
-	BGEZALL,
 	BEQL,
 	BNEL,
 	BLEZL,
 	BGTZL,
 
+	//--------------------------
+
+	JAL= OPS_CALL + STRIP(BGTZL)+1,
+	JALR,
+
+	BLTZAL,
+	BGEZAL,
+	BLTZALL,
+	BGEZALL,
+
 	//---------------------------
 
-	SB = OPS_STR + STRIP(BGTZL)+1,
+	SB = OPS_STR + STRIP(BGEZALL)+1,
 	SH,
 	SWL,
 	SW,
@@ -194,22 +247,6 @@ typedef enum {
 	sizeof_mips_op_t = STRIP(LWU) +1
 } mips_op_t;
 
-/*
- * Provides the length of the code segment starting at uiMIPSword.
- * It will only scan up to uiNumInstructions. if it fails to jump within
- * uinumInstructions then the function will report the segment as invalid.
- *
- * On hitting a branch or jump it will stop searching and return the instruction count.
- *
- * if pJumpToAddress is provided then it will be populated with the address the
- * branch or jump would go to.
- */
-int32_t ops_validCodeSegment(
-		uint32_t* puiCodeBase,
-		uint32_t uiStart,
-		uint32_t uiNumInstructions,
-		uint32_t* pCodeLen,
-		uint32_t* pJumpToAddress);
 
 /*
  * Provides the registers used in an instruction in the form:
