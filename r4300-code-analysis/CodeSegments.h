@@ -10,24 +10,41 @@
 
 #include <stdint.h>
 
+
+typedef enum
+{
+	BLOCK_INVALID,			// invalid code section
+	BLOCK_PART,				// within a block
+	BLOCK_END,				// block will not continue after this point (e.g. Jump with no link)
+	BLOCK_CONTINUES			// block may/will continue after end of segment e.g. conditional branch, jump/branch with link etc.
+} block_type_t;
+
 typedef struct _code_seg
 {
-	uint32_t MIPScode;				// an address to mips code
-	uint32_t* ARMcode;				// a pointer to arm code
+	struct _code_seg* nextCodeSegmentLinkedList;		//next code segment in linked list
+
+	uint32_t MIPScode;				// an index to mips code
 	uint32_t MIPScodeLen;			// a length of mips code
+	int32_t  MIPSReturnRegister;		// boolean segments returns;
+	uint32_t MIPSnextInstructionIndex;
+
+	uint64_t MIPSRegistersUsed;		//The registers read/written by segment
+	uint32_t MIPSRegistersUsedCount;//Count of the registers read/written by segment
+
+	uint32_t* ARMcode;				// a pointer to arm code
 	uint32_t ARMcodeLen;			// a length to arm code
 
-	uint32_t ReturnRegister;		// boolean segments returns;
-	uint32_t next;					// the address arm will jump to at end of this segment
-	uint32_t callers;				// array of code segments that may call this segment
+	struct _code_seg* pCodeSegmentTargets[2];	// the code segment(s) we may branch to. will need relinking after DMA moves
 
+	//uint32_t callers;			// array of code segments that may call this segment
+	block_type_t blockType;		// if this is BLOCK_END then we can place literals afterward
 } code_seg_t;
 
 
 typedef struct _code_segment_data
 {
 	uint32_t count;
-	code_seg_t* segments;
+	code_seg_t* FirstSegment;
 } code_segment_data_t;
 
 code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size);

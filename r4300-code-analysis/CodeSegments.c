@@ -11,10 +11,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-static code_segment_data_t segmentData = {0, 0};
+static code_segment_data_t segmentData;
+static uint8_t* CodeSegBounds;
 
-int32_t ops_validCodeSegment(uint32_t* puiCodeBase, uint32_t uiStart, uint32_t uiNumInstructions, uint32_t* pCodeLen, uint32_t* pJumpToAddress, uint32_t* ReturnRegister);
 
+static uint32_t CountRegisers(uint64_t bitfield)
+{
+	int x;
+	uint32_t c = 0;
+	for (x=0; x < 64; x++)
+	{
+		if (bitfield&0x1) c++;
+		bitfield = bitfield >> 1;
+	}
+	return c;
+}
 
 code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 {
@@ -23,108 +34,188 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 	//find the number of segments
 
-	for (x=64/4; x< size/4; )
+	int32_t iStart = 0;
+	
+	code_seg_t* prevCodeSeg = NULL;
+	code_seg_t* nextCodeSeg;
+
+	segmentData.FirstSegment = NULL;
+
+	CodeSegBounds = malloc(size/4);
+	memset(CodeSegBounds, BLOCK_INVALID, size/4);
+	
+	/*
+	 * Generate Code block validity
+	 *
+	 * Scan the file for code blocks and ensure there are no invalid instructions in it.
+	 *
+	 * */
+	for (x=64/4; x< size/4; x++)
 	{
-		uint32_t uiLen;
-		int bValid = ops_validCodeSegment(ROM, x, 4096, &uiLen, NULL, NULL);
-
-		if (bValid && ROM[x])
+		uint32_t bValidBlock = 1;
+		
+		for (y = x; y < size/4; y++)
 		{
-			printf("decoding segment 0x%08X with %d instructions\n", x*4, uiLen);
+			int op = ops_type(ROM[y]);
 
-			for (y=x; y < x+ uiLen; y++) ops_decode((y)*4, ROM[y]);
-
-			//printf("%3d, br=0x%08X | ", len, br*4);
-
-			printf("\n");
-
-			//ops_decode((x+len-1)*4, ROM[x+len-1]);
-			segmentCount ++;
+			//we are not in valid code
+			if (INVALID == op)
+			{
+				bValidBlock = 0;
+				break;
+			}
+			if ((op & OPS_JUMP) == OPS_JUMP)
+			{
+				CodeSegBounds[y] = BLOCK_END;
+				//if (x < 400) printf("Segment at 0x%08X to 0x%08X (%d) j\n", (x)*4, y*4, x-6);
+				break;
+			}
+			else if(((op & OPS_CALL) == OPS_CALL)
+				|| ((op & OPS_BRANCH) == OPS_BRANCH)	//MIPS does not have an unconditional branch
+				)
+			{
+				CodeSegBounds[y] = BLOCK_CONTINUES;
+				//if (x < 400) printf("Segment at 0x%08X to 0x%08X (%d) b\n", (x)*4, y*4, x-6);
+				break;
+			}
 		}
-		x += uiLen;
 
+		//mark block as valid
+		if (bValidBlock)
+		{
+			if (y - x > 0) memset(&CodeSegBounds[x], BLOCK_PART, y - x );
+			x = y;
+		}
 	}
 
-	segmentData.count = segmentCount;
-	segmentCount = 0;
+	/*
+	 * Build CodeSegments using map
+	 *
+	 * There may be branches within a segment that branch to other code segments.
+	 * If this happens then the segment needs to be split.
+	 * */
 
-	//in case function has been called before
-	if (segmentData.segments) free(segmentData.segments);
+	iStart = 64/4;
 
-	//now we have a count we can calloc for the segment data array
-	//TODO malloc protection
-	segmentData.segments = malloc(segmentCount * sizeof(code_seg_t));
-	memset(segmentData.segments, 0, segmentCount * sizeof(code_seg_t));
-
-	for (x=64/4; x< size/4; )
+	for (x=64/4; x< size/4; x++)
 	{
-		uint32_t len, uiBranchAddress, returnReg;
-		int bValid = ops_validCodeSegment(&ROM[x], x, 4096, &len, &uiBranchAddress, &returnReg);
-
-		if (bValid && ROM[x])
-		{
-			segmentData.segments[segmentCount].MIPScode = x * 4;
-			segmentData.segments[segmentCount].MIPScodeLen = len;
-			segmentData.segments[segmentCount].ARMcodeLen = 0;
-			segmentData.segments[segmentCount].next = uiBranchAddress;
-			segmentData.segments[segmentCount].ReturnRegister = returnReg;
-
-			segmentCount ++;
+		//if in invalid block then continue scanning
+		if (CodeSegBounds[x] == BLOCK_INVALID){
+			iStart = x+1;
+			continue;
 		}
 
-		x += len;
+		if (CodeSegBounds[x] == BLOCK_PART)	continue;
 
+		//we have reached the end of the segment
+		if (CodeSegBounds[x] == BLOCK_END)
+		{
+			int32_t offset =  ops_JumpAddressOffset(ROM[x]);
+
+			nextCodeSeg = malloc(sizeof(code_seg_t));
+			if (!segmentCount) segmentData.FirstSegment = nextCodeSeg;
+
+			nextCodeSeg->MIPScode = iStart*4;
+			nextCodeSeg->MIPScodeLen = x - iStart +1;
+			nextCodeSeg->ARMcodeLen = 0;
+			nextCodeSeg->MIPSnextInstructionIndex = offset;
+			nextCodeSeg->blockType = BLOCK_END;
+
+			if (ops_type(ROM[x]) == JR) //only JR can set PC to the Link Register (or other register!)
+			{
+				nextCodeSeg->MIPSReturnRegister = (ROM[x]>>21)&0x1f;
+			}
+			else
+			{
+				nextCodeSeg->MIPSReturnRegister = 0;
+			}
+
+			nextCodeSeg->nextCodeSegmentLinkedList = NULL;
+			if (prevCodeSeg) prevCodeSeg->nextCodeSegmentLinkedList = nextCodeSeg;
+			prevCodeSeg = nextCodeSeg;
+			segmentCount++;
+
+			iStart = x+1;
+		}
+
+		//check to see if instruction is a branch and if it stays local, to segment
+		else if (CodeSegBounds[x] == BLOCK_CONTINUES)
+		{
+			//nextSegment = findNextSegment(x, size);
+
+			int32_t offset =  ops_JumpAddressOffset(ROM[x]);
+
+			nextCodeSeg = malloc(sizeof(code_seg_t));
+			if (!segmentCount) segmentData.FirstSegment = nextCodeSeg;
+
+			//is this a loop currently in a segment?
+			if (offset < 0 && (x + offset > iStart) )
+			{
+				nextCodeSeg->MIPScode = (iStart) * 4;
+				nextCodeSeg->MIPScodeLen = x + offset - iStart;
+				nextCodeSeg->MIPSnextInstructionIndex = (x + offset)*4;
+				nextCodeSeg->MIPSReturnRegister = 0;
+
+				nextCodeSeg->ARMcodeLen = 0;
+				nextCodeSeg->blockType = BLOCK_CONTINUES;
+
+
+				nextCodeSeg->nextCodeSegmentLinkedList = NULL;
+				if (prevCodeSeg) prevCodeSeg->nextCodeSegmentLinkedList = nextCodeSeg;
+				prevCodeSeg = nextCodeSeg;
+
+				segmentCount++;
+
+				nextCodeSeg = malloc(sizeof(code_seg_t));
+
+				nextCodeSeg->MIPScode = (x + offset) * 4;
+				nextCodeSeg->MIPScodeLen = -offset + 1;
+				nextCodeSeg->MIPSnextInstructionIndex = (x + 1)*4;
+				nextCodeSeg->ARMcodeLen = 0;
+				nextCodeSeg->MIPSReturnRegister = 0;
+				nextCodeSeg->blockType = BLOCK_CONTINUES;
+			}
+
+			else //must branch to another segment
+			{
+				nextCodeSeg->MIPScode = (iStart) * 4;
+				nextCodeSeg->MIPScodeLen = x - iStart+1;
+				nextCodeSeg->MIPSnextInstructionIndex = (x + offset)*4;
+				nextCodeSeg->ARMcodeLen = 0;
+				nextCodeSeg->MIPSReturnRegister = 0;
+
+				nextCodeSeg->blockType = BLOCK_CONTINUES;
+			}
+
+			nextCodeSeg->nextCodeSegmentLinkedList = NULL;
+			if (prevCodeSeg) prevCodeSeg->nextCodeSegmentLinkedList = nextCodeSeg;
+			prevCodeSeg = nextCodeSeg;
+
+			segmentCount++;
+
+			iStart = x+1;
+		}
+	}
+
+	//update the count of segments
+	segmentData.count = segmentCount;
+
+
+	/*
+	 * Generate the register usage for the MIPS code.
+	 */
+	nextCodeSeg = segmentData.FirstSegment;
+	while (nextCodeSeg != NULL)
+	{
+		nextCodeSeg->MIPSRegistersUsed = 0;
+		for (x=0; x < nextCodeSeg->MIPScodeLen; x++)
+		{
+			nextCodeSeg->MIPSRegistersUsed |= ops_regs_used(ROM[nextCodeSeg->MIPScode/4 + x]);
+		}
+
+		nextCodeSeg->MIPSRegistersUsedCount = CountRegisers(nextCodeSeg->MIPSRegistersUsed);
+		nextCodeSeg = nextCodeSeg->nextCodeSegmentLinkedList;
 	}
 
 	return &segmentData;
-}
-
-
-int32_t ops_validCodeSegment(uint32_t* puiCodeBase, uint32_t uiStart, uint32_t uiNumInstructions, uint32_t* pCodeLen, uint32_t* pJumpToAddress, uint32_t* ReturnRegister)
-{
-	int x;
-
-	for(x=uiStart; x<uiNumInstructions; x++)
-	{
-		int op = ops_type(puiCodeBase[x]);
-
-		if (INVALID == op)
-		{
-			if (pJumpToAddress) *pJumpToAddress = 0;
-			if (pCodeLen) *pCodeLen = x + 1;
-			if (ReturnRegister) *ReturnRegister = 0;
-			return 0;
-		}
-
-		else if ( (op & OPS_JUMP) == OPS_JUMP)
-		{
-			if (pJumpToAddress) *pJumpToAddress = ops_JumpAddressOffset(puiCodeBase[x]);
-			if (pCodeLen) *pCodeLen = x - uiStart + 1;
-
-			if (op == JR) //only JR can set PC to the Link Register (or other register!)
-			{
-				if (ReturnRegister) *ReturnRegister = (puiCodeBase[x]>>21)&0x1f;
-			}
-			return 1;
-		}
-		/*
-		 * else if ( (op & OPS_BRANCH) == OPS_BRANCH)
-		{
-			if (pJumpToAddress) *pJumpToAddress = ops_JumpAddressOffset(puiCodeBase[x]);
-			if (pCodeLen) *pCodeLen = x - uiStart + 1;
-			return 1;
-		}
-		*/
-		else if ( (op & OPS_CALL) == OPS_CALL)
-		{
-			if (pJumpToAddress) *pJumpToAddress = (uint32_t)(x) + ops_JumpAddressOffset(puiCodeBase[x]);
-			if (pCodeLen) *pCodeLen = x - uiStart + 1;
-			if (ReturnRegister) *ReturnRegister = 0;
-			return 1;
-		}
-	}
-	if (pCodeLen) *pCodeLen = uiNumInstructions + 1;
-	if (ReturnRegister) *ReturnRegister = 0;
-
-	return 0;
 }

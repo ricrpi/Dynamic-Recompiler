@@ -12,9 +12,12 @@
 
 #define OPS_JUMP 	0x01000
 #define OPS_BRANCH 	0x02000
-#define OPS_CALL 	0x04000
-#define OPS_STR  	0x08000
-#define OPS_LDR  	0x10000
+#define OPS_CALL 	0x04000	//BRANCH and LINK
+
+#define OPS_LIKELY	0x10000
+#define OPS_STR  	0x20000
+#define OPS_LDR  	0x40000
+
 
 #define STRIP(x) (x & 0xfff)
 
@@ -194,19 +197,20 @@ typedef enum
 	SD,
 
 	//---------------------------
-	J = OPS_JUMP + STRIP(SD)+1,
+	J = OPS_JUMP + STRIP(SD) + 1,
 	JR,
 
 	//---------------------------
 
-	BLTZ = OPS_BRANCH + STRIP(JR)+1,
+	BLTZ = OPS_BRANCH + STRIP(JR) + 1,
 	BGEZ,
-	BLTZL,
-	BGEZL,
 	BEQ,
 	BNE,
 	BLEZ,
 	BGTZ,
+
+	BLTZL = OPS_BRANCH + OPS_LIKELY + STRIP(BGTZ) + 1,
+	BGEZL,
 	BEQL,
 	BNEL,
 	BLEZL,
@@ -214,17 +218,17 @@ typedef enum
 
 	//--------------------------
 
-	JAL= OPS_CALL + STRIP(BGTZL)+1,
+	JAL= OPS_CALL + STRIP(BGTZL) + 1,
 	JALR,
-
 	BLTZAL,
 	BGEZAL,
-	BLTZALL,
+
+	BLTZALL = OPS_CALL + OPS_LIKELY + STRIP(BGEZAL)+1,
 	BGEZALL,
 
 	//---------------------------
 
-	SB = OPS_STR + STRIP(BGEZALL)+1,
+	SB = OPS_STR + STRIP(BGEZALL) + 1,
 	SH,
 	SWL,
 	SW,
@@ -244,17 +248,56 @@ typedef enum
 	LHU,
 	LWR,
 	LWU,
-	sizeof_mips_op_t = STRIP(LWU) +1
+	sizeof_mips_op_t = STRIP(LWU) + 1
 } mips_op_t;
 
 
+#define MIPS_REG_0     0x0000000000000001
+#define MIPS_REG_1     0x0000000000000002
+#define MIPS_REG_2     0x0000000000000004
+#define MIPS_REG_3     0x0000000000000008
+#define MIPS_REG_4     0x0000000000000010
+#define MIPS_REG_5     0x0000000000000020
+#define MIPS_REG_6     0x0000000000000040
+#define MIPS_REG_7     0x0000000000000080
+#define MIPS_REG_8     0x0000000000000100
+#define MIPS_REG_9     0x0000000000000200
+#define MIPS_REG_10    0x0000000000000400
+#define MIPS_REG_11    0x0000000000000800
+#define MIPS_REG_12    0x0000000000001000
+#define MIPS_REG_13    0x0000000000002000
+#define MIPS_REG_14    0x0000000000004000
+#define MIPS_REG_15    0x0000000000008000
+#define MIPS_REG_16    0x0000000000010000
+#define MIPS_REG_17    0x0000000000020000
+#define MIPS_REG_18    0x0000000000040000
+#define MIPS_REG_19    0x0000000000080000
+#define MIPS_REG_20    0x0000000000100000
+#define MIPS_REG_21    0x0000000000200000
+#define MIPS_REG_22    0x0000000000400000
+#define MIPS_REG_23    0x0000000000800000
+#define MIPS_REG_24    0x0000000001000000
+#define MIPS_REG_25    0x0000000002000000
+#define MIPS_REG_26    0x0000000004000000
+#define MIPS_REG_27    0x0000000008000000
+#define MIPS_REG_28    0x0000000010000000
+#define MIPS_REG_29    0x0000000020000000
+#define MIPS_REG_30    0x0000000040000000
+#define MIPS_REG_31    0x0000000080000000
+
+#define MIPS_REG_LO    0x0000000100000000
+#define MIPS_REG_HI    0x0000000200000000
+
+#define MIPS_REG_ALL   0x00000003ffffffff
+
+#define MIPS_REG(x)		((uint32_t)(1<<(x)))
+
+//TODO check if there are any other registers to add
+
 /*
- * Provides the registers used in an instruction in the form:
- * 	(reg_out1 << 24 | reg_out2 << 16 | reg_in1 << 8 | reg_in2)
- *
- * 	Note: This function will not indicate if the word is a valid instruction
+ * Provides a bit mask for the registers used in an instruction:
  */
-int32_t ops_regs_used(uint32_t uiMIPSword);
+uint64_t ops_regs_used(uint32_t uiMIPSword);
 
 /*
  * Converts a raw word into an enumeration type

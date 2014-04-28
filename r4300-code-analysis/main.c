@@ -14,100 +14,7 @@
 #include "memory.h"
 #include "CodeSegments.h"
 
-
 uint32_t * ROM_buffer = NULL;
-code_seg_t* First_seg = NULL;
-code_seg_t* Last_seg = NULL;
-
-/*
-void decode(uint32_t addr)
-{
-	uint32_t caddr, branch;
-	int x;
-	caddr = addr;
-	uint32_t uiCodeLen;
-
-	int bOK = 1;
-
-	while (bOK)
-	{
-		if (find_seg(caddr)) return;	//we have compiled this segment before
-
-		//from the supplied address get the code segment
-		int bValid = ops_validCodeSegment(ROM_buffer, caddr/4, 4096, &uiCodeLen, &branch);
-
-		//for (x=0; x< 200; x++)
-		//	ops_decode((addr+x*4), ROM_buffer[addr/4 + x]);
-
-		// if we have a valid code segment
-		if (bValid > 0)
-		{
-			// get the last code instruction type
-			mips_op_t op_type = ops_type(ROM_buffer[caddr/4 + uiCodeLen-1]);
-
-			printf("decoding segment 0x%08X with %d instructions\n", caddr, uiCodeLen);
-
-
-			for (x=0; x< uiCodeLen; x++) ops_decode((caddr+x*4), ROM_buffer[caddr/4 + x]);
-
-			//the segment could jump or branch
-			// if it branches then lets recursively follow
-			// else continue processing
-
-			//how do we handle simple loops?
-
-			//This must be a new segment
-			new_seg(addr, uiCodeLen, branch);
-
-			if ((op_type & OPS_JUMP) == OPS_JUMP)
-			{
-				printf("jumping to 0x%08X\n", branch);
-				caddr = caddr + uiCodeLen/4 + 4;
-			}
-			else if ((op_type & OPS_BRANCH) == OPS_BRANCH)
-			{
-				if (branch < 0x1000000) {
-					printf("branching to 0x%08X\n", branch);
-					decode(branch);
-
-				}
-				caddr = caddr + uiCodeLen*4;
-				printf("continue from 0x%08X\n", caddr);
-			}
-			else
-			{
-				printf( "_____________________\n");
-				printf("we have gone wrong. code_len=%d, type=%d\n\t", uiCodeLen, op_type);
-				ops_decode((caddr + uiCodeLen*4), ROM_buffer[caddr/4 + uiCodeLen]);
-
-				for (x=0; x < uiCodeLen + 4; x++)
-							ops_decode((caddr+x*4), ROM_buffer[caddr/4 + x]);
-				printf( "_____________________\n");
-
-				bOK =0;
-			}
-
-		}
-		else if (0 == uiCodeLen)
-		{
-			printf("segment scan length too short\n");
-		}
-		else
-		{
-			printf( "_____________________\n"
-					"invalid code segment! from 0x%08X\n\n", caddr);
-			for (x=-8; x < 2; x++)
-			{
-				if (-1 == x) printf("\n");
-				ops_decode((caddr + (uiCodeLen + x)* 4), ROM_buffer[caddr/4 + uiCodeLen + x]);
-				if (-1 == x) printf("\n");
-			}
-				printf( "_____________________\n");
-
-			bOK = 0;
-		}
-	}
-}*/
 
 int main(int argc, char* argv[])
 {
@@ -158,7 +65,7 @@ int main(int argc, char* argv[])
 
 
 #if 0
-	for (x=0x40/4; x< 0x00001118/4; x++ )
+	for (x=0x40/4; x< romlength/4; x++ )
 	{
 		ops_decode((x)*4, ROM_buffer[x]);
 	}
@@ -168,35 +75,42 @@ int main(int argc, char* argv[])
 
 	segmentData = GenerateCodeSegmentData(ROM_buffer, romlength);
 
-	printf("MIPS Address Length   ARM Address Length    Next\n");
+	printf("MIPS Address            Length   Registers    used  Next        Block type 2=end,3=br\n");
 
-	for (x=0; x < segmentData->count; x++)
+	code_seg_t* nextCodeSeg = segmentData->FirstSegment;
+	int count =0;
+	while (nextCodeSeg != NULL && count < 200)
 	{
-		if (segmentData->segments[x].ReturnRegister)
+		count++;
+
+		if (nextCodeSeg->MIPSReturnRegister)
 		{
-			printf("0x%08X %5d      0x%08X %6d      r%d\n",
-				segmentData->segments[x].MIPScode,
-				segmentData->segments[x].MIPScodeLen,
-				segmentData->segments[x].ARMcode,
-				segmentData->segments[x].ARMcodeLen,
-				segmentData->segments[x].ReturnRegister);
+			printf("0x%08X 0x%08X %5d      0x%010llX %2d      r%d\n",
+				nextCodeSeg->MIPScode,
+				nextCodeSeg->MIPScode+nextCodeSeg->MIPScodeLen*4,
+				nextCodeSeg->MIPScodeLen,
+				nextCodeSeg->MIPSRegistersUsed,
+				nextCodeSeg->MIPSRegistersUsedCount,
+				nextCodeSeg->MIPSReturnRegister);
 		}
 		else
 		{
-			printf("0x%08X %5d      0x%08X %6d      0x%08X\n",
-				segmentData->segments[x].MIPScode,
-				segmentData->segments[x].MIPScodeLen,
-				segmentData->segments[x].ARMcode,
-				segmentData->segments[x].ARMcodeLen,
-				(uint32_t*)segmentData->segments[x].next);
+			printf("0x%08X 0x%08X %5d      0x%010llX %2d    0x%08X %d\n",
+				nextCodeSeg->MIPScode,
+				nextCodeSeg->MIPScode+nextCodeSeg->MIPScodeLen*4,
+				nextCodeSeg->MIPScodeLen,
+				nextCodeSeg->MIPSRegistersUsed,
+				nextCodeSeg->MIPSRegistersUsedCount,
+				nextCodeSeg->MIPSnextInstructionIndex,
+				nextCodeSeg->blockType);
 		}
 
-
+		nextCodeSeg = nextCodeSeg->nextCodeSegmentLinkedList;
 	}
 
 	free(ROM_buffer);
 
-	printf("There are %d code segments\n", segmentData->count);
+	printf("%d code segments generated\n", segmentData->count);
 
 	printf("\nFinished processing ROM\n");
 	return 0;
