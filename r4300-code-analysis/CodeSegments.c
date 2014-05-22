@@ -15,14 +15,17 @@ static code_segment_data_t segmentData;
 static uint8_t* CodeSegBounds;
 
 
-static uint32_t CountRegisers(uint64_t bitfield)
+static uint32_t CountRegisers(uint32_t *bitfields)
 {
-	int x;
+	int x, y;
 	uint32_t c = 0;
-	for (x=0; x < 64; x++)
+
+	for (y=0; y < 3; y ++)
 	{
-		if (bitfield&0x1) c++;
-		bitfield = bitfield >> 1;
+		for (x=0; x < 32; x++)
+		{
+			if (bitfields[y] & (1<<x)) c++;
+		}
 	}
 	return c;
 }
@@ -47,7 +50,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 	/*
 	 * Generate Code block validity
 	 *
-	 * Scan the file for code blocks and ensure there are no invalid instructions in it.
+	 * Scan the file for code blocks and ensure there are no invalid instructions in them.
 	 *
 	 * */
 	for (x=64/4; x< size/4; x++)
@@ -94,7 +97,6 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 	 * There may be branches within a segment that branch to other code segments.
 	 * If this happens then the segment needs to be split.
 	 * */
-
 	iStart = 64/4;
 
 	for (x=64/4; x< size/4; x++)
@@ -115,7 +117,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 			nextCodeSeg = malloc(sizeof(code_seg_t));
 			if (!segmentCount) segmentData.FirstSegment = nextCodeSeg;
 
-			nextCodeSeg->MIPScode = iStart*4;
+			nextCodeSeg->MIPScode = &ROM[iStart];
 			nextCodeSeg->MIPScodeLen = x - iStart +1;
 			nextCodeSeg->ARMcodeLen = 0;
 			nextCodeSeg->MIPSnextInstructionIndex = offset;
@@ -151,9 +153,9 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 			//is this a loop currently in a segment?
 			if (offset < 0 && (x + offset > iStart) )
 			{
-				nextCodeSeg->MIPScode = (iStart) * 4;
+				nextCodeSeg->MIPScode = &ROM[(iStart)];
 				nextCodeSeg->MIPScodeLen = x + offset - iStart;
-				nextCodeSeg->MIPSnextInstructionIndex = (x + offset)*4;
+				nextCodeSeg->MIPSnextInstructionIndex = &ROM[x + offset];
 				nextCodeSeg->MIPSReturnRegister = 0;
 
 				nextCodeSeg->ARMcodeLen = 0;
@@ -168,9 +170,9 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 				nextCodeSeg = malloc(sizeof(code_seg_t));
 
-				nextCodeSeg->MIPScode = (x + offset) * 4;
+				nextCodeSeg->MIPScode = &ROM[x + offset];
 				nextCodeSeg->MIPScodeLen = -offset + 1;
-				nextCodeSeg->MIPSnextInstructionIndex = (x + 1)*4;
+				nextCodeSeg->MIPSnextInstructionIndex = &ROM[x + 1];
 				nextCodeSeg->ARMcodeLen = 0;
 				nextCodeSeg->MIPSReturnRegister = 0;
 				nextCodeSeg->blockType = BLOCK_CONTINUES;
@@ -178,9 +180,9 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 			else //must branch to another segment
 			{
-				nextCodeSeg->MIPScode = (iStart) * 4;
+				nextCodeSeg->MIPScode = &ROM[iStart];
 				nextCodeSeg->MIPScodeLen = x - iStart+1;
-				nextCodeSeg->MIPSnextInstructionIndex = (x + offset)*4;
+				nextCodeSeg->MIPSnextInstructionIndex = &ROM[x + offset];
 				nextCodeSeg->ARMcodeLen = 0;
 				nextCodeSeg->MIPSReturnRegister = 0;
 
@@ -207,11 +209,48 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 	nextCodeSeg = segmentData.FirstSegment;
 	while (nextCodeSeg != NULL)
 	{
-		nextCodeSeg->MIPSRegistersUsed = 0;
+		nextCodeSeg->MIPSRegistersUsed[0] = 0;
+		nextCodeSeg->MIPSRegistersUsed[1] = 0;
+		nextCodeSeg->MIPSRegistersUsed[2] = 0;
 		for (x=0; x < nextCodeSeg->MIPScodeLen; x++)
 		{
-			nextCodeSeg->MIPSRegistersUsed |= ops_regs_used(ROM[nextCodeSeg->MIPScode/4 + x]);
+			 ops_regs_used(*(nextCodeSeg->MIPScode + x), &nextCodeSeg->MIPSRegistersUsed[0], &nextCodeSeg->MIPSRegistersUsed[1], &nextCodeSeg->MIPSRegistersUsed[2]);
 		}
+
+		code_seg_t* tempCodeSeg = segmentData.FirstSegment;
+		// build links between segments
+
+		nextCodeSeg->pCodeSegmentTargets[0] = 0;
+
+
+		if (!nextCodeSeg->MIPSReturnRegister)
+		{
+			while (tempCodeSeg != NULL)
+			{
+				if (tempCodeSeg->MIPScode == nextCodeSeg->MIPSnextInstructionIndex)
+				{
+					nextCodeSeg->pCodeSegmentTargets[0] = tempCodeSeg;
+					break;
+				}
+				tempCodeSeg = tempCodeSeg->nextCodeSegmentLinkedList;
+			}
+
+			if (nextCodeSeg->blockType == BLOCK_CONTINUES)
+			{
+				tempCodeSeg = segmentData.FirstSegment;
+
+				while (tempCodeSeg != NULL)
+				{
+					if (tempCodeSeg->MIPScode == (nextCodeSeg->MIPScode + nextCodeSeg->MIPScodeLen))
+					{
+						nextCodeSeg->pCodeSegmentTargets[1] = tempCodeSeg;
+						break;
+					}
+					tempCodeSeg = tempCodeSeg->nextCodeSegmentLinkedList;
+				}
+			}
+		}
+
 
 		nextCodeSeg->MIPSRegistersUsedCount = CountRegisers(nextCodeSeg->MIPSRegistersUsed);
 		nextCodeSeg = nextCodeSeg->nextCodeSegmentLinkedList;

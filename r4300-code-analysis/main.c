@@ -13,6 +13,8 @@
 #include "rom.h"
 #include "memory.h"
 #include "CodeSegments.h"
+#include "InstructionSetMIPS4.h"
+#include "Debugger.h"
 
 uint32_t * ROM_buffer = NULL;
 
@@ -73,9 +75,21 @@ int main(int argc, char* argv[])
 	printf("----------------------------\n");
 #endif
 
+	//Find all code where we don't know which registers are used
+#if 1
+	for (x=0x40/4; x< romlength/4; x++ )
+	{
+		uint32_t temp;
+		if (ops_regs_used(ROM_buffer[x],&temp,&temp,&temp) == 2) ops_decode((x)*4, ROM_buffer[x]);
+	}
+
+	printf("----------------------------\n");
+#endif
+
+
 	segmentData = GenerateCodeSegmentData(ROM_buffer, romlength);
 
-	printf("MIPS Address            Length   Registers    used  Next        Block type 2=end,3=br\n");
+	printf("MIPS Address            Length   Regs-cpu   vfp      sp     used Next       Block type 2=end,3=br\n");
 
 	code_seg_t* nextCodeSeg = segmentData->FirstSegment;
 	int count =0;
@@ -85,21 +99,25 @@ int main(int argc, char* argv[])
 
 		if (nextCodeSeg->MIPSReturnRegister)
 		{
-			printf("0x%08X 0x%08X %5d      0x%010llX %2d      r%d\n",
+			printf("0x%08X 0x%08X %5d      0x%08X %08X %02X    %2d      r%d\n",
 				nextCodeSeg->MIPScode,
 				nextCodeSeg->MIPScode+nextCodeSeg->MIPScodeLen*4,
 				nextCodeSeg->MIPScodeLen,
-				nextCodeSeg->MIPSRegistersUsed,
+				nextCodeSeg->MIPSRegistersUsed[0],
+				nextCodeSeg->MIPSRegistersUsed[1],
+				nextCodeSeg->MIPSRegistersUsed[2],
 				nextCodeSeg->MIPSRegistersUsedCount,
 				nextCodeSeg->MIPSReturnRegister);
 		}
 		else
 		{
-			printf("0x%08X 0x%08X %5d      0x%010llX %2d    0x%08X %d\n",
+			printf("0x%08X 0x%08X %5d      0x%08X %08X %02X    %2d    0x%08X %d\n",
 				nextCodeSeg->MIPScode,
 				nextCodeSeg->MIPScode+nextCodeSeg->MIPScodeLen*4,
 				nextCodeSeg->MIPScodeLen,
-				nextCodeSeg->MIPSRegistersUsed,
+				nextCodeSeg->MIPSRegistersUsed[0],
+				nextCodeSeg->MIPSRegistersUsed[1],
+				nextCodeSeg->MIPSRegistersUsed[2],
 				nextCodeSeg->MIPSRegistersUsedCount,
 				nextCodeSeg->MIPSnextInstructionIndex,
 				nextCodeSeg->blockType);
@@ -108,11 +126,18 @@ int main(int argc, char* argv[])
 		nextCodeSeg = nextCodeSeg->nextCodeSegmentLinkedList;
 	}
 
-	free(ROM_buffer);
+
 
 	printf("%d code segments generated\n", segmentData->count);
 
 	printf("\nFinished processing ROM\n");
+
+	Debugger_start(segmentData);
+
+
+	free(ROM_buffer);
+
+	printf("\nEND\n");
 	return 0;
 }
 

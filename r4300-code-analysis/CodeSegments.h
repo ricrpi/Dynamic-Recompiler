@@ -23,12 +23,13 @@ typedef struct _code_seg
 {
 	struct _code_seg* nextCodeSegmentLinkedList;		//next code segment in linked list
 
-	uint32_t MIPScode;				// an index to mips code
+	uint32_t* MIPScode;				// an index to mips code
 	uint32_t MIPScodeLen;			// a length of mips code
-	int32_t  MIPSReturnRegister;		// boolean segments returns;
+	uint32_t MIPSReturnRegister;		// boolean segments returns;
 	uint32_t MIPSnextInstructionIndex;
 
-	uint64_t MIPSRegistersUsed;		//The registers read/written by segment
+	uint32_t MIPSRegistersUsed[3];		//The registers read/written by segment
+
 	uint32_t MIPSRegistersUsedCount;//Count of the registers read/written by segment
 
 	uint32_t* ARMcode;				// a pointer to arm code

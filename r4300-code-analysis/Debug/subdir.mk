@@ -5,6 +5,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../CodeSegments.c \
+../Debugger.c \
 ../InstructionSetARM6hf.c \
 ../InstructionSetMIPS4.c \
 ../OptimizeARM6hf.c \
@@ -14,6 +15,7 @@ C_SRCS += \
 
 OBJS += \
 ./CodeSegments.o \
+./Debugger.o \
 ./InstructionSetARM6hf.o \
 ./InstructionSetMIPS4.o \
 ./OptimizeARM6hf.o \
@@ -23,6 +25,7 @@ OBJS += \
 
 C_DEPS += \
 ./CodeSegments.d \
+./Debugger.d \
 ./InstructionSetARM6hf.d \
 ./InstructionSetMIPS4.d \
 ./OptimizeARM6hf.d \
