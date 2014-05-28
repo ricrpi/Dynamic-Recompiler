@@ -13,23 +13,22 @@
 
 #define INDEX "%08x"
 
-#define I_OP "s%u, s%u, #%d"
+#define I_OP "s%02u, s%02u, #%02d"
 #define OP_I(val) \
 		((val & 0x03E00000) >> 21), \
 		((val & 0x001F0000) >> 16), \
 		(int)(val<<16)/(1<<16)
 
 // Technically these are I OPs but I want to format the output differently
-#define B_OP "r%u, s%u, #%d => 0x%08x, \traw 0x%08x"
+#define B_OP "r%02u, s%02u, #%02d\t\t// branch to 0x%08x"
 #define OP_B(val) \
 		((val & 0x03E00000) >> 21), \
 		((val & 0x001F0000) >> 16), \
 		(int)(val<<16)/(1<<16), \
-		(x + 4 + (int)(val<<16)/(1<<16) * 4), \
-		(val)// calculate offset from current position
+		(x + 4 + (int)(val<<16)/(1<<16) * 4) // calculate offset from current position
 
 // Technically these are I OPs but I want to format the output differently
-#define BV_OP "r%u, 0x%02x, #%d => 0x%08x, \traw 0x%08x"
+#define BV_OP "r%02u, 0x%02x, #%02d => 0x%08x, \traw 0x%08x"
 #define OP_BV(val) \
 		((val & 0x03E00000) >> 21), \
 		((val & 0x001F0000) >> 16), \
@@ -47,7 +46,7 @@
 #define R_OP ""
 #define OP_R(val) (val)
 
-#define L_OP "r%u, [r%u, #%d]"
+#define L_OP "r%02u, [r%02u, #%02d]"
 #define OP_L(val) \
 		((val>>21)&0x1f), \
 		((val>>16)&0x1f), \
@@ -107,7 +106,19 @@ int32_t ops_JumpAddressOffset(uint32_t uiMIPSword)
 	case 0x05: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBNE    \t" I_OP "\n", x, OP_I(val)); return;	// I
 	case 0x06: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBLEZ   \t\n", x ); return;
 	case 0x07: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBGTZ   \t\n", x ); return;
-
+	case 0x11: //*uiCPUregs = cop1\n",x);
+		op2=(uiMIPSword>>21)&0x1f;
+		switch(op2)
+		{
+		case 0x08: //*uiCPUregs = BC1;
+			switch((uiMIPSword>>16)&0x3)
+			{
+			case 0x00: return (int32_t)(uiMIPSword<<16)/(1<<16); // BC1F; return 0;
+			case 0x01: return (int32_t)(uiMIPSword<<16)/(1<<16); // BC1T; return 0;
+			case 0x02: return (int32_t)(uiMIPSword<<16)/(1<<16); // BC1FL; return 0;
+			case 0x03: return (int32_t)(uiMIPSword<<16)/(1<<16); // BC1TL; return 0;
+			}break;
+		}break;
 	case 0x14: return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBEQL  \n",x); return;
 	case 0x15: return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBNEL  \n",x); return;
 	case 0x16: return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBLEZL \n",x); return;
@@ -117,7 +128,7 @@ int32_t ops_JumpAddressOffset(uint32_t uiMIPSword)
 	return 0x7FFFFFF;
 }
 
-uint32_t ops_regs_used(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFPregs, uint32_t *uiSpecialRegs)
+uint32_t ops_regs_output(uint32_t uiMIPSword, uint32_t *puiCPUregs_out, uint32_t *puiFPUregs_out, uint32_t *puiSpecialregs_out)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
@@ -129,261 +140,546 @@ uint32_t ops_regs_used(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFP
 			op2=uiMIPSword&0x3f;
 			switch(op2)
 			{
-				case 0x00: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SLL;
-				case 0x02: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SRL; return 0;
-				case 0x03: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SRA; return 0;
-				case 0x04: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SLLV; return 0;
-				case 0x07: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SRAV; return 0;
-				case 0x08: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // JR; return 0;
-				case 0x09: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // JALR; return 0;
-				case 0x0C: *uiCPUregs |= 0; return 0; // SYSCALL; return 0;
-				case 0x0D: *uiCPUregs |= 0; return 0; // BREAK; return 0;
-				case 0x0F: *uiCPUregs |= 0; return 0; // SYNC; return 0;
-				case 0x10: *uiCPUregs |= MIPS_REG((uiMIPSword>>11)&0x1f) | MIPS_REG_HI; return 0; // MFHI; return 0;
-				case 0x11: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG_HI; return 0; // MTHI; return 0;
-				case 0x12: *uiCPUregs |= MIPS_REG((uiMIPSword>>11)&0x1f) | MIPS_REG_LO; return 0; // MFLO; return 0;
-				case 0x13: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG_LO; return 0; // MTLO; return 0;
-				case 0x14: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSLLV; return 0;
-				case 0x16: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRLV; return 0;
-				case 0x17: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRAV; return 0;
-				case 0x18: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); *uiSpecialRegs |= MIPS_REG_HI | MIPS_REG_LO; return 0; // MULT; return 0;
-				case 0x19: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); *uiSpecialRegs |= MIPS_REG_HI | MIPS_REG_LO; return 0; // MULTU; return 0;
-				case 0x1A: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); *uiSpecialRegs |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DIV; return 0;
-				case 0x1B: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); *uiSpecialRegs |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DIVU; return 0;
-				case 0x1C: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); *uiSpecialRegs |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DMULT; return 0;
-				case 0x1D: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); *uiSpecialRegs |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DMULTU; return 0;
-				case 0x1E: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); *uiSpecialRegs |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DDIV; return 0;
-				case 0x1F: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); *uiSpecialRegs |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DDIVU; return 0;
-				case 0x20: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ADD; return 0;
-				case 0x21: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ADDU; return 0;
-				case 0x22: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SUB; return 0;
-				case 0x23: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SUBU; return 0;
-				case 0x24: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // AND; return 0;
-				case 0x25: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // OR; return 0;
-				case 0x26: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // XOR; return 0;
-				case 0x27: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // NOR; return 0;
-				case 0x2A: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SLT; return 0;
-				case 0x2B: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SLTU; return 0;
-				case 0x2C: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DADD; return 0;
-				case 0x2D: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DADDU; return 0;
-				case 0x2E: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSUB; return 0;
-				case 0x2F: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSUBU; return 0;
-				case 0x30: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TGE; return 0;
-				case 0x31: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TGEU; return 0;
-				case 0x32: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TLT; return 0;
-				case 0x33: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TLTU; return 0;
-				case 0x34: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TEQ; return 0;
-				case 0x36: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TNE; return 0;
-				case 0x38: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSLL; return 0;
-				case 0x3A: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRL; return 0;
-				case 0x3B: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRA; return 0;
-				case 0x3C: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSLL32; return 0;
-				case 0x3E: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRL32; return 0;
-				case 0x3F: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRA32; return 0;
+				case 0x00: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SLL
+				case 0x02: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SRL
+				case 0x03: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SRA
+				case 0x04: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SLLV
+				case 0x07: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SRAV
+				case 0x08: return 0; // JR
+				case 0x09: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // JALR
+				case 0x0C: return 0; // SYSCALL
+				case 0x0D: return 0; // BREAK
+				case 0x0F: return 0; // SYNC
+				case 0x10: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MFHI; return 0;
+				case 0x11: *puiCPUregs_out |= MIPS_REG_HI; return 0; // MTHI; return 0;
+				case 0x12: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MFLO; return 0;
+				case 0x13: *puiCPUregs_out |= MIPS_REG_LO; return 0; // MTLO; return 0;
+				case 0x14: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSLLV; return 0;
+				case 0x16: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRLV; return 0;
+				case 0x17: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRAV; return 0;
+				case 0x18: *puiSpecialregs_out |= MIPS_REG_HI | MIPS_REG_LO; return 0; // MULT; return 0;
+				case 0x19: *puiSpecialregs_out |= MIPS_REG_HI | MIPS_REG_LO; return 0; // MULTU; return 0;
+				case 0x1A: *puiSpecialregs_out |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DIV; return 0;
+				case 0x1B: *puiSpecialregs_out |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DIVU; return 0;
+				case 0x1C: *puiSpecialregs_out |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DMULT; return 0;
+				case 0x1D: *puiSpecialregs_out |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DMULTU; return 0;
+				case 0x1E: *puiSpecialregs_out |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DDIV; return 0;
+				case 0x1F: *puiSpecialregs_out |= MIPS_REG_HI | MIPS_REG_LO; return 0; // DDIVU; return 0;
+				case 0x20: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ADD; return 0;
+				case 0x21: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ADDU; return 0;
+				case 0x22: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SUB; return 0;
+				case 0x23: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SUBU; return 0;
+				case 0x24: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // AND; return 0;
+				case 0x25: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // OR; return 0;
+				case 0x26: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // XOR; return 0;
+				case 0x27: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // NOR; return 0;
+				case 0x2A: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SLT; return 0;
+				case 0x2B: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SLTU; return 0;
+				case 0x2C: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DADD; return 0;
+				case 0x2D: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DADDU
+				case 0x2E: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSUB
+				case 0x2F: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSUBU
+				case 0x30: *puiSpecialregs_out |= MIPS_TRAP; return 0; // TGE
+				case 0x31: *puiSpecialregs_out |= MIPS_TRAP; return 0; // TGEU
+				case 0x32: *puiSpecialregs_out |= MIPS_TRAP; return 0; // TLT
+				case 0x33: *puiSpecialregs_out |= MIPS_TRAP; return 0; // TLTU
+				case 0x34: *puiSpecialregs_out |= MIPS_TRAP; return 0; // TEQ
+				case 0x36: *puiSpecialregs_out |= MIPS_TRAP; return 0; // TNE
+
+				case 0x38: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSLL
+				case 0x3A: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRL
+				case 0x3B: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRA
+				case 0x3C: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSLL32
+				case 0x3E: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRL32
+				case 0x3F: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DSRA32
 			}
 			break; return 1;
 		case 0x01:
 			op2=(uiMIPSword>>16)&0x1f;
 			switch(op2)
 			{
-			case 0x00: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLTZ; return 0;	// I
-			case 0x01: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGEZ; return 0;	// I
-			case 0x02: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLTZL; return 0;
-			case 0x03: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGEZL; return 0;
-			case 0x08: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TGEI; return 0;
-			case 0x09: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TGEIU; return 0;
-			case 0x0A: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TLTI; return 0;
-			case 0x0B: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TLTIU; return 0;
-			case 0x0C: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TEQI; return 0;
-			case 0x0E: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TNEI; return 0;
-			case 0x10: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG_31; return 0; // BLTZAL; return 0;	// I and link
-			case 0x11: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG_31; return 0; // BGEZAL; return 0;	// I and link
-			case 0x12: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG_31; return 0; // BLTZALL; return 0;	// I and link likely
-			case 0x13: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG_31; return 0; // BGEZALL; return 0;	// I and link likely
+			case 0x00: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BLTZ
+			case 0x01: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BGEZ
+			case 0x02: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BLTZL
+			case 0x03: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BGEZL
+			case 0x08: 	*puiSpecialregs_out |= MIPS_TRAP; return 0; // TGEI
+			case 0x09: 	*puiSpecialregs_out |= MIPS_TRAP; return 0; // TGEIU
+			case 0x0A: 	*puiSpecialregs_out |= MIPS_TRAP; return 0; // TLTI
+			case 0x0B: 	*puiSpecialregs_out |= MIPS_TRAP; return 0; // TLTIU
+			case 0x0C: 	*puiSpecialregs_out |= MIPS_TRAP; return 0; // TEQI
+			case 0x0E: 	*puiSpecialregs_out |= MIPS_TRAP; return 0; // TNEI
+			case 0x10: 	*puiCPUregs_out |= MIPS_REG_31;
+						*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BLTZAL
+			case 0x11: 	*puiCPUregs_out |= MIPS_REG_31;
+						*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BGEZAL
+			case 0x12: 	*puiCPUregs_out |= MIPS_REG_31;
+						*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BLTZALL
+			case 0x13: 	*puiCPUregs_out |= MIPS_REG_31;
+						*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BGEZALL
 			}
 
 			break; return 1;
 
-		case 0x02: 	*uiCPUregs |= 0; return 0; //J; return 0;
-		case 0x03: 	*uiCPUregs |= MIPS_REG_31; return 0; //JAL; return 0;
-		case 0x04: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // BEQ; return 0;	// I
-		case 0x05: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // BNE; return 0;	// I
-		case 0x06: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLEZ; return 0;
-		case 0x07: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGTZ; return 0;
-		case 0x08: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ADDI; return 0;	// I
-		case 0x09: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ADDIU; return 0;	// I
-		case 0x0A: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SLTI; return 0;	// I
-		case 0x0B: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SLTIU; return 0;	// I
-		case 0x0C: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ANDI; return 0; 	// I
-		case 0x0D: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ORI; return 0;	// I
-		case 0x0E: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // XORI; return 0;	// I
-		case 0x0F: 	*uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LUI; return 0;	// I
-		case 0x10: 	//*uiCPUregs |= cop0\n",x);
+		case 0x02: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; //J; return 0;
+		case 0x03: 	*puiCPUregs_out |= MIPS_REG_31;
+					*puiSpecialregs_out |= MIPS_REG_PC; return 0; //JAL; return 0;
+		case 0x04: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BEQ; return 0;	// I
+		case 0x05: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BNE; return 0;	// I
+		case 0x06: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BLEZ; return 0;
+		case 0x07: 	*puiSpecialregs_out |= MIPS_REG_PC; return 0; // BGTZ; return 0;
+		case 0x08: 	*puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ADDI; return 0;	// I
+		case 0x09: 	*puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ADDIU; return 0;	// I
+		case 0x0A: 	*puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SLTI; return 0;	// I
+		case 0x0B: 	*puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SLTIU
+		case 0x0C: 	*puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ANDI
+		case 0x0D: 	*puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ORI
+		case 0x0E: 	*puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // XORI
+		case 0x0F: 	*puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LUI
+		case 0x10: 	// cop0
 			op2=(uiMIPSword>>21)&0x1f;
 			switch(op2)
 			{
-			case 0x00: *uiCPUregs |= MIPS_REG_ALL; return 2; // MFC0; return 0;
-			case 0x04: *uiCPUregs |= MIPS_REG_ALL; return 2; // MTC0; return 0;
-			case 0x10: //*uiCPUregs = tlb;
+			case 0x00: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // MFC0
+			case 0x04: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MTC0
+			case 0x10: // tlb;
 				switch(uiMIPSword&0x3f)
 				{
-				case 0x01: *uiCPUregs |= MIPS_REG_ALL; return 2; // TLBR; return 0;
-				case 0x02: *uiCPUregs |= MIPS_REG_ALL; return 2; // TLBWI; return 0;
-				case 0x06: *uiCPUregs |= MIPS_REG_ALL; return 2; // TLBWR; return 0;
-				case 0x08: *uiCPUregs |= MIPS_REG_ALL; return 2; // TLBP; return 0;
-				case 0x18: *uiCPUregs |= MIPS_REG_ALL; return 2; // ERET; return 0;
+				case 0x01: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // TLBR
+				case 0x02: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // TLBWI
+				case 0x06: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // TLBWR
+				case 0x08: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // TLBP
+				case 0x18: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // ERET
 				}
 			}
 			break; return 1;
 
-		case 0x11: //*uiCPUregs = cop1\n",x);
+		case 0x11: // cop1
 			op2=(uiMIPSword>>21)&0x1f;
 			switch(op2)
 			{
-			case 0x00: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // MFC1; return 0;
-			case 0x01: *uiCPUregs |= MIPS_REG_ALL; return 2; // DMFC1; return 0;
-			case 0x02: *uiCPUregs |= MIPS_REG_ALL; return 2; // CFC1; return 0;
-			case 0x04: *uiCPUregs |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // MTC1; return 0;
-			case 0x05: *uiCPUregs |= MIPS_REG_ALL; return 2; // DMTC1; return 0;
-			case 0x06: *uiCPUregs |= MIPS_REG_ALL; return 2; // CTC1; return 0;
+			case 0x00: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // MFC1
+			case 0x01: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DMFC1
+			case 0x02: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // CFC1
+			case 0x04: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MTC1
+			case 0x05: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DMTC1
+			case 0x06: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CTC1
+			case 0x08: // BC1;
+				switch((uiMIPSword>>16)&0x3)
+				{
+				case 0x00: *puiSpecialregs_out |= MIPS_REG_CC; return 0; // BC1F
+				case 0x01: *puiSpecialregs_out |= MIPS_REG_CC; return 0; // BC1T
+				case 0x02: *puiSpecialregs_out |= MIPS_REG_CC; return 0; // BC1FL
+				case 0x03: *puiSpecialregs_out |= MIPS_REG_CC; return 0; // BC1TL
+				}break; return 1;
+
+			case 0x10: // C1.S
+			case 0x11:
+				switch(uiMIPSword&0x3f)
+				{
+				case 0x00: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // ADD_S
+				case 0x01: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // SUB_S; return 0;
+				case 0x02: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // MUL_S; return 0;
+				case 0x03: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // DIV_S; return 0;
+				case 0x04: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // SQRT_S; return 0;
+				case 0x05: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // ABS_S; return 0;
+				case 0x06: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // MOV_S; return 0;
+				case 0x07: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // NEG_S; return 0;
+				case 0x08: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // ROUND_L_S; return 0;
+				case 0x09: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // TRUNC_L_S; return 0;
+				case 0x0A: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // CEIL_L_S; return 0;
+				case 0x0B: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // FLOOR_L_S; return 0;
+				case 0x0C: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // ROUND_W_S; return 0;
+				case 0x0D: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // TRUNC_W_S; return 0;
+				case 0x0E: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // CEIL_W_S; return 0;
+				case 0x0F: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // FLOOR_W_S; return 0;
+
+				case 0x21: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // CVT_D_S; return 0;
+				case 0x24: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // CVT_W_S; return 0;
+				case 0x25: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // CVT_L_S; return 0;
+				case 0x30: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_F_S; return 0;
+				case 0x31: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_UN_S; return 0;
+				case 0x32: *puiSpecialregs_out |= MIPS_REG_CC; return 0; // C_EQ_S; return 0;
+				case 0x33: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_UEQ_S; return 0;
+				case 0x34: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_OLT_S; return 0;
+				case 0x35: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_ULT_S; return 0;
+				case 0x36: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_OLE_S; return 0;
+				case 0x37: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_ULE_S; return 0;
+				case 0x38: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_SF_S; return 0;
+				case 0x39: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_NGLE_S; return 0;
+				case 0x3A: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_SEQ_S; return 0;
+				case 0x3B: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_NGL_S; return 0;
+				case 0x3C: *puiSpecialregs_out |= MIPS_REG_CC; return 0; // C_LT_S; return 0;
+				case 0x3D: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_NGE_S; return 0;
+				case 0x3E: *puiSpecialregs_out |= MIPS_REG_CC; return 0; // C_LE_S; return 0;
+				case 0x3F: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_NGT_S; return 0;
+				}break; return 1;
+		/*	case 0x11: // C1_D
+				switch(uiMIPSword&0x3f)
+				{
+				case 0x00: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // ADD_D; return 0;
+				case 0x01: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // SUB_D; return 0;
+				case 0x02: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // MUL_D; return 0;
+				case 0x03: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // DIV_D; return 0;
+				case 0x04: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // SQRT_D; return 0;
+				case 0x05: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // ABS_D; return 0;
+				case 0x06: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // MOV_D; return 0;
+				case 0x07: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // NEG_D; return 0;
+				case 0x08: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // ROUND_L_D; return 0;
+				case 0x09: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // TRUNC_L_D; return 0;
+				case 0x0A: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // CEIL_L_D; return 0;
+				case 0x0B: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // FLOOR_L_D; return 0;
+				case 0x0C: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // ROUND_W_D; return 0;
+				case 0x0D: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // TRUNC_W_D; return 0;
+				case 0x0E: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // CEIL_W_D; return 0;
+				case 0x0F: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // FLOOR_W_D; return 0;
+				case 0x20: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // CVT_S_D; return 0;
+				case 0x24: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // CVT_W_D; return 0;
+				case 0x25: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // CVT_L_D; return 0;
+				case 0x30: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_F_D; return 0;
+				case 0x31: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_UN_D; return 0;
+				case 0x32: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_EQ_D; return 0;
+				case 0x33: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_UEQ_D; return 0;
+				case 0x34: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_OLT_D; return 0;
+				case 0x35: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_ULT_D; return 0;
+				case 0x36: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_OLE_D; return 0;
+				case 0x37: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_ULE_D; return 0;
+				case 0x38: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_SF_D; return 0;
+				case 0x39: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_NGLE_D; return 0;
+				case 0x3A: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_SEQ_D; return 0;
+				case 0x3B: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_NGL_D; return 0;
+				case 0x3C: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_LT_D; return 0;
+				case 0x3D: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_NGE_D; return 0;
+				case 0x3E: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_LE_D; return 0;
+				case 0x3F: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // C_NGT_D; return 0;
+				} break; return 1;*/
+			case 0x14: // C1_W
+				switch(uiMIPSword&0x3f)
+				{
+				case 0x20: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // CVT_S_W; return 0;
+				case 0x21: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>6)&0x1f); return 0; // CVT_D_W; return 0;
+				}
+				break; return 1;
+
+			case 0x15: // C1_L
+				switch(uiMIPSword&0x3f)
+				{
+				case 0x20: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // CVT_S_L; return 0;
+				case 0x21: *puiCPUregs_out |= MIPS_REG_ALL; return 2; // CVT_D_L; return 0;
+				}
+				break; return 1;
+			}break; return 1;
+
+		case 0x14: *puiSpecialregs_out |= MIPS_REG_PC; return 0; // BEQL; return 0;
+		case 0x15: *puiSpecialregs_out |= MIPS_REG_PC; return 0; // BNEL; return 0;
+		case 0x16: *puiSpecialregs_out |= MIPS_REG_PC; return 0; // BLEZL; return 0;
+		case 0x17: *puiSpecialregs_out |= MIPS_REG_PC; return 0; // BGTZL; return 0;
+		case 0x18: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DADDI; return 0;
+		case 0x19: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DADDIU; return 0;
+		case 0x1A: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LDL; return 0;
+		case 0x1B: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LDR; return 0;
+		case 0x20: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LB; return 0;	// Load Byte
+		case 0x21: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LH; return 0;	// Load Halfword
+		case 0x22: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LWL; return 0;
+		case 0x23: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LW; return 0;	// Load Word
+		case 0x24: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LBU; return 0;	// Load Unsigned Byte
+		case 0x25: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LHU; return 0;	// Load Halfword unsigned
+		case 0x26: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LWR; return 0;
+		case 0x27: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LWU; return 0;	// Load Word unsigned
+		case 0x28: return 0; // SB; return 0;	// I
+		case 0x29: return 0; // SH; return 0;	// I
+		case 0x2A: return 0; // SWL; return 0;
+		case 0x2B: return 0; // SW; return 0;	// I
+		case 0x2C: return 0; // SDL; return 0;
+		case 0x2D: return 0; // SDR; return 0;
+		case 0x2E: return 0; // SWR; return 0;
+		case 0x2F: *puiCPUregs_out |= 0; return 0; // CACHE; return 0;
+		case 0x30: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f);
+					*puiSpecialregs_out |= MIPS_REG_LL; return 0; // LL; return 0;	// Load Linked Word atomic Read-Modify-Write ops
+		case 0x31: *puiFPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LWC1; return 0;	// Load Word to co processor 1
+		case 0x34: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LLD; return 0;	// Load Linked Dbl Word atomic Read-Modify-Write ops
+					*puiSpecialregs_out |= MIPS_REG_LL; return 0;
+		case 0x35: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LDC1; return 0;
+		case 0x37: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LD; return 0; 	// Load Double word
+		case 0x38: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SC; return 0;	// Store Linked Word atomic Read-Modify-Write ops
+		case 0x39: return 0; // SWC1; return 0;	// Store Word from co processor 1 to memory
+		case 0x3C: *puiCPUregs_out |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SCD; return 0;	// Store Conditional Double Word
+		case 0x3D: return 0; // SDC1; return 0;
+		case 0x3F: return 0; // SD; return 0; 	// Store Double word
+	}
+
+	return 1;
+}
+
+uint32_t ops_regs_input(uint32_t uiMIPSword, uint32_t *puiCPUregs_in, uint32_t *puiFPUregs_in, uint32_t *puiSpecialregs_in)
+{
+	uint32_t op=uiMIPSword>>26;
+	uint32_t op2;
+
+	//TODO need to return registers
+	switch(op)
+	{
+		case 0x00:
+			op2=uiMIPSword&0x3f;
+			switch(op2)
+			{
+				case 0x00: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SLL;
+				case 0x02: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SRL; return 0;
+				case 0x03: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SRA; return 0;
+				case 0x04: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SLLV; return 0;
+				case 0x07: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SRAV; return 0;
+				case 0x08: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // JR; return 0;
+				case 0x09: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // JALR; return 0;
+				case 0x0C: return 0; // SYSCALL; return 0;
+				case 0x0D: return 0; // BREAK; return 0;
+				case 0x0F: return 0; // SYNC; return 0;
+				case 0x10: *puiCPUregs_in |= MIPS_REG_HI; return 0; // MFHI; return 0;
+				case 0x11: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // MTHI; return 0;
+				case 0x12: *puiCPUregs_in |= MIPS_REG_LO; return 0; // MFLO; return 0;
+				case 0x13: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // MTLO; return 0;
+				case 0x14: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSLLV; return 0;
+				case 0x16: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSRLV; return 0;
+				case 0x17: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSRAV; return 0;
+				case 0x18: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // MULT; return 0;
+				case 0x19: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // MULTU; return 0;
+				case 0x1A: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DIV; return 0;
+				case 0x1B: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DIVU; return 0;
+				case 0x1C: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DMULT; return 0;
+				case 0x1D: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DMULTU; return 0;
+				case 0x1E: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DDIV; return 0;
+				case 0x1F: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DDIVU; return 0;
+				case 0x20: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ADD; return 0;
+				case 0x21: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // ADDU; return 0;
+				case 0x22: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SUB; return 0;
+				case 0x23: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SUBU; return 0;
+				case 0x24: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // AND; return 0;
+				case 0x25: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // OR; return 0;
+				case 0x26: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // XOR; return 0;
+				case 0x27: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // NOR; return 0;
+				case 0x2A: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SLT; return 0;
+				case 0x2B: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SLTU; return 0;
+				case 0x2C: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DADD; return 0;
+				case 0x2D: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DADDU; return 0;
+				case 0x2E: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSUB; return 0;
+				case 0x2F: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSUBU; return 0;
+				case 0x30: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TGE; return 0;
+				case 0x31: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TGEU; return 0;
+				case 0x32: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TLT; return 0;
+				case 0x33: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TLTU; return 0;
+				case 0x34: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TEQ; return 0;
+				case 0x36: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // TNE; return 0;
+				case 0x38: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSLL; return 0;
+				case 0x3A: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSRL; return 0;
+				case 0x3B: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSRA; return 0;
+				case 0x3C: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSLL32; return 0;
+				case 0x3E: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSRL32; return 0;
+				case 0x3F: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DSRA32; return 0;
+			}
+			break; return 1;
+		case 0x01:
+			op2=(uiMIPSword>>16)&0x1f;
+			switch(op2)
+			{
+			case 0x00: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLTZ; return 0;	// I
+			case 0x01: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGEZ; return 0;	// I
+			case 0x02: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLTZL; return 0;
+			case 0x03: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGEZL; return 0;
+			case 0x08: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TGEI; return 0;
+			case 0x09: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TGEIU; return 0;
+			case 0x0A: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TLTI; return 0;
+			case 0x0B: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TLTIU; return 0;
+			case 0x0C: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TEQI; return 0;
+			case 0x0E: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // TNEI; return 0;
+			case 0x10: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLTZAL; return 0;	// I and link
+			case 0x11: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGEZAL; return 0;	// I and link
+			case 0x12: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLTZALL; return 0;	// I and link likely
+			case 0x13: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGEZALL; return 0;	// I and link likely
+			}
+
+			break; return 1;
+
+		case 0x02: 	return 0; //J; return 0;
+		case 0x03: 	return 0; //JAL; return 0;
+		case 0x04: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // BEQ; return 0;	// I
+		case 0x05: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // BNE; return 0;	// I
+		case 0x06: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLEZ; return 0;
+		case 0x07: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGTZ; return 0;
+		case 0x08: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // ADDI; return 0;	// I
+		case 0x09: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // ADDIU; return 0;	// I
+		case 0x0A: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // SLTI; return 0;	// I
+		case 0x0B: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // SLTIU; return 0;	// I
+		case 0x0C: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // ANDI; return 0; 	// I
+		case 0x0D: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // ORI; return 0;	// I
+		case 0x0E: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // XORI; return 0;	// I
+		case 0x0F: 	*puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LUI; return 0;	// I
+		case 0x10: 	// cop0
+			op2=(uiMIPSword>>21)&0x1f;
+			switch(op2)
+			{
+			case 0x00: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MFC0; return 0;
+			case 0x04: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // MTC0; return 0;
+			case 0x10: // tlb
+				switch(uiMIPSword&0x3f)
+				{
+				case 0x01: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // TLBR; return 0;
+				case 0x02: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // TLBWI; return 0;
+				case 0x06: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // TLBWR; return 0;
+				case 0x08: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // TLBP; return 0;
+				case 0x18: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // ERET; return 0;
+				}
+			}
+			break; return 1;
+
+		case 0x11: // cop1
+			op2=(uiMIPSword>>21)&0x1f;
+			switch(op2)
+			{
+			case 0x00: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MFC1
+			case 0x01: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DMFC1
+			case 0x02: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CFC1
+			case 0x04: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // MTC1
+			case 0x05: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DMTC1
+			case 0x06: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // CTC1
 			case 0x08: //*uiCPUregs = BC1;
 				switch((uiMIPSword>>16)&0x3)
 				{
-				case 0x00: *uiCPUregs |= MIPS_REG_ALL; return 2; // BC1F; return 0;
-				case 0x01: *uiCPUregs |= MIPS_REG_ALL; return 2; // BC1T; return 0;
-				case 0x02: *uiCPUregs |= MIPS_REG_ALL; return 2; // BC1FL; return 0;
-				case 0x03: *uiCPUregs |= MIPS_REG_ALL; return 2; // BC1TL; return 0;
+				case 0x00: return 0; // BC1F; return 0;
+				case 0x01: return 0; // BC1T; return 0;
+				case 0x02: return 0; // BC1FL; return 0;
+				case 0x03: return 0; // BC1TL; return 0;
 				}break; return 1;
 
-			case 0x10: //*uiCPUregs = C1.S\n",x);
+			case 0x10: // C1.S
+			case 0x11:
 				switch(uiMIPSword&0x3f)
 				{
-				case 0x00: *uiCPUregs |= MIPS_REG_ALL; return 2; // ADD_S; return 0;
-				case 0x01: *uiCPUregs |= MIPS_REG_ALL; return 2; // SUB_S; return 0;
-				case 0x02: *uiCPUregs |= MIPS_REG_ALL; return 2; // MUL_S; return 0;
-				case 0x03: *uiCPUregs |= MIPS_REG_ALL; return 2; // DIV_S; return 0;
-				case 0x04: *uiCPUregs |= MIPS_REG_ALL; return 2; // SQRT_S; return 0;
-				case 0x05: *uiCPUregs |= MIPS_REG_ALL; return 2; // ABS_S; return 0;
-				case 0x06: *uiCPUregs |= MIPS_REG_ALL; return 2; // MOV_S; return 0;
-				case 0x07: *uiCPUregs |= MIPS_REG_ALL; return 2; // NEG_S; return 0;
-				case 0x08: *uiCPUregs |= MIPS_REG_ALL; return 2; // ROUND_L_S; return 0;
-				case 0x09: *uiCPUregs |= MIPS_REG_ALL; return 2; // TRUNC_L_S; return 0;
-				case 0x0A: *uiCPUregs |= MIPS_REG_ALL; return 2; // CEIL_L_S; return 0;
-				case 0x0B: *uiCPUregs |= MIPS_REG_ALL; return 2; // FLOOR_L_S; return 0;
-				case 0x0C: *uiCPUregs |= MIPS_REG_ALL; return 2; // ROUND_W_S; return 0;
-				case 0x0D: *uiCPUregs |= MIPS_REG_ALL; return 2; // TRUNC_W_S; return 0;
-				case 0x0E: *uiCPUregs |= MIPS_REG_ALL; return 2; // CEIL_W_S; return 0;
-				case 0x0F: *uiCPUregs |= MIPS_REG_ALL; return 2; // FLOOR_W_S; return 0;
-				case 0x21: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_D_S; return 0;
-				case 0x24: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_W_S; return 0;
-				case 0x25: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_L_S; return 0;
-				case 0x30: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_F_S; return 0;
-				case 0x31: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_UN_S; return 0;
-				case 0x32: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_EQ_S; return 0;
-				case 0x33: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_UEQ_S; return 0;
-				case 0x34: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_OLT_S; return 0;
-				case 0x35: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_ULT_S; return 0;
-				case 0x36: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_OLE_S; return 0;
-				case 0x37: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_ULE_S; return 0;
-				case 0x38: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_SF_S; return 0;
-				case 0x39: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_NGLE_S; return 0;
-				case 0x3A: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_SEQ_S; return 0;
-				case 0x3B: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_NGL_S; return 0;
-				case 0x3C: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_LT_S; return 0;
-				case 0x3D: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_NGE_S; return 0;
-				case 0x3E: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_LE_S; return 0;
-				case 0x3F: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_NGT_S; return 0;
+				case 0x00: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ADD_S
+				case 0x01: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SUB_S
+				case 0x02: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MUL_S
+				case 0x03: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DIV_S
+				case 0x04: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SQRT_S
+				case 0x05: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ABS_S
+				case 0x06: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MOV_S
+				case 0x07: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // NEG_S
+				case 0x08: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ROUND_L_S
+				case 0x09: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // TRUNC_L_S
+				case 0x0A: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CEIL_L_S
+				case 0x0B: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // FLOOR_L_S
+				case 0x0C: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ROUND_W_S
+				case 0x0D: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // TRUNC_W_S
+				case 0x0E: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CEIL_W_S
+				case 0x0F: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // FLOOR_W_S
+				// TODO some of these may be the wrong way round
+				case 0x21: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CVT_D_S
+				case 0x24: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CVT_W_S
+				case 0x25: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // CVT_L_S
+				case 0x30: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_F_S
+				case 0x31: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_UN_S
+				case 0x32: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // C_EQ_S
+				case 0x33: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_UEQ_S
+				case 0x34: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_OLT_S
+				case 0x35: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_ULT_S
+				case 0x36: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_OLE_S
+				case 0x37: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_ULE_S
+				case 0x38: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_SF_S
+				case 0x39: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_NGLE_S
+				case 0x3A: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_SEQ_S
+				case 0x3B: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_NGL_S
+				case 0x3C: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // C_LT_S
+				case 0x3D: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_NGE_S
+				case 0x3E: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // C_LE_S
+				case 0x3F: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_NGT_S
 				}break; return 1;
-			case 0x11: //*uiCPUregs = C1_D\n",x);
+			/*case 0x11: // C1_D
 				switch(uiMIPSword&0x3f)
 				{
-				case 0x00: *uiCPUregs |= MIPS_REG_ALL; return 2; // ADD_D; return 0;
-				case 0x01: *uiCPUregs |= MIPS_REG_ALL; return 2; // SUB_D; return 0;
-				case 0x02: *uiCPUregs |= MIPS_REG_ALL; return 2; // MUL_D; return 0;
-				case 0x03: *uiCPUregs |= MIPS_REG_ALL; return 2; // DIV_D; return 0;
-				case 0x04: *uiCPUregs |= MIPS_REG_ALL; return 2; // SQRT_D; return 0;
-				case 0x05: *uiCPUregs |= MIPS_REG_ALL; return 2; // ABS_D; return 0;
-				case 0x06: *uiCPUregs |= MIPS_REG_ALL; return 2; // MOV_D; return 0;
-				case 0x07: *uiCPUregs |= MIPS_REG_ALL; return 2; // NEG_D; return 0;
-				case 0x08: *uiCPUregs |= MIPS_REG_ALL; return 2; // ROUND_L_D; return 0;
-				case 0x09: *uiCPUregs |= MIPS_REG_ALL; return 2; // TRUNC_L_D; return 0;
-				case 0x0A: *uiCPUregs |= MIPS_REG_ALL; return 2; // CEIL_L_D; return 0;
-				case 0x0B: *uiCPUregs |= MIPS_REG_ALL; return 2; // FLOOR_L_D; return 0;
-				case 0x0C: *uiCPUregs |= MIPS_REG_ALL; return 2; // ROUND_W_D; return 0;
-				case 0x0D: *uiCPUregs |= MIPS_REG_ALL; return 2; // TRUNC_W_D; return 0;
-				case 0x0E: *uiCPUregs |= MIPS_REG_ALL; return 2; // CEIL_W_D; return 0;
-				case 0x0F: *uiCPUregs |= MIPS_REG_ALL; return 2; // FLOOR_W_D; return 0;
-				case 0x20: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_S_D; return 0;
-				case 0x24: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_W_D; return 0;
-				case 0x25: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_L_D; return 0;
-				case 0x30: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_F_D; return 0;
-				case 0x31: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_UN_D; return 0;
-				case 0x32: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_EQ_D; return 0;
-				case 0x33: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_UEQ_D; return 0;
-				case 0x34: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_OLT_D; return 0;
-				case 0x35: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_ULT_D; return 0;
-				case 0x36: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_OLE_D; return 0;
-				case 0x37: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_ULE_D; return 0;
-				case 0x38: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_SF_D; return 0;
-				case 0x39: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_NGLE_D; return 0;
-				case 0x3A: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_SEQ_D; return 0;
-				case 0x3B: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_NGL_D; return 0;
-				case 0x3C: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_LT_D; return 0;
-				case 0x3D: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_NGE_D; return 0;
-				case 0x3E: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_LE_D; return 0;
-				case 0x3F: *uiCPUregs |= MIPS_REG_ALL; return 2; // C_NGT_D; return 0;
-				} break; return 1;
+				case 0x00: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ADD_D; return 0;
+				case 0x01: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SUB_D; return 0;
+				case 0x02: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MUL_D; return 0;
+				case 0x03: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // DIV_D; return 0;
+				case 0x04: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // SQRT_D; return 0;
+				case 0x05: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ABS_D; return 0;
+				case 0x06: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // MOV_D; return 0;
+				case 0x07: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // NEG_D; return 0;
+				case 0x08: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ROUND_L_D; return 0;
+				case 0x09: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // TRUNC_L_D; return 0;
+				case 0x0A: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CEIL_L_D; return 0;
+				case 0x0B: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // FLOOR_L_D; return 0;
+				case 0x0C: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // ROUND_W_D; return 0;
+				case 0x0D: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // TRUNC_W_D; return 0;
+				case 0x0E: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CEIL_W_D; return 0;
+				case 0x0F: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // FLOOR_W_D; return 0;
+				case 0x20: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // CVT_S_D; return 0;
+				case 0x24: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // CVT_W_D; return 0;
+				case 0x25: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // CVT_L_D; return 0;
+				case 0x30: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_F_D; return 0;
+				case 0x31: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_UN_D; return 0;
+				case 0x32: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_EQ_D; return 0;
+				case 0x33: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_UEQ_D; return 0;
+				case 0x34: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_OLT_D; return 0;
+				case 0x35: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_ULT_D; return 0;
+				case 0x36: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_OLE_D; return 0;
+				case 0x37: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_ULE_D; return 0;
+				case 0x38: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_SF_D; return 0;
+				case 0x39: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_NGLE_D; return 0;
+				case 0x3A: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_SEQ_D; return 0;
+				case 0x3B: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_NGL_D; return 0;
+				case 0x3C: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_LT_D; return 0;
+				case 0x3D: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_NGE_D; return 0;
+				case 0x3E: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_LE_D; return 0;
+				case 0x3F: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // C_NGT_D; return 0;
+				} break; return 1;*/
 			case 0x14: //*uiCPUregs = C1_W\n",x);
 				switch(uiMIPSword&0x3f)
 				{
-				case 0x20: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_S_W; return 0;
-				case 0x21: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_D_W; return 0;
+				case 0x20: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CVT_S_W; return 0;
+				case 0x21: *puiFPUregs_in |= MIPS_REG((uiMIPSword>>11)&0x1f); return 0; // CVT_D_W; return 0;
 				}
 				break; return 1;
 
 			case 0x15: //*uiCPUregs = C1_L\n",x);
 				switch(uiMIPSword&0x3f)
 				{
-				case 0x20: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_S_L; return 0;
-				case 0x21: *uiCPUregs |= MIPS_REG_ALL; return 2; // CVT_D_L; return 0;
+				case 0x20: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // CVT_S_L; return 0;
+				case 0x21: *puiCPUregs_in |= MIPS_REG_ALL; return 2; // CVT_D_L; return 0;
 				}
 				break; return 1;
 			}break; return 1;
 
-		case 0x14: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // BEQL; return 0;
-		case 0x15: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // BNEL; return 0;
-		case 0x16: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLEZL; return 0;
-		case 0x17: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGTZL; return 0;
-		case 0x18: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DADDI; return 0;
-		case 0x19: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DADDIU; return 0;
-		case 0x1A: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LDL; return 0;
-		case 0x1B: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LDR; return 0;
-		case 0x20: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LB; return 0;	// Load Byte
-		case 0x21: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LH; return 0;	// Load Halfword
-		case 0x22: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LWL; return 0;
-		case 0x23: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LW; return 0;	// Load Word
-		case 0x24: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LBU; return 0;	// Load Unsigned Byte
-		case 0x25: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LHU; return 0;	// Load Halfword unsigned
-		case 0x26: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LWR; return 0;
-		case 0x27: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LWU; return 0;	// Load Word unsigned
-		case 0x28: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SB; return 0;	// I
-		case 0x29: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SH; return 0;	// I
-		case 0x2A: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SWL; return 0;
-		case 0x2B: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SW; return 0;	// I
-		case 0x2C: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SDL; return 0;
-		case 0x2D: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SDR; return 0;
-		case 0x2E: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SWR; return 0;
-		case 0x2F: *uiCPUregs |= 0; return 0; // CACHE; return 0;
-		case 0x30: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG_LL; return 0; // LL; return 0;	// Load Linked Word atomic Read-Modify-Write ops
-		case 0x31: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LWC1; return 0;	// Load Word to co processor 1
-		case 0x34: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LLD; return 0;	// Load Linked Dbl Word atomic Read-Modify-Write ops
-		case 0x35: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LDC1; return 0;
-		case 0x37: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // LD; return 0; 	// Load Double word
-		case 0x38: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG_LL; return 0; // SC; return 0;	// Store Linked Word atomic Read-Modify-Write ops
-		case 0x39: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // SWC1; return 0;	// Store Word from co processor 1 to memory
-		case 0x3C: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG_LL; return 0; // SCD; return 0;	// Store Conditional Double Word
-		case 0x3D: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SDC1; return 0;
-		case 0x3F: *uiCPUregs |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SD; return 0; 	// Store Double word
+		case 0x14: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // BEQL; return 0;
+		case 0x15: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // BNEL; return 0;
+		case 0x16: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BLEZL; return 0;
+		case 0x17: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // BGTZL; return 0;
+		case 0x18: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DADDI; return 0;
+		case 0x19: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // DADDIU; return 0;
+		case 0x1A: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LDL; return 0;
+		case 0x1B: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LDR; return 0;
+		case 0x20: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LB; return 0;	// Load Byte
+		case 0x21: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LH; return 0;	// Load Halfword
+		case 0x22: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LWL; return 0;
+		case 0x23: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LW; return 0;	// Load Word
+		case 0x24: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LBU; return 0;	// Load Unsigned Byte
+		case 0x25: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LHU; return 0;	// Load Halfword unsigned
+		case 0x26: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LWR; return 0;
+		case 0x27: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LWU; return 0;	// Load Word unsigned
+		case 0x28: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SB; return 0;	// I
+		case 0x29: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SH; return 0;	// I
+		case 0x2A: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SWL; return 0;
+		case 0x2B: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SW; return 0;	// I
+		case 0x2C: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SDL; return 0;
+		case 0x2D: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SDR; return 0;
+		case 0x2E: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SWR; return 0;
+		case 0x2F: return 0; // CACHE; return 0;
+		case 0x30: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LL; return 0;	// Load Linked Word atomic Read-Modify-Write ops
+		case 0x31: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LWC1; return 0;	// Load Word to co processor 1
+		case 0x34: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LLD; return 0;	// Load Linked Dbl Word atomic Read-Modify-Write ops
+		case 0x35: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LDC1; return 0;
+		case 0x37: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // LD; return 0; 	// Load Double word
+		case 0x38: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG_LL; return 0; // SC; return 0;	// Store Linked Word atomic Read-Modify-Write ops
+		case 0x39: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f); return 0; // SWC1; return 0;	// Store Word from co processor 1 to memory
+		case 0x3C: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f) | MIPS_REG_LL; return 0; // SCD; return 0;	// Store Conditional Double Word
+		case 0x3D: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f);
+					*puiFPUregs_in |= MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SDC1; return 0;
+		case 0x3F: *puiCPUregs_in |= MIPS_REG((uiMIPSword>>21)&0x1f) | MIPS_REG((uiMIPSword>>16)&0x1f); return 0; // SD; return 0; 	// Store Double word
 	}
 
 	return 1;
@@ -766,14 +1062,14 @@ void ops_decode(uint32_t x, uint32_t uiMIPSword)
 	case 0x0C: 	printf(INDEX "\tANDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 	case 0x0D: 	printf(INDEX "\tORI    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 	case 0x0E: 	printf(INDEX "\tXORI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0F: 	printf(INDEX "\tLUI    \t" I_OP "\t Load upper half of word\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x10: 	//printf(INDEX "\tcop0\n",x);
+	case 0x0F: 	printf(INDEX "\tLUI    \t" I_OP "\t// Load upper half of word\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x10: 	// cop0
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
 		{
-		case 0x00: printf(INDEX "\tMFC0 \tr%d, f%d \t// move f%d to r%d\traw 0x%x\n",x, (uiMIPSword>>16), (uiMIPSword>>11), (uiMIPSword>>16), (uiMIPSword>>11), uiMIPSword); return;
-		case 0x04: printf(INDEX "\tMTC0 \tr%d, f%d \t// move r%d to f%d\traw 0x%x\n",x, (uiMIPSword>>16), (uiMIPSword>>11), (uiMIPSword>>16), (uiMIPSword>>11), uiMIPSword); return;
-		case 0x10: printf(INDEX "\ttlb\n",x);
+		case 0x00: printf(INDEX "\tMFC0 \tr%02d, f%02d \t\t// move f%d to r%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x04: printf(INDEX "\tMTC0 \tr%02d, f%02d \t\t// move r%d to f%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x10: // tlb
 			switch(uiMIPSword&0x3f)
 			{
 			case 0x01: printf(INDEX "\tTLBR\n",x); return;
@@ -785,12 +1081,12 @@ void ops_decode(uint32_t x, uint32_t uiMIPSword)
 		}
 		break;
 
-	case 0x11: //printf(INDEX "\tcop1\n",x);
+	case 0x11: // cop1
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
 		{
-		case 0x00: printf(INDEX "\tMFC1 \t r%d, f%d \t// move f%d to r%d\traw 0x%x\n",x, (uiMIPSword>>16), (uiMIPSword>>11), (uiMIPSword>>16), (uiMIPSword>>11), uiMIPSword); return;
-		case 0x01: printf(INDEX "\tDMFC1\t r%d, f%d \t// move r%d to f%d\traw 0x%x\n",x, (uiMIPSword>>16), (uiMIPSword>>11), (uiMIPSword>>16), (uiMIPSword>>11), uiMIPSword); return;
+		case 0x00: printf(INDEX "\tMFC1 \t r%2d, f%2d \t// move f%d to r%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x01: printf(INDEX "\tDMFC1\t r%2d, f%2d \t// move r%d to f%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
 		case 0x02: printf(INDEX "\tCFC1\n",x); return;
 		case 0x04: printf(INDEX "\tMTC1\n",x); return;
 		case 0x05: printf(INDEX "\tDMTC1\n",x); return;
@@ -804,7 +1100,7 @@ void ops_decode(uint32_t x, uint32_t uiMIPSword)
 			case 0x03: printf(INDEX "\tBC1TL\n",x); return;
 			}break;
 
-		case 0x10: //printf(INDEX "\tC1.S\n",x);
+		case 0x10: // C1.S",x);
 			switch(uiMIPSword&0x3f)
 			{
 			case 0x00: printf(INDEX "\tADD.S\n",x); return;

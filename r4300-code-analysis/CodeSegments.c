@@ -50,7 +50,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 	/*
 	 * Generate Code block validity
 	 *
-	 * Scan the file for code blocks and ensure there are no invalid instructions in them.
+	 * Scan memory for code blocks and ensure there are no invalid instructions in them.
 	 *
 	 * */
 	for (x=64/4; x< size/4; x++)
@@ -120,7 +120,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 			nextCodeSeg->MIPScode = &ROM[iStart];
 			nextCodeSeg->MIPScodeLen = x - iStart +1;
 			nextCodeSeg->ARMcodeLen = 0;
-			nextCodeSeg->MIPSnextInstructionIndex = offset;
+			nextCodeSeg->MIPSnextInstructionIndex = &ROM[iStart + offset];
 			nextCodeSeg->blockType = BLOCK_END;
 
 			if (ops_type(ROM[x]) == JR) //only JR can set PC to the Link Register (or other register!)
@@ -155,7 +155,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 			{
 				nextCodeSeg->MIPScode = &ROM[(iStart)];
 				nextCodeSeg->MIPScodeLen = x + offset - iStart;
-				nextCodeSeg->MIPSnextInstructionIndex = &ROM[x + offset];
+				nextCodeSeg->MIPSnextInstructionIndex = 0; // &ROM[x + offset];
 				nextCodeSeg->MIPSReturnRegister = 0;
 
 				nextCodeSeg->ARMcodeLen = 0;
@@ -172,7 +172,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 				nextCodeSeg->MIPScode = &ROM[x + offset];
 				nextCodeSeg->MIPScodeLen = -offset + 1;
-				nextCodeSeg->MIPSnextInstructionIndex = &ROM[x + 1];
+				nextCodeSeg->MIPSnextInstructionIndex = &ROM[x + offset]; //&ROM[x + 1];
 				nextCodeSeg->ARMcodeLen = 0;
 				nextCodeSeg->MIPSReturnRegister = 0;
 				nextCodeSeg->blockType = BLOCK_CONTINUES;
@@ -214,22 +214,25 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 		nextCodeSeg->MIPSRegistersUsed[2] = 0;
 		for (x=0; x < nextCodeSeg->MIPScodeLen; x++)
 		{
-			 ops_regs_used(*(nextCodeSeg->MIPScode + x), &nextCodeSeg->MIPSRegistersUsed[0], &nextCodeSeg->MIPSRegistersUsed[1], &nextCodeSeg->MIPSRegistersUsed[2]);
+			 ops_regs_input(*(nextCodeSeg->MIPScode + x), &nextCodeSeg->MIPSRegistersUsed[0], &nextCodeSeg->MIPSRegistersUsed[1], &nextCodeSeg->MIPSRegistersUsed[2]);
+			 ops_regs_output(*(nextCodeSeg->MIPScode + x), &nextCodeSeg->MIPSRegistersUsed[0], &nextCodeSeg->MIPSRegistersUsed[1], &nextCodeSeg->MIPSRegistersUsed[2]);
+
 		}
 
 		code_seg_t* tempCodeSeg = segmentData.FirstSegment;
 		// build links between segments
 
 		nextCodeSeg->pCodeSegmentTargets[0] = 0;
-
+		uint32_t tgtIndex = 0;
 
 		if (!nextCodeSeg->MIPSReturnRegister)
 		{
+
 			while (tempCodeSeg != NULL)
 			{
 				if (tempCodeSeg->MIPScode == nextCodeSeg->MIPSnextInstructionIndex)
 				{
-					nextCodeSeg->pCodeSegmentTargets[0] = tempCodeSeg;
+					nextCodeSeg->pCodeSegmentTargets[tgtIndex++] = tempCodeSeg;
 					break;
 				}
 				tempCodeSeg = tempCodeSeg->nextCodeSegmentLinkedList;
@@ -243,7 +246,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 				{
 					if (tempCodeSeg->MIPScode == (nextCodeSeg->MIPScode + nextCodeSeg->MIPScodeLen))
 					{
-						nextCodeSeg->pCodeSegmentTargets[1] = tempCodeSeg;
+						nextCodeSeg->pCodeSegmentTargets[tgtIndex++] = tempCodeSeg;
 						break;
 					}
 					tempCodeSeg = tempCodeSeg->nextCodeSegmentLinkedList;

@@ -67,9 +67,9 @@ int main(int argc, char* argv[])
 
 
 #if 0
-	for (x=0x40/4; x< romlength/4; x++ )
+	for (x=0x40/4; x< 172/4; x++ )
 	{
-		ops_decode((x)*4, ROM_buffer[x]);
+		ops_decode((uint32_t)&ROM_buffer[x], ROM_buffer[x]);
 	}
 
 	printf("----------------------------\n");
@@ -77,10 +77,13 @@ int main(int argc, char* argv[])
 
 	//Find all code where we don't know which registers are used
 #if 1
+	printf("Unknown register usage on these instructions:\n");
 	for (x=0x40/4; x< romlength/4; x++ )
 	{
 		uint32_t temp;
-		if (ops_regs_used(ROM_buffer[x],&temp,&temp,&temp) == 2) ops_decode((x)*4, ROM_buffer[x]);
+		if (ops_regs_input(ROM_buffer[x],&temp,&temp,&temp) == 2
+				|| ops_regs_output(ROM_buffer[x],&temp,&temp,&temp) == 2) ops_decode((x)*4, ROM_buffer[x]);
+
 	}
 
 	printf("----------------------------\n");
@@ -89,7 +92,7 @@ int main(int argc, char* argv[])
 
 	segmentData = GenerateCodeSegmentData(ROM_buffer, romlength);
 
-	printf("MIPS Address            Length   Regs-cpu   vfp      sp     used Next       Block type 2=end,3=br\n");
+	printf("MIPS Address            Length   Regs-cpu   fpu      sp     used Next       Block type 2=end,3=br\n");
 
 	code_seg_t* nextCodeSeg = segmentData->FirstSegment;
 	int count =0;
@@ -99,9 +102,9 @@ int main(int argc, char* argv[])
 
 		if (nextCodeSeg->MIPSReturnRegister)
 		{
-			printf("0x%08X 0x%08X %5d      0x%08X %08X %02X    %2d      r%d\n",
-				nextCodeSeg->MIPScode,
-				nextCodeSeg->MIPScode+nextCodeSeg->MIPScodeLen*4,
+			printf("0x%08X 0x%08X %5d      0x%08X %08X %03X     %2d     r%d\n",
+				(uint32_t)nextCodeSeg->MIPScode,
+				(uint32_t)(nextCodeSeg->MIPScode+nextCodeSeg->MIPScodeLen),
 				nextCodeSeg->MIPScodeLen,
 				nextCodeSeg->MIPSRegistersUsed[0],
 				nextCodeSeg->MIPSRegistersUsed[1],
@@ -111,15 +114,15 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			printf("0x%08X 0x%08X %5d      0x%08X %08X %02X    %2d    0x%08X %d\n",
-				nextCodeSeg->MIPScode,
-				nextCodeSeg->MIPScode+nextCodeSeg->MIPScodeLen*4,
+			printf("0x%08X 0x%08X %5d      0x%08X %08X %02X     %2d   0x%08X %d\n",
+				(uint32_t)nextCodeSeg->MIPScode,
+				(uint32_t)(nextCodeSeg->MIPScode+nextCodeSeg->MIPScodeLen),
 				nextCodeSeg->MIPScodeLen,
 				nextCodeSeg->MIPSRegistersUsed[0],
 				nextCodeSeg->MIPSRegistersUsed[1],
 				nextCodeSeg->MIPSRegistersUsed[2],
 				nextCodeSeg->MIPSRegistersUsedCount,
-				nextCodeSeg->MIPSnextInstructionIndex,
+				(uint32_t)nextCodeSeg->MIPSnextInstructionIndex,
 				nextCodeSeg->blockType);
 		}
 

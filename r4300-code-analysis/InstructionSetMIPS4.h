@@ -292,6 +292,9 @@ typedef enum
 #define MIPS_REG_FCR0  0x00000004
 #define MIPS_REG_FCR31 0x00000008
 #define MIPS_REG_LL	   0x00000010
+#define MIPS_REG_PC	   0x00000020
+#define MIPS_REG_CC    0x00000040	// Coprocessor Condition code
+#define MIPS_TRAP      0x00000100
 
 #define MIPS_REG_ALL   0xffffffff
 
@@ -302,8 +305,8 @@ typedef enum
 /*
  * Provides a bit mask for the registers used in an instruction:
  */
-uint32_t ops_regs_used(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFPregs, uint32_t *uiSpecialRegs);
-
+uint32_t ops_regs_input(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFPregs, uint32_t *uiSpecialRegs);
+uint32_t ops_regs_output(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFPregs, uint32_t *uiSpecialRegs);
 /*
  * Converts a raw word into an enumeration type
  */

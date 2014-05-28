@@ -26,7 +26,7 @@ typedef struct _code_seg
 	uint32_t* MIPScode;				// an index to mips code
 	uint32_t MIPScodeLen;			// a length of mips code
 	uint32_t MIPSReturnRegister;		// boolean segments returns;
-	uint32_t MIPSnextInstructionIndex;
+	uint32_t* MIPSnextInstructionIndex;
 
 	uint32_t MIPSRegistersUsed[3];		//The registers read/written by segment
 
