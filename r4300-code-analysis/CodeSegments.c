@@ -59,7 +59,8 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 		
 		for (y = x; y < size/4; y++)
 		{
-			int op = ops_type(ROM[y]);
+			Instruction_e op;
+			op = ops_type(ROM[y]);
 
 			//we are not in valid code
 			if (INVALID == op)

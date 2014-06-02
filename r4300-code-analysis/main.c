@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
 #if 0
 	for (x=0x40/4; x< 172/4; x++ )
 	{
-		ops_decode((uint32_t)&ROM_buffer[x], ROM_buffer[x]);
+		mips_print((uint32_t)&ROM_buffer[x], ROM_buffer[x]);
 	}
 
 	printf("----------------------------\n");
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 	{
 		uint32_t temp;
 		if (ops_regs_input(ROM_buffer[x],&temp,&temp,&temp) == 2
-				|| ops_regs_output(ROM_buffer[x],&temp,&temp,&temp) == 2) ops_decode((x)*4, ROM_buffer[x]);
+				|| ops_regs_output(ROM_buffer[x],&temp,&temp,&temp) == 2) mips_print((x)*4, ROM_buffer[x]);
 
 	}
 

@@ -685,7 +685,7 @@ uint32_t ops_regs_input(uint32_t uiMIPSword, uint32_t *puiCPUregs_in, uint32_t *
 	return 1;
 }
 
-mips_op_t ops_type(uint32_t uiMIPSword)
+Instruction_e ops_type(uint32_t uiMIPSword)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
@@ -957,7 +957,307 @@ mips_op_t ops_type(uint32_t uiMIPSword)
 	return INVALID;
 }
 
-void ops_decode(uint32_t x, uint32_t uiMIPSword)
+uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
+{
+	uint32_t op=uiMIPSword>>26;
+	uint32_t op2;
+
+	switch(op)
+	{
+		case 0x00:
+	        op2=uiMIPSword&0x3f;
+	        switch(op2)
+	        {
+	          case 0x00:
+	        	  ins->instruction = SLL;
+	        	  ins->shiftType = LOGICAL_LEFT;
+	        	  ins->I = 1;
+	        	  ins->shift = (uiMIPSword&0x1f)>>6;
+	        	  ins->Rd = (uiMIPSword&0x1f)>>11;
+	        	  ins->Rt = (uiMIPSword&0x1f)>>16;
+	        	  return 0;
+	          case 0x02:
+	        	  ins->instruction = SRL;
+	        	  ins->shiftType = LOGICAL_RIGHT;
+	        	  ins->I = 1;
+	        	  ins->shift = (uiMIPSword&0x1f)>>6;
+	        	  ins->Rd = (uiMIPSword&0x1f)>>11;
+	        	  ins->Rt = (uiMIPSword&0x1f)>>16;
+	        	  return 0;
+	          case 0x03:
+	        	  ins->instruction = SRA;
+				  ins->shiftType = ARITHMETIC_RIGHT;
+				  ins->I = 1;
+				  ins->shift = (uiMIPSword&0x1f)>>6;
+				  ins->Rd = (uiMIPSword&0x1f)>>11;
+				  ins->Rt = (uiMIPSword&0x1f)>>16;
+				  return 0;
+	          case 0x04:
+	          	  ins->instruction = SLLV;
+	          	  ins->shiftType = LOGICAL_LEFT;
+	          	  ins->I = 0;
+	          	  ins->Rd = (uiMIPSword&0x1f)>>11;
+	          	  ins->Rt = (uiMIPSword&0x1f)>>16;
+	          	  ins->Rs = (uiMIPSword&0x1f)>>21;
+	          return 0;
+	          case 0x07: return SRAV;
+	          case 0x08: return JR;
+	          case 0x09: return JALR;
+	          case 0x0C: return SYSCALL;
+	          case 0x0D: return BREAK;
+	          case 0x0F: return SYNC;
+	          case 0x10: return MFHI;
+	          case 0x11: return MTHI;
+	          case 0x12: return MFLO;
+	          case 0x13: return MTLO;
+	          case 0x14: return DSLLV;
+	          case 0x16: return DSRLV;
+	          case 0x17: return DSRAV;
+	          case 0x18: return MULT;
+	          case 0x19: return MULTU;
+	          case 0x1A: return DIV;
+	          case 0x1B: return DIVU;
+	          case 0x1C: return DMULT;
+	          case 0x1D: return DMULTU;
+	          case 0x1E: return DDIV;
+	          case 0x1F: return DDIVU;
+	          case 0x20: return ADD;
+	          case 0x21: return ADDU;
+	          case 0x22: return SUB;
+	          case 0x23: return SUBU;
+	          case 0x24: return AND;
+	          case 0x25: return OR;
+	          case 0x26: return XOR;
+	          case 0x27: return NOR;
+	          case 0x2A: return SLT;
+	          case 0x2B: return SLTU;
+	          case 0x2C: return DADD;
+	          case 0x2D: return DADDU;
+	          case 0x2E: return DSUB;
+	          case 0x2F: return DSUBU;
+	          case 0x30: return TGE;
+	          case 0x31: return TGEU;
+	          case 0x32: return TLT;
+	          case 0x33: return TLTU;
+	          case 0x34: return TEQ;
+	          case 0x36: return TNE;
+	          case 0x38: return DSLL;
+	          case 0x3A: return DSRL;
+	          case 0x3B: return DSRA;
+	          case 0x3C: return DSLL32;
+	          case 0x3E: return DSRL32;
+	          case 0x3F: return DSRA32;
+	        }
+	        break;
+
+	case 0x01:
+		op2=(uiMIPSword>>16)&0x1f;
+		switch(op2)
+		{
+		case 0x00: 	return BLTZ;	// I
+		case 0x01: 	return BGEZ;	// I
+		case 0x02: 	return BLTZL;
+		case 0x03: 	return BGEZL;
+		case 0x08: 	return TGEI;
+		case 0x09: 	return TGEIU;
+		case 0x0A: 	return TLTI;
+		case 0x0B: 	return TLTIU;
+		case 0x0C: 	return TEQI;
+		case 0x0E: 	return TNEI;
+		case 0x10: 	return BLTZAL;	// I and link
+		case 0x11: 	return BGEZAL;	// I and link
+		case 0x12: 	return BLTZALL;	// I and link likely
+		case 0x13: 	return BGEZALL;	// I and link likely
+		}
+
+		break;
+
+	case 0x02: 	return J;	// J
+	case 0x03: 	return JAL; // J
+	case 0x04: 	return BEQ;	// I
+	case 0x05: 	return BNE;	// I
+	case 0x06: 	return BLEZ;
+	case 0x07: 	return BGTZ;
+	case 0x08: 	return ADDI;	// I
+	case 0x09: 	return ADDIU;	// I
+	case 0x0A: 	return SLTI;	// I
+	case 0x0B: 	return SLTIU;	// I
+	case 0x0C: 	return ANDI; 	// I
+	case 0x0D: 	return ORI;	// I
+	case 0x0E: 	return XORI;	// I
+	case 0x0F: 	return LUI;	// I
+	case 0x10: 	//return cop0\n",x);
+		op2=(uiMIPSword>>21)&0x1f;
+		switch(op2)
+		{
+		case 0x00: return MFC0;
+		case 0x04: return MTC0;
+		case 0x10: //return tlb;
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x01: return TLBR;
+			case 0x02: return TLBWI;
+			case 0x06: return TLBWR;
+			case 0x08: return TLBP;
+			case 0x18: return ERET;
+			}
+		}
+		break;
+
+	case 0x11: //return cop1\n",x);
+		op2=(uiMIPSword>>21)&0x1f;
+		switch(op2)
+		{
+		case 0x00: return MFC1;
+		case 0x01: return DMFC1;
+		case 0x02: return CFC1;
+		case 0x04: return MTC1;
+		case 0x05: return DMTC1;
+		case 0x06: return CTC1;
+		case 0x08: //return BC1;
+			switch((uiMIPSword>>16)&0x3)
+			{
+			case 0x00: return BC1F;
+			case 0x01: return BC1T;
+			case 0x02: return BC1FL;
+			case 0x03: return BC1TL;
+			}break;
+
+		case 0x10: //return C1.S\n",x);
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x00: return ADD_S;
+			case 0x01: return SUB_S;
+			case 0x02: return MUL_S;
+			case 0x03: return DIV_S;
+			case 0x04: return SQRT_S;
+			case 0x05: return ABS_S;
+			case 0x06: return MOV_S;
+			case 0x07: return NEG_S;
+			case 0x08: return ROUND_L_S;
+			case 0x09: return TRUNC_L_S;
+			case 0x0A: return CEIL_L_S;
+			case 0x0B: return FLOOR_L_S;
+			case 0x0C: return ROUND_W_S;
+			case 0x0D: return TRUNC_W_S;
+			case 0x0E: return CEIL_W_S;
+			case 0x0F: return FLOOR_W_S;
+			case 0x21: return CVT_D_S;
+			case 0x24: return CVT_W_S;
+			case 0x25: return CVT_L_S;
+			case 0x30: return C_F_S;
+			case 0x31: return C_UN_S;
+			case 0x32: return C_EQ_S;
+			case 0x33: return C_UEQ_S;
+			case 0x34: return C_OLT_S;
+			case 0x35: return C_ULT_S;
+			case 0x36: return C_OLE_S;
+			case 0x37: return C_ULE_S;
+			case 0x38: return C_SF_S;
+			case 0x39: return C_NGLE_S;
+			case 0x3A: return C_SEQ_S;
+			case 0x3B: return C_NGL_S;
+			case 0x3C: return C_LT_S;
+			case 0x3D: return C_NGE_S;
+			case 0x3E: return C_LE_S;
+			case 0x3F: return C_NGT_S;
+			}break;
+		case 0x11: //return C1_D\n",x);
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x00: return ADD_D;
+			case 0x01: return SUB_D;
+			case 0x02: return MUL_D;
+			case 0x03: return DIV_D;
+			case 0x04: return SQRT_D;
+			case 0x05: return ABS_D;
+			case 0x06: return MOV_D;
+			case 0x07: return NEG_D;
+			case 0x08: return ROUND_L_D;
+			case 0x09: return TRUNC_L_D;
+			case 0x0A: return CEIL_L_D;
+			case 0x0B: return FLOOR_L_D;
+			case 0x0C: return ROUND_W_D;
+			case 0x0D: return TRUNC_W_D;
+			case 0x0E: return CEIL_W_D;
+			case 0x0F: return FLOOR_W_D;
+			case 0x20: return CVT_S_D;
+			case 0x24: return CVT_W_D;
+			case 0x25: return CVT_L_D;
+			case 0x30: return C_F_D;
+			case 0x31: return C_UN_D;
+			case 0x32: return C_EQ_D;
+			case 0x33: return C_UEQ_D;
+			case 0x34: return C_OLT_D;
+			case 0x35: return C_ULT_D;
+			case 0x36: return C_OLE_D;
+			case 0x37: return C_ULE_D;
+			case 0x38: return C_SF_D;
+			case 0x39: return C_NGLE_D;
+			case 0x3A: return C_SEQ_D;
+			case 0x3B: return C_NGL_D;
+			case 0x3C: return C_LT_D;
+			case 0x3D: return C_NGE_D;
+			case 0x3E: return C_LE_D;
+			case 0x3F: return C_NGT_D;
+			} break;
+		case 0x14: //return C1_W\n",x);
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x20: return CVT_S_W;
+			case 0x21: return CVT_D_W;
+			}
+			break;
+
+		case 0x15: //return C1_L\n",x);
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x20: return CVT_S_L;
+			case 0x21: return CVT_D_L;
+			}
+			break;
+		}break;
+
+	case 0x14: return BEQL;
+	case 0x15: return BNEL;
+	case 0x16: return BLEZL;
+	case 0x17: return BGTZL;
+	case 0x18: return DADDI;
+	case 0x19: return DADDIU;
+	case 0x1A: return LDL;
+	case 0x1B: return LDR;
+	case 0x20: return LB;	// Load Byte
+	case 0x21: return LH;	// Load Halfword
+	case 0x22: return LWL;
+	case 0x23: return LW;	// Load Word
+	case 0x24: return LBU;	// Load Unsigned Byte
+	case 0x25: return LHU;	// Load Halfword unsigned
+	case 0x26: return LWR;
+	case 0x27: return LWU;	// Load Word unsigned
+	case 0x28: return SB;	// I
+	case 0x29: return SH;	// I
+	case 0x2A: return SWL;
+	case 0x2B: return SW;	// I
+	case 0x2C: return SDL;
+	case 0x2D: return SDR;
+	case 0x2E: return SWR;
+	case 0x2F: return CACHE;
+	case 0x30: return LL;	// Load Linked Word atomic Read-Modify-Write ops
+	case 0x31: return LWC1;	// Load Word to co processor 1
+	case 0x34: return LLD;	// Load Linked Dbl Word atomic Read-Modify-Write ops
+	case 0x35: return LDC1;
+	case 0x37: return LD; 	// Load Double word
+	case 0x38: return SC;	// Store Linked Word atomic Read-Modify-Write ops
+	case 0x39: return SWC1;	// Store Word from co processor 1 to memory
+	case 0x3C: return SCD;	// Store Conditional Double Word
+	case 0x3D: return SDC1;
+	case 0x3F: return SD; 	// Store Double word
+	}
+
+	return 1;
+}
+
+void mips_print(uint32_t x, uint32_t uiMIPSword)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;

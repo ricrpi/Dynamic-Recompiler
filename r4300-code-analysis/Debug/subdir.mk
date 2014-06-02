@@ -8,8 +8,7 @@ C_SRCS += \
 ../Debugger.c \
 ../InstructionSetARM6hf.c \
 ../InstructionSetMIPS4.c \
-../OptimizeARM6hf.c \
-../OptimizeMIPS4.c \
+../Optimize.c \
 ../main.c \
 ../rom.c 
 
@@ -18,8 +17,7 @@ OBJS += \
 ./Debugger.o \
 ./InstructionSetARM6hf.o \
 ./InstructionSetMIPS4.o \
-./OptimizeARM6hf.o \
-./OptimizeMIPS4.o \
+./Optimize.o \
 ./main.o \
 ./rom.o 
 
@@ -28,8 +26,7 @@ C_DEPS += \
 ./Debugger.d \
 ./InstructionSetARM6hf.d \
 ./InstructionSetMIPS4.d \
-./OptimizeARM6hf.d \
-./OptimizeMIPS4.d \
+./Optimize.d \
 ./main.d \
 ./rom.d 
 

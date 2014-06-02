@@ -10,6 +10,6 @@
 
 #include "CodeSegments.h"
 
-void EncodeSegment(code_seg_t CodeSegment);
+void arm_encode(code_seg_t CodeSegment);
 
 #endif /* ARMENCODE_H_ */
