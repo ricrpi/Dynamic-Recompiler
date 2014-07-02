@@ -6,54 +6,65 @@
 #include "CodeSegments.h"
 #include "Debugger.h"
 #include "InstructionSetMIPS4.h"
+#include "Optimize.h"
+
+#define LINE_LEN 400
+//#define HISTORY_LEN 5
 
 
 static char userInput[20][20];
+//static char cmdHistory[HISTORY_LEN][LINE_LEN];
 
-static code_seg_t* CurrentCodeSeg;
+static code_seg_t* CurrentCodeSeg = NULL;
 
 void getCmd() {
 
-	unsigned char line[400];
-    int c,d;
-    int argN = 0;
-
-    for(c=0;c<sizeof(userInput[argN])-1;c++) {
-        line[c] = fgetc(stdin);
-
-        // TODO strip arrow key input
-
-        if (line[c] == '\n' || line[c] == '\0')
-        {
-            	line[c+1] = '\0';
-            	break;
-        }
-        else if (line[c] == 128 && c > 0)
-        {
-        	c--;
-        }
-    }
-    c=d=0;
-
-    while (line[c] != '\0')
-    {
-    	if (line[c] == ' ')
-    	{
-    		userInput[argN][d] = '\0';
-    		argN++;
-    		d = 0;
-    	}
-    	else
-    	{
-    		userInput[argN][d++] = line[c];
-    	}
-
-    	c++;
-    }
+	unsigned char line[LINE_LEN];
+	int c,d;
+	int argN = 0;
 
 
+	for(c=0;c<sizeof(userInput[argN])-1;c++) {
+		line[c] = fgetc(stdin);
 
-    return;
+		// TODO strip arrow key input for terminals, eclipse strips this already
+
+		if (line[c] == '\n' || line[c] == '\0')
+		{
+			line[c+1] = '\0';
+			break;
+		}
+		else if (line[c] == 128 && c > 0)
+		{
+			c--;
+		}
+	}
+	c=d=0;
+
+	//pushback history
+//	memmove(&cmdHistory[0], &cmdHistory[1], (HISTORY_LEN - 1) * LINE_LEN);
+//	memcpy(cmdHistory, line, LINE_LEN);
+
+	//clear user input so it doesn't corrupt
+	memset(userInput,0,sizeof(userInput));
+
+	while (line[c] != '\0')
+	{
+		if (line[c] == ' ')
+		{
+			userInput[argN][d] = '\0';
+			argN++;
+			d = 0;
+		}
+		else
+		{
+			userInput[argN][d++] = line[c];
+		}
+
+		c++;
+	}
+
+	return;
 }
 
 static void printLine()
@@ -71,21 +82,21 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* segmentData, uint
 		if (CurrentCodeSeg->pCodeSegmentTargets[1] != NULL)
 		{
 			printf("Seg  0x%08x  \t0x%08x\tblock type: %d\n"
-				"next segments:\n"
-				" (1) 0x%08x  \t0x%08x\n"
-				" (2) 0x%08x  \t0x%08x\n"
-				, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->blockType
-				, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0]->MIPScode
-				, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[1], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[1]->MIPScode);
+					"next segments:\n"
+					" (1) 0x%08x  \t0x%08x\n"
+					" (2) 0x%08x  \t0x%08x\n"
+					, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->blockType
+					, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0]->MIPScode
+					, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[1], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[1]->MIPScode);
 		}
 		else
 		{
 			printf("Seg  0x%08x  \t0x%08x\tblock type: %d\n"
-							"next segments:\n"
-							" (1) 0x%08x  \t0x%08x\n"
+					"next segments:\n"
+					" (1) 0x%08x  \t0x%08x\n"
 
-							, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->blockType
-							, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0]->MIPScode);
+					, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->blockType
+					, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0]->MIPScode);
 		}
 	}
 	else
@@ -93,7 +104,7 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* segmentData, uint
 		printf("Seg  0x%08x  \t0x%08x\tblock type: %d\nnext segments:\n"
 				, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->blockType);
 
-		code_seg_t*  tempCodeSeg=segmentData->FirstSegment;
+		code_seg_t*  tempCodeSeg=segmentData->StaticSegments;
 		x=1;
 		while (tempCodeSeg !=NULL)
 		{
@@ -146,11 +157,11 @@ static int Debugger_print(const code_segment_data_t* segmentData)
 				"0x%08X %08X %02X (%d)\n"
 				, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen, CurrentCodeSeg->MIPSReturnRegister
 				, CurrentCodeSeg->MIPSRegistersUsed[0], CurrentCodeSeg->MIPSRegistersUsed[1], CurrentCodeSeg->MIPSRegistersUsed[2]
-				, CurrentCodeSeg->MIPSRegistersUsedCount);
+				                                                                                                                , CurrentCodeSeg->MIPSRegistersUsedCount);
 	}
-	else if (!strncmp(userInput[1], "gen", 1))
+	else if (!strncmp(userInput[1], "intermediate", 1))
 	{
-
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!strncmp(userInput[1], "reg", 1))
 	{
@@ -167,110 +178,110 @@ static int Debugger_print(const code_segment_data_t* segmentData)
 			{
 			case DSRLV:
 			case DSRAV:
-			//	    MULT:
-			//	    MULTU:
-			//	    DIV:
-			//	    DIVU:
+				//	    MULT:
+				//	    MULTU:
+				//	    DIV:
+				//	    DIVU:
 			case	    DMULT:
 			case	    DMULTU:
 			case	    DDIV:
 			case	    DDIVU:
-			//	    ADD:
-			//	    ADDU:
-			//	    SUB:
-			//	    SUBU:
-			//	    AND:
-			//	    OR:
-			//	    XOR:
-			//	    NOR:
-			//	    SLT:
-			//	    SLTU:
+				//	    ADD:
+				//	    ADDU:
+				//	    SUB:
+				//	    SUBU:
+				//	    AND:
+				//	    OR:
+				//	    XOR:
+				//	    NOR:
+				//	    SLT:
+				//	    SLTU:
 			case	    DADD:
 			case	    DADDU:
 			case	    DSUB:
 			case	    DSUBU:
-			//	    TGE:
-			//	    TGEU:
-			//	    TLT:
-			//	    TLTU:
-			//	    TEQ:
-			//	    TNE:
+				//	    TGE:
+				//	    TGEU:
+				//	    TLT:
+				//	    TLTU:
+				//	    TEQ:
+				//	    TNE:
 			case	    DSLL:
 			case	    DSRL:
 			case	    DSRA:
 			case	    DSLL32:
 			case	    DSRL32:
 			case	    DSRA32:
-			//		INVALID:
-			//		TGEI:
-			//		TGEIU:
-			//		TLTI:
-			//		TLTIU:
-			//		TEQI:
-			//		TNEI:
-			//		ADDI:
-			//		ADDIU:
-			//		SLTI:
-			//		SLTIU:
-			//		ANDI:
-			//		ORI:
-			//		XORI:
-			//		LUI:
-			//		cop0:
-			//		MFC0:
-			//		MTC0:
-			//		tlb:
-			//		TLBR:
-			//		TLBWI:
-			//		TLBWR:
-			//		TLBP:
-			//		ERET:
-			//		MFC1:
+				//		INVALID:
+				//		TGEI:
+				//		TGEIU:
+				//		TLTI:
+				//		TLTIU:
+				//		TEQI:
+				//		TNEI:
+				//		ADDI:
+				//		ADDIU:
+				//		SLTI:
+				//		SLTIU:
+				//		ANDI:
+				//		ORI:
+				//		XORI:
+				//		LUI:
+				//		cop0:
+				//		MFC0:
+				//		MTC0:
+				//		tlb:
+				//		TLBR:
+				//		TLBWI:
+				//		TLBWR:
+				//		TLBP:
+				//		ERET:
+				//		MFC1:
 			case		DMFC1:
-			//		CFC1:
-			//		MTC1:
+				//		CFC1:
+				//		MTC1:
 			case		DMTC1:
-			//		CTC1:
-			//		BC1:
-			//		BC1F:
-			//		BC1T:
-			//		BC1FL:
-			//		BC1TL:
-			//		ADD_S:
-			//		SUB_S:
-			//		MUL_S:
-			//		DIV_S:
-			//		SQRT_S:
-			//		ABS_S:
-			//		MOV_S:
-			//		NEG_S:
-			//		ROUND_L_S:
-			//		TRUNC_L_S:
-			//		CEIL_L_S:
-			//		FLOOR_L_S:
-			//		ROUND_W_S:
-			//		TRUNC_W_S:
-			//		CEIL_W_S:
-			//		FLOOR_W_S:
+				//		CTC1:
+				//		BC1:
+				//		BC1F:
+				//		BC1T:
+				//		BC1FL:
+				//		BC1TL:
+				//		ADD_S:
+				//		SUB_S:
+				//		MUL_S:
+				//		DIV_S:
+				//		SQRT_S:
+				//		ABS_S:
+				//		MOV_S:
+				//		NEG_S:
+				//		ROUND_L_S:
+				//		TRUNC_L_S:
+				//		CEIL_L_S:
+				//		FLOOR_L_S:
+				//		ROUND_W_S:
+				//		TRUNC_W_S:
+				//		CEIL_W_S:
+				//		FLOOR_W_S:
 
-			//		CVT_W_S:
-			//		CVT_L_S:
-			//		C_F_S:
-			//		C_UN_S:
-			//		C_EQ_S:
-			//		C_UEQ_S:
-			//		C_OLT_S:
-			//		C_ULT_S:
-			//		C_OLE_S:
-			//		C_ULE_S:
-			//		C_SF_S:
-			//		C_NGLE_S:
-			//		C_SEQ_S:
-			//		C_NGL_S:
-			//		C_LT_S:
-			//		C_NGE_S:
-			//		C_LE_S:
-			//		C_NGT_S:
+				//		CVT_W_S:
+				//		CVT_L_S:
+				//		C_F_S:
+				//		C_UN_S:
+				//		C_EQ_S:
+				//		C_UEQ_S:
+				//		C_OLT_S:
+				//		C_ULT_S:
+				//		C_OLE_S:
+				//		C_ULE_S:
+				//		C_SF_S:
+				//		C_NGLE_S:
+				//		C_SEQ_S:
+				//		C_NGL_S:
+				//		C_LT_S:
+				//		C_NGE_S:
+				//		C_LE_S:
+				//		C_NGT_S:
 			case		ADD_D:
 			case		SUB_D:
 			case		MUL_D:
@@ -301,27 +312,27 @@ static int Debugger_print(const code_segment_data_t* segmentData)
 			case		C_NGE_D:
 			case		C_LE_D:
 			case		C_NGT_D:
-			//		CVT_S_W:
+				//		CVT_S_W:
 			case		CVT_D_L:
 			case		DADDI:
 			case		DADDIU:
-			//		CACHE:
-			//		LL:
-			//		LWC1:
+				//		CACHE:
+				//		LL:
+				//		LWC1:
 			case		LLD:
 			case		LDC1:
 			case		LD:
-			//		SC:
-			//		SWC1:
+				//		SC:
+				//		SWC1:
 			case		SCD:
 			case		SDC1:
 			case		SD:
 
-			//		SWL:
-			//		SW:
+				//		SWL:
+				//		SW:
 			case		SDL:
 			case		SDR:
-			//		SWR:
+				//		SWR:
 
 			case		LDL:	//only 32 bits are loaded but implies register is 64 bit
 			case		LDR:
@@ -408,9 +419,16 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 
 	val = strtoul(userInput[1], &tailPointer, 0);
 
-	if (!strncmp(userInput[1], "", 1))
+	if (!strlen(userInput[1]))
 	{
-		printf("First Segment at 0x%x, number of segments %d\n", (uint32_t)segmentData->FirstSegment, segmentData->count);
+		printf("First Segment at 0x%x, number of segments %d\n", (uint32_t)segmentData->StaticSegments, segmentData->count);
+
+		printf("Current Segment 0x%x\n"
+				"\tMIPS            ARM\n"
+				"\t0x%08X %u\t0x%08X %u\n\n",
+				(uint32_t)CurrentCodeSeg,
+				(uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen,
+				(uint32_t)CurrentCodeSeg->ARMcode, CurrentCodeSeg->ARMcodeLen);
 
 		Debugger_seg_returnAddr(segmentData, val, CurrentCodeSeg);
 
@@ -422,7 +440,7 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 		int ok = 0;
 		if (0 == val)
 		{
-			CurrentCodeSeg = segmentData->FirstSegment;
+			CurrentCodeSeg = segmentData->StaticSegments;
 		}
 		else if (1 == val)
 		{
@@ -436,7 +454,7 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 		}
 		else
 		{
-			tempCodeSeg=segmentData->FirstSegment;
+			tempCodeSeg=segmentData->StaticSegments;
 
 			while (tempCodeSeg != NULL)
 			{
@@ -455,7 +473,7 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 	}
 	else
 	{
-		tempCodeSeg = segmentData->FirstSegment;
+		tempCodeSeg = segmentData->StaticSegments;
 		x=1;
 		while (tempCodeSeg != NULL)
 		{
@@ -493,42 +511,80 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 
 }
 
+static int Debugger_opt(const code_segment_data_t* segmentData)
+{
+	if (!strlen(userInput[1]))
+	{
+		Optimize(CurrentCodeSeg);
+
+	}
+	else if (!strncasecmp(userInput[1], "DelaySlot", 1))
+	{
+		Optimize_DelaySlot(CurrentCodeSeg);
+	}
+	else if (!strncasecmp(userInput[1], "CountRegister", 1))
+	{
+		Optimize_CountRegister(CurrentCodeSeg);
+	}
+	else if (!strncasecmp(userInput[1], "32BitRegisters", 1))
+	{
+		Optimize_32BitRegisters(CurrentCodeSeg);
+	}
+	else if (!strncasecmp(userInput[1], "ReduceRegistersUsed", 1))
+	{
+		Optimize_ReduceRegistersUsed(CurrentCodeSeg);
+	}
+	else if (!strncasecmp(userInput[1], "loadStoreWriteBack", 1))
+	{
+		Optimize_LoadStoreWriteBack(CurrentCodeSeg);
+	}
+	else if (!strncasecmp(userInput[1], "init", 1))
+	{
+		Optimize_init(CurrentCodeSeg);
+	}
+	else if (!strncasecmp(userInput[1], "full", 1))
+	{
+		Optimize(CurrentCodeSeg);
+	}
+	else
+	{
+		printf(HELP_OPT);
+	}
+
+	return 0;
+}
 
 void Debugger_start(code_segment_data_t* segmentData)
 {
-	uint32_t quit = 0;
 
 	//find segment
-	CurrentCodeSeg = segmentData->FirstSegment;
+	if (!CurrentCodeSeg) CurrentCodeSeg = segmentData->StaticSegments;
 
-	while (!quit)
+	printf("> "); fflush(stdin);
+	getCmd();
+
+	if (!strncmp(userInput[0], "quit", 1))
 	{
-		printf("> "); fflush(stdin);
-		getCmd();
-
-		if (!strncmp(userInput[0], "quit", 4))
-		{
-			quit = 1;
-		}
-		else if (!strncmp(userInput[0], "print", 1))
-		{
-			Debugger_print(segmentData);
-		}
-		else if (!strncmp(userInput[0], "seg", 1))
-		{
-			Debugger_seg(segmentData);
-		}
-		else if (!strncmp(userInput[0], "help", 1))
-		{
-			printf(HELP_GEN);
-		}
-		else
-		{
-			printf("unknown command: %s", userInput[0]);
-		}
-
-
-
+		exit(0);
 	}
-
+	else if (!strncmp(userInput[0], "print", 1))
+	{
+		Debugger_print(segmentData);
+	}
+	else if (!strncmp(userInput[0], "segment", 1))
+	{
+		Debugger_seg(segmentData);
+	}
+	else if (!strncmp(userInput[0], "opt", 1))
+	{
+		Debugger_opt(segmentData);
+	}
+	else if (!strncmp(userInput[0], "help", 1))
+	{
+		printf(HELP_GEN);
+	}
+	else
+	{
+		printf("unknown command: %s", userInput[0]);
+	}
 }

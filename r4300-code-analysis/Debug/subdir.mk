@@ -6,6 +6,7 @@
 C_SRCS += \
 ../CodeSegments.c \
 ../Debugger.c \
+../InstructionSet.c \
 ../InstructionSetARM6hf.c \
 ../InstructionSetMIPS4.c \
 ../Optimize.c \
@@ -15,6 +16,7 @@ C_SRCS += \
 OBJS += \
 ./CodeSegments.o \
 ./Debugger.o \
+./InstructionSet.o \
 ./InstructionSetARM6hf.o \
 ./InstructionSetMIPS4.o \
 ./Optimize.o \
@@ -24,6 +26,7 @@ OBJS += \
 C_DEPS += \
 ./CodeSegments.d \
 ./Debugger.d \
+./InstructionSet.d \
 ./InstructionSetARM6hf.d \
 ./InstructionSetMIPS4.d \
 ./Optimize.d \
@@ -35,7 +38,7 @@ C_DEPS += \
 %.o: ../%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -I"/home/rjhender/git/R4300-code-analysis/r4300-code-analysis" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

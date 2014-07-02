@@ -9,7 +9,9 @@
 #define CODESEGMENTS_H_
 
 #include <stdint.h>
+#include "InstructionSet.h"
 
+//-------------------------------------------------------------------
 
 typedef enum
 {
@@ -35,6 +37,9 @@ typedef struct _code_seg
 	uint32_t* ARMcode;				// a pointer to arm code
 	uint32_t ARMcodeLen;			// a length to arm code
 
+	Instruction_t* Intermcode;		// a pointer to Intermediate code
+	//uint32_t IntermcodeLen;			// length to Intermediate code
+
 	struct _code_seg* pCodeSegmentTargets[2];	// the code segment(s) we may branch to. will need relinking after DMA moves
 
 	//uint32_t callers;			// array of code segments that may call this segment
@@ -45,8 +50,26 @@ typedef struct _code_seg
 typedef struct _code_segment_data
 {
 	uint32_t count;
-	code_seg_t* FirstSegment;
+	code_seg_t* StaticSegments;		// code run directly in ROM
+	code_seg_t* DynamicSegments;	// code running in RDRAM (copied or DMA'd from ROM)
 } code_segment_data_t;
+
+//-------------------------------------------------------------------
+
+/*
+ * Function to create a newSegment
+ */
+code_seg_t* newSegment();
+
+/*
+ * Function to destroy a codeSegment
+ */
+uint32_t delSegment(code_seg_t* codeSegment);
+
+/*
+ * Function to walk the Intermediate Instruction' LinkedList and free it.
+ */
+void freeIntermediateInstructions(code_seg_t* codeSegment);
 
 code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size);
 

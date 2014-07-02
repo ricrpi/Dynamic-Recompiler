@@ -7,13 +7,17 @@
 
 #include "CodeSegments.h"
 #include "InstructionSetMIPS4.h"
+#include "InstructionSet.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+//-------------------------------------------------------------------
+
 static code_segment_data_t segmentData;
 static uint8_t* CodeSegBounds;
 
+//-------------------------------------------------------------------
 
 static uint32_t CountRegisers(uint32_t *bitfields)
 {
@@ -30,6 +34,47 @@ static uint32_t CountRegisers(uint32_t *bitfields)
 	return c;
 }
 
+//-------------------------------------------------------------------
+
+code_seg_t* newSegment()
+{
+	code_seg_t* newSeg = malloc(sizeof(code_seg_t));
+
+	memset(newSeg, 0,sizeof(code_seg_t));
+
+	return newSeg;
+}
+
+uint32_t delSegment(code_seg_t* codeSegment)
+{
+	uint32_t ret = 0;
+
+	freeIntermediateInstructions(codeSegment);
+	free(codeSegment);
+
+	return ret;
+}
+
+void freeIntermediateInstructions(code_seg_t* codeSegment)
+{
+	Instruction_t *prevInstruction;
+	Instruction_t *nextInstruction;
+
+	//remove any existing Intermediate code
+	if (codeSegment->Intermcode)
+	{
+		prevInstruction = codeSegment->Intermcode;
+
+		while (prevInstruction)
+		{
+			nextInstruction = prevInstruction->nextInstruction;
+			free(prevInstruction);
+			prevInstruction = nextInstruction;
+		}
+	}
+	codeSegment->Intermcode = NULL;
+}
+
 code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 {
 	int x,y;
@@ -42,7 +87,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 	code_seg_t* prevCodeSeg = NULL;
 	code_seg_t* nextCodeSeg;
 
-	segmentData.FirstSegment = NULL;
+	segmentData.StaticSegments = NULL;
 
 	CodeSegBounds = malloc(size/4);
 	memset(CodeSegBounds, BLOCK_INVALID, size/4);
@@ -115,8 +160,8 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 		{
 			int32_t offset =  ops_JumpAddressOffset(ROM[x]);
 
-			nextCodeSeg = malloc(sizeof(code_seg_t));
-			if (!segmentCount) segmentData.FirstSegment = nextCodeSeg;
+			nextCodeSeg = newSegment();
+			if (!segmentCount) segmentData.StaticSegments = nextCodeSeg;
 
 			nextCodeSeg->MIPScode = &ROM[iStart];
 			nextCodeSeg->MIPScodeLen = x - iStart +1;
@@ -148,8 +193,8 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 			int32_t offset =  ops_JumpAddressOffset(ROM[x]);
 
-			nextCodeSeg = malloc(sizeof(code_seg_t));
-			if (!segmentCount) segmentData.FirstSegment = nextCodeSeg;
+			nextCodeSeg = newSegment();
+			if (!segmentCount) segmentData.StaticSegments = nextCodeSeg;
 
 			//is this a loop currently in a segment?
 			if (offset < 0 && (x + offset > iStart) )
@@ -169,7 +214,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 				segmentCount++;
 
-				nextCodeSeg = malloc(sizeof(code_seg_t));
+				nextCodeSeg = newSegment();
 
 				nextCodeSeg->MIPScode = &ROM[x + offset];
 				nextCodeSeg->MIPScodeLen = -offset + 1;
@@ -207,7 +252,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 	/*
 	 * Generate the register usage for the MIPS code.
 	 */
-	nextCodeSeg = segmentData.FirstSegment;
+	nextCodeSeg = segmentData.StaticSegments;
 	while (nextCodeSeg != NULL)
 	{
 		nextCodeSeg->MIPSRegistersUsed[0] = 0;
@@ -220,7 +265,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 		}
 
-		code_seg_t* tempCodeSeg = segmentData.FirstSegment;
+		code_seg_t* tempCodeSeg = segmentData.StaticSegments;
 		// build links between segments
 
 		nextCodeSeg->pCodeSegmentTargets[0] = 0;
@@ -241,7 +286,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 			if (nextCodeSeg->blockType == BLOCK_CONTINUES)
 			{
-				tempCodeSeg = segmentData.FirstSegment;
+				tempCodeSeg = segmentData.StaticSegments;
 
 				while (tempCodeSeg != NULL)
 				{

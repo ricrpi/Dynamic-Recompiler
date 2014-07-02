@@ -17,4 +17,9 @@
 				((mot & 0xFF000000) >> 24) \
 		)
 
+
+#define FUNC_GEN_INTERRUPT 		676
+#define FUNC_SEG_BRANCH_UNKNOWN 680
+
+
 #endif /* MEMORY_H_ */

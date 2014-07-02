@@ -11,7 +11,6 @@
 #include <stdint.h>
 #include "InstructionSet.h"
 
-
 #define MIPS_REG_0     0x00000001
 #define MIPS_REG_1     0x00000002
 #define MIPS_REG_2     0x00000004

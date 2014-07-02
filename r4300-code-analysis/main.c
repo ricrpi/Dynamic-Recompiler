@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 
 	printf("MIPS Address            Length   Regs-cpu   fpu      sp     used Next       Block type 2=end,3=br\n");
 
-	code_seg_t* nextCodeSeg = segmentData->FirstSegment;
+	code_seg_t* nextCodeSeg = segmentData->StaticSegments;
 	int count =0;
 	while (nextCodeSeg != NULL && count < 200)
 	{
@@ -135,8 +135,10 @@ int main(int argc, char* argv[])
 
 	printf("\nFinished processing ROM\n");
 
-	Debugger_start(segmentData);
-
+	while (1)
+	{
+		Debugger_start(segmentData);
+	}
 
 	free(ROM_buffer);
 
