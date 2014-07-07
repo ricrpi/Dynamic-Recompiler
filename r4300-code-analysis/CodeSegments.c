@@ -89,8 +89,8 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 	segmentData.StaticSegments = NULL;
 
-	CodeSegBounds = malloc(size/4);
-	memset(CodeSegBounds, BLOCK_INVALID, size/4);
+	CodeSegBounds = malloc(size/sizeof(*CodeSegBounds));
+	memset(CodeSegBounds, BLOCK_INVALID, size/sizeof(*CodeSegBounds));
 	
 	/*
 	 * Generate Code block validity
@@ -123,7 +123,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 				|| ((op & OPS_BRANCH) == OPS_BRANCH)	//MIPS does not have an unconditional branch
 				)
 			{
-				CodeSegBounds[y] = BLOCK_CONTINUES;
+				CodeSegBounds[y] = BLOCK_BRANCH_CONT;
 				//if (x < 400) printf("Segment at 0x%08X to 0x%08X (%d) b\n", (x)*4, y*4, x-6);
 				break;
 			}
@@ -144,7 +144,6 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 	 * If this happens then the segment needs to be split.
 	 * */
 	iStart = 64/4;
-
 	for (x=64/4; x< size/4; x++)
 	{
 		//if in invalid block then continue scanning
@@ -153,7 +152,14 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 			continue;
 		}
 
-		if (CodeSegBounds[x] == BLOCK_PART)	continue;
+		if (CodeSegBounds[x] == BLOCK_PART)
+		{
+			if (CodeSegBounds[x-1] == BLOCK_INVALID) CodeSegBounds[x] = BLOCK_START;
+			else if (CodeSegBounds[x-1] == BLOCK_END) CodeSegBounds[x] = BLOCK_START;
+			else if (CodeSegBounds[x-1] == BLOCK_BRANCH_CONT) CodeSegBounds[x] = BLOCK_START_CONT;
+			else if (CodeSegBounds[x-1] == BLOCK_LOOPS) CodeSegBounds[x] = BLOCK_START_CONT;
+			continue;
+		}
 
 		//we have reached the end of the segment
 		if (CodeSegBounds[x] == BLOCK_END)
@@ -187,7 +193,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 		}
 
 		//check to see if instruction is a branch and if it stays local, to segment
-		else if (CodeSegBounds[x] == BLOCK_CONTINUES)
+		else if (CodeSegBounds[x] == BLOCK_BRANCH_CONT)
 		{
 			//nextSegment = findNextSegment(x, size);
 
@@ -201,12 +207,9 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 			{
 				nextCodeSeg->MIPScode = &ROM[(iStart)];
 				nextCodeSeg->MIPScodeLen = x + offset - iStart;
-				nextCodeSeg->MIPSnextInstructionIndex = 0; // &ROM[x + offset];
-				nextCodeSeg->MIPSReturnRegister = 0;
 
-				nextCodeSeg->ARMcodeLen = 0;
 				nextCodeSeg->blockType = BLOCK_CONTINUES;
-
+				CodeSegBounds[x + offset] = BLOCK_CONTINUES;
 
 				nextCodeSeg->nextCodeSegmentLinkedList = NULL;
 				if (prevCodeSeg) prevCodeSeg->nextCodeSegmentLinkedList = nextCodeSeg;
@@ -219,9 +222,9 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 				nextCodeSeg->MIPScode = &ROM[x + offset];
 				nextCodeSeg->MIPScodeLen = -offset + 1;
 				nextCodeSeg->MIPSnextInstructionIndex = &ROM[x + offset]; //&ROM[x + 1];
-				nextCodeSeg->ARMcodeLen = 0;
-				nextCodeSeg->MIPSReturnRegister = 0;
-				nextCodeSeg->blockType = BLOCK_CONTINUES;
+
+				nextCodeSeg->blockType = BLOCK_LOOPS;
+				CodeSegBounds[x] = BLOCK_LOOPS;
 			}
 
 			else //must branch to another segment
@@ -232,7 +235,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 				nextCodeSeg->ARMcodeLen = 0;
 				nextCodeSeg->MIPSReturnRegister = 0;
 
-				nextCodeSeg->blockType = BLOCK_CONTINUES;
+				nextCodeSeg->blockType = BLOCK_BRANCH_CONT;
 			}
 
 			nextCodeSeg->nextCodeSegmentLinkedList = NULL;
@@ -250,7 +253,7 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 
 
 	/*
-	 * Generate the register usage for the MIPS code.
+	 * Generate Segment Linkage
 	 */
 	nextCodeSeg = segmentData.StaticSegments;
 	while (nextCodeSeg != NULL)
@@ -284,7 +287,8 @@ code_segment_data_t* GenerateCodeSegmentData(uint32_t* ROM, uint32_t size)
 				tempCodeSeg = tempCodeSeg->nextCodeSegmentLinkedList;
 			}
 
-			if (nextCodeSeg->blockType == BLOCK_CONTINUES)
+			if (nextCodeSeg->blockType == BLOCK_CONTINUES
+					|| nextCodeSeg->blockType == BLOCK_BRANCH_CONT)
 			{
 				tempCodeSeg = segmentData.StaticSegments;
 

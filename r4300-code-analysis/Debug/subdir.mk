@@ -9,7 +9,7 @@ C_SRCS += \
 ../InstructionSet.c \
 ../InstructionSetARM6hf.c \
 ../InstructionSetMIPS4.c \
-../Optimize.c \
+../Translate.c \
 ../main.c \
 ../rom.c 
 
@@ -19,7 +19,7 @@ OBJS += \
 ./InstructionSet.o \
 ./InstructionSetARM6hf.o \
 ./InstructionSetMIPS4.o \
-./Optimize.o \
+./Translate.o \
 ./main.o \
 ./rom.o 
 
@@ -29,7 +29,7 @@ C_DEPS += \
 ./InstructionSet.d \
 ./InstructionSetARM6hf.d \
 ./InstructionSetMIPS4.d \
-./Optimize.d \
+./Translate.d \
 ./main.d \
 ./rom.d 
 

@@ -85,7 +85,7 @@ static void sprintInstr(char* str, Instruction_t*ins)
 
 //------------------------------------------------------------------
 
-Instruction_t* newInstr()
+Instruction_t* newEmptyInstr()
 {
 	Instruction_t* newInstr;
 
@@ -117,6 +117,51 @@ Instruction_t* newInstr()
 	newInstr->S=0;			// Set condition flags
 	newInstr->U=1;			// Up/Down, set for inc, clear for decrement
 	newInstr->W=0;			// Writeback bit set to write to base register
+
+	return newInstr;
+
+}
+
+Instruction_t* newInstr(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1, reg_t R2, int32_t imm)
+{
+	Instruction_t* newInstr = newEmptyInstr(0);
+
+	newInstr->instruction = ins;
+	newInstr->cond = cond;
+	newInstr->immediate = imm;
+	newInstr->Rd1 = Rd1;
+	newInstr->R1 = R1;
+	newInstr->R2 = R2;
+
+	return newInstr;
+
+}
+
+Instruction_t* newInstrPUSH(Condition_e cond, uint32_t Rmask)
+{
+	Instruction_t* newInstr = newEmptyInstr(0);
+
+	newInstr->instruction = ARM_STM;
+	newInstr->cond = cond;
+	newInstr->R1 = REG_HOST_SP;
+	newInstr->W = 1;
+	newInstr->PR = 1;
+	newInstr->U = 0;
+
+	return newInstr;
+
+}
+
+Instruction_t* newInstrPOP(Condition_e cond, uint32_t Rmask)
+{
+	Instruction_t* newInstr = newEmptyInstr(0);
+
+	newInstr->instruction = ARM_LDM;
+	newInstr->cond = cond;
+	newInstr->R1 = REG_HOST_SP;
+	newInstr->W = 1;
+	newInstr->PR = 0;
+	newInstr->U = 1;
 
 	return newInstr;
 

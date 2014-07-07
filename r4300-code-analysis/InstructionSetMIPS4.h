@@ -59,12 +59,11 @@
 
 #define MIPS_REG(x)		((uint32_t)(1<<(x)))
 
-//TODO check if there are any other registers to add
-
 /*
  * Provides a bit mask for the registers used in an instruction:
  */
 uint32_t ops_regs_input(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFPregs, uint32_t *uiSpecialRegs);
+
 uint32_t ops_regs_output(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFPregs, uint32_t *uiSpecialRegs);
 /*
  * Converts a raw word into an enumeration type

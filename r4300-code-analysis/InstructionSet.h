@@ -22,20 +22,25 @@
 
 #define STRIP(x) (x & 0xfff)
 
-
+//Offsets into General Purpose Register space
 #define FP_REG_OFFSET	64
 #define C0_REG_OFFSET	128
 
+//These are the HOST registers. Translation MUST not change them
 #define REG_HOST_FP	 (0x400a)
 #define REG_HOST_SP	 (0x400b)
 #define REG_HOST_LR	 (0x400c)
 #define REG_HOST_PC	 (0x400d)
 
-#define REG_HOST_STM_FP (0x1000)
+//The following is for Register Mask operations
+#define REG_HOST_STM_FP (0x0800)
 #define REG_HOST_STM_SP (0x2000)
 #define REG_HOST_STM_LR (0x4000)
 #define REG_HOST_STM_PC (0x8000)
+#define REG_HOST_STM_GENERAL (0x17FF)
+#define REG_HOST_STM_EABI (0x000F)
 
+// MIPS R4300 Special CPU Registers
 #define REG_PC       (0x4010)
 #define REG_FCR0	 (0x4011)
 #define REG_FCR31    (0x4012)
@@ -43,7 +48,7 @@
 #define REG_MULTLO   (0x4014)
 #define REG_LLBIT    (0x4015)
 
-
+// MIPS R4300 Co processor 0 Registers
 #define REG_CONTEXT  (C0_REG_OFFSET + 4)
 #define REG_BADVADDR (C0_REG_OFFSET + 8)
 #define REG_COUNT    (C0_REG_OFFSET + 9)
@@ -55,15 +60,12 @@
 
 #define REG_NOT_USED (0xffff)
 
-
-//#define INIT_INSTRUCTION {0, 0,AL,0,0,0,0,REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0}
-
 typedef int16_t reg_t;
 
 typedef enum
 {
 	UNKNOWN,
-	IGNORE,
+	LITERAL,
 	INVALID,
 
 	SLL,
@@ -322,13 +324,15 @@ typedef enum
 	ARM_STR,
 	ARM_LDM,
 	ARM_STM,
+	ARM_MRS,
+	ARM_MSR,
 	sizeof_mips_op_t
 } Instruction_e;
 
 static const char* Instruction_ascii[sizeof_mips_op_t+1] =
 {
 	"UNKNOWN",
-	"IGNORE",
+	".word",
 	"INVALID",
 
 	"SLL",
@@ -587,6 +591,8 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] =
 	"str",
 	"ldm",
 	"stm",
+	"mrs",
+	"msr",
 	"[size of Instruction_t]"
 };
 
@@ -600,22 +606,22 @@ typedef enum
 
 typedef enum
 {
-	EQ,
-	NE,
-	CS,
-	CC,
-	MI,
-	PL,
-	VS,
-	VC,
-	HI,
-	LS,
-	GE,
-	LT,
-	GT,
-	LE,
-	AL,
-	NV
+	EQ, // Z = 1
+	NE, // Z = 0
+	CS, // C = 1
+	CC, // C = 0
+	MI, // N = 1
+	PL, // N = 0
+	VS, // V = 1
+	VC, // V = 0
+	HI, // C = 1 && Z = 0
+	LS,	// C = 0 || Z = 1
+	GE,	// N = V
+	LT,	// N != V
+	GT,	// Z = 0 && N = V
+	LE,	// Z = 1 || N! = V
+	AL,	// Always
+	NV	// Never
 } Condition_e;
 
 typedef struct _Instruction
@@ -667,6 +673,15 @@ struct _code_seg;
 
 void Intermediate_print(struct _code_seg *codeSegment);
 
-Instruction_t* newInstr();
+Instruction_t* newEmptyInstr();
+
+Instruction_t* newInstr(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1, reg_t R2, int32_t imm);
+
+Instruction_t* newInstrPUSH(Condition_e cond, uint32_t Rmask);
+
+Instruction_t* newInstrPOP(Condition_e cond, uint32_t Rmask);
 
 #endif
+
+
+

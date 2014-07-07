@@ -16,9 +16,13 @@
 typedef enum
 {
 	BLOCK_INVALID,			// invalid code section
+	BLOCK_START,			// start of a block CPU will only ever jump to this
+	BLOCK_START_CONT,		// start of a block, there is a valid block before
 	BLOCK_PART,				// within a block
 	BLOCK_END,				// block will not continue after this point (e.g. Jump with no link)
-	BLOCK_CONTINUES			// block may/will continue after end of segment e.g. conditional branch, jump/branch with link etc.
+	BLOCK_BRANCH_CONT,		// block may/will continue after end of segment e.g. conditional branch, jump/branch with link etc.
+	BLOCK_CONTINUES,
+	BLOCK_LOOPS				// block branches to itself
 } block_type_t;
 
 typedef struct _code_seg

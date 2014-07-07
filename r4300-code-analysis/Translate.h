@@ -1,25 +1,25 @@
 
-#ifndef OPTIMIZE_H_
-#define OPTIMIZE_H_
+#ifndef TRANSLATE_H_
+#define TRANSLATE_H_
 
 #include "InstructionSet.h"
 #include "CodeSegments.h"
 
 extern uint32_t bCountSaturates;
 
-void Optimize_DelaySlot(code_seg_t* codeSegment);
+void Translate_DelaySlot(code_seg_t* codeSegment);
 
 /*
  * MIPS4300 has a COUNT register that is decremented every instruction
  * when it underflows, an interrupt is triggered.
  */
-void Optimize_CountRegister(code_seg_t* codeSegment);
+void Translate_CountRegister(code_seg_t* codeSegment);
 
 /*
  * Function to turn 64bit registers into multiple 32-bit registers
  *
  */
-void Optimize_32BitRegisters(code_seg_t* codeSegment);
+void Translate_32BitRegisters(code_seg_t* codeSegment);
 
 /*
  * Function to re-number / reduce the number of registers so that they fit the HOST
@@ -32,14 +32,12 @@ void Optimize_32BitRegisters(code_seg_t* codeSegment);
  * with the layout of the emulated register space.
  *
  */
-void Optimize_ReduceRegistersUsed(code_seg_t* codeSegment);
+void Translate_ReduceRegistersUsed(code_seg_t* codeSegment);
 
-void Optimize_LoadStoreWriteBack(code_seg_t* codeSegment);
+void Translate_LoadStoreWriteBack(code_seg_t* codeSegment);
 
-void Optimize_init(code_seg_t* codeSegment);
+void Translate_init(code_seg_t* codeSegment);
 
-void Optimize(code_seg_t* codeSegment);
+void Translate(code_seg_t* codeSegment);
 
-void Optimize_printBuffer(code_seg_t* codeSegment);
-
-#endif /* OPTIMIZE_MIPS4_H_ */
+#endif /* TRANSLATE_H_ */

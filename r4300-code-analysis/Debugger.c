@@ -6,7 +6,7 @@
 #include "CodeSegments.h"
 #include "Debugger.h"
 #include "InstructionSetMIPS4.h"
-#include "Optimize.h"
+#include "Translate.h"
 
 #define LINE_LEN 400
 //#define HISTORY_LEN 5
@@ -515,36 +515,36 @@ static int Debugger_opt(const code_segment_data_t* segmentData)
 {
 	if (!strlen(userInput[1]))
 	{
-		Optimize(CurrentCodeSeg);
+		Translate(CurrentCodeSeg);
 
 	}
 	else if (!strncasecmp(userInput[1], "DelaySlot", 1))
 	{
-		Optimize_DelaySlot(CurrentCodeSeg);
+		Translate_DelaySlot(CurrentCodeSeg);
 	}
 	else if (!strncasecmp(userInput[1], "CountRegister", 1))
 	{
-		Optimize_CountRegister(CurrentCodeSeg);
+		Translate_CountRegister(CurrentCodeSeg);
 	}
 	else if (!strncasecmp(userInput[1], "32BitRegisters", 1))
 	{
-		Optimize_32BitRegisters(CurrentCodeSeg);
+		Translate_32BitRegisters(CurrentCodeSeg);
 	}
 	else if (!strncasecmp(userInput[1], "ReduceRegistersUsed", 1))
 	{
-		Optimize_ReduceRegistersUsed(CurrentCodeSeg);
+		Translate_ReduceRegistersUsed(CurrentCodeSeg);
 	}
 	else if (!strncasecmp(userInput[1], "loadStoreWriteBack", 1))
 	{
-		Optimize_LoadStoreWriteBack(CurrentCodeSeg);
+		Translate_LoadStoreWriteBack(CurrentCodeSeg);
 	}
 	else if (!strncasecmp(userInput[1], "init", 1))
 	{
-		Optimize_init(CurrentCodeSeg);
+		Translate_init(CurrentCodeSeg);
 	}
 	else if (!strncasecmp(userInput[1], "full", 1))
 	{
-		Optimize(CurrentCodeSeg);
+		Translate(CurrentCodeSeg);
 	}
 	else
 	{
