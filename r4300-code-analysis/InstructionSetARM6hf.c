@@ -101,11 +101,11 @@ uint32_t arm_encode(const Instruction_t ins)
 
 		//-------------------------------------------
 
-	case IGNORE:
+	case LITERAL:
+		return ins.immediate;
 	case SYSCALL:
 	case BREAK:
 	case SYNC:
-
 		return 0;
 
 		//------- ARM Cannot handle -----------------
@@ -201,13 +201,13 @@ void arm_decode(uint32_t word)
 					switch ((word>>5)&3)	//type
 					{
 					case 0:
-						sprintf(Op2,", %s, LSL #%d", arm_reg_a[word&0xf], (word>>7)&0x1f); break;
+						sprintf(Op2,", %s, lsl #%d", arm_reg_a[word&0xf], (word>>7)&0x1f); break;
 					case 1:
-						sprintf(Op2,", %s, LSR #%d", arm_reg_a[word&0xf], (word>>7)&0x1f); break;
+						sprintf(Op2,", %s, lsr #%d", arm_reg_a[word&0xf], (word>>7)&0x1f); break;
 					case 2:
-						sprintf(Op2,", %s, ASR #%d", arm_reg_a[word&0xf], (word>>7)&0x1f); break;
+						sprintf(Op2,", %s, asr #%d", arm_reg_a[word&0xf], (word>>7)&0x1f); break;
 					case 3:
-						sprintf(Op2,", %s, ROR #%d", arm_reg_a[word&0xf], (word>>7)&0x1f); break;
+						sprintf(Op2,", %s, ror #%d", arm_reg_a[word&0xf], (word>>7)&0x1f); break;
 					}
 				}
 				else
@@ -220,13 +220,13 @@ void arm_decode(uint32_t word)
 				switch ((word>>5)&3)	//type
 				{
 				case 0:
-					sprintf(Op2,", %s, LSL %s", arm_reg_a[word&0xf], arm_reg_a[(word>>8)&0xf]); break;
+					sprintf(Op2,", %s, lsl %s", arm_reg_a[word&0xf], arm_reg_a[(word>>8)&0xf]); break;
 				case 1:
-					sprintf(Op2,", %s, LSR %s", arm_reg_a[word&0xf], arm_reg_a[(word>>8)&0xf]); break;
+					sprintf(Op2,", %s, lsr %s", arm_reg_a[word&0xf], arm_reg_a[(word>>8)&0xf]); break;
 				case 2:
-					sprintf(Op2,", %s, ASR %s", arm_reg_a[word&0xf], arm_reg_a[(word>>8)&0xf]); break;
+					sprintf(Op2,", %s, asr %s", arm_reg_a[word&0xf], arm_reg_a[(word>>8)&0xf]); break;
 				case 3:
-					sprintf(Op2,", %s, ROR %s", arm_reg_a[word&0xf], arm_reg_a[(word>>8)&0xf]); break;
+					sprintf(Op2,", %s, ror %s", arm_reg_a[word&0xf], arm_reg_a[(word>>8)&0xf]); break;
 				}
 			}
 		}
@@ -271,7 +271,7 @@ void arm_decode(uint32_t word)
 	}
 	else if ((word & 0x0c000000) == 0x0c000000)
 	{
-		printf("\tTODO co processor\n"); // TODO
+		printf("\tTODO co processor\n"); // TODO arm co-processor instructions
 	}
 	else
 	{

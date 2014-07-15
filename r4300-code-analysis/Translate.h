@@ -7,6 +7,23 @@
 
 extern uint32_t bCountSaturates;
 
+
+typedef void (pfu4v)(unsigned int, unsigned int, unsigned int, unsigned int);
+typedef void (pf4v)(int, int, int, int);
+
+typedef void (pfu1v)(unsigned int);
+typedef void (pf1v)(int);
+
+typedef unsigned int (pfu4ru1)(unsigned int, unsigned int, unsigned int, unsigned int);
+typedef int (pf4r1)(int, int, int, int);
+
+typedef unsigned int (pfu1ru1)(unsigned int);
+typedef int (pf1r1)(int);
+
+typedef unsigned int (pfuvr1)();
+typedef int (pfvr1)();
+
+
 void Translate_DelaySlot(code_seg_t* codeSegment);
 
 /*

@@ -39,11 +39,11 @@
 		(val)// calculate offset from current position
 
 
-#define J_OP "0x%08x // PC = 0x%08x, \traw 0x%08x"
-#define OP_J(val) \
-		(val & 0x03FFFFFF), \
-		((x+8) & 0xF0000000) + ((val & 0x03FFFFFF)*4), \
-		(val)
+#define J_OP "0x%08x\t\t// val<<2 = 0x%08x, offset = %d"
+#define OP_J(x, val) \
+		(x&0xf0000000)|((val<<2) & 0x0FFFFFFF), \
+		((val << 2) & 0x0FFFFFFF), \
+		(((x&0xf0000000)|(val<<2) & 0x0FFFFFFF) - x)
 
 #define R_OP ""
 #define OP_R(val) (val)
@@ -70,8 +70,9 @@ void count_ops(uint32_t* data, uint32_t len)
 }
 
 
-int32_t ops_JumpAddressOffset(uint32_t uiMIPSword)
+int32_t ops_JumpAddressOffset(uint32_t* instruction)
 {
+	uint32_t uiMIPSword = *instruction;
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
 
@@ -102,8 +103,8 @@ int32_t ops_JumpAddressOffset(uint32_t uiMIPSword)
 		case 0x13: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBGEZALL\t" B_OP "\n",x, OP_B(val)); return;	// I and link likely
 		}break;
 
-	case 0x02: 	return (uiMIPSword<<6)/(1<<6); //printf(INDEX "\tJ      \t" J_OP "\n", x, OP_J(val)); return;	// J
-	case 0x03: 	return (uiMIPSword<<6)/(1<<6);   //printf(INDEX "\tJAL    \t" J_OP "\n", x, OP_J(val)); return;	// J
+	case 0x02: 	return ((int32_t)((((uint32_t)instruction&0xF0000000) | ((uiMIPSword<<2)&0x0FFFFFFF)) - (uint32_t)instruction))/4; //printf(INDEX "\tJ      \t" J_OP "\n", x, OP_J(val)); return;	// J
+	case 0x03: 	return ((int32_t)((((uint32_t)instruction&0xF0000000) | ((uiMIPSword<<2)&0x0FFFFFFF)) - (uint32_t)instruction))/4;   //printf(INDEX "\tJAL    \t" J_OP "\n", x, OP_J(val)); return;	// J
 	case 0x04: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBEQ    \t" I_OP "\n", x, OP_I(val)); return;	// I
 	case 0x05: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBNE    \t" I_OP "\n", x, OP_I(val)); return;	// I
 	case 0x06: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBLEZ   \t\n", x ); return;
@@ -126,7 +127,7 @@ int32_t ops_JumpAddressOffset(uint32_t uiMIPSword)
 	case 0x16: return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBLEZL \n",x); return;
 	case 0x17: return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBGTZL \n",x); return;
 	}
-	printf("%d invalid\n",__LINE__);
+	printf("InstructionSetMIPS4.h:%d invalid ops_JumpAddressOffset() instruction %d 0x%08x\n",__LINE__, uiMIPSword, uiMIPSword);
 	return 0x7FFFFFF;
 }
 
@@ -705,6 +706,8 @@ Instruction_e ops_type(uint32_t uiMIPSword)
 	          case 0x07: return SRAV;
 	          case 0x08: return JR;
 	          case 0x09: return JALR;
+	          //case 0x0A: printf("detected MOVZ\n"); return UNKNOWN;	// MOVZ in MIPS IV
+	          //case 0x0B: printf("detected MOVN\n"); return UNKNOWN;	// MOVN in MIPS IV
 	          case 0x0C: return SYSCALL;
 	          case 0x0D: return BREAK;
 	          case 0x0F: return SYNC;
@@ -1041,48 +1044,81 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 			return 0;
 		case 0x10:
 			ins->instruction =  MFHI;
+			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1 = REG_MULTHI;
 			return 0;
 		case 0x11:
 			ins->instruction =  MTHI;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->Rd1 = REG_MULTHI;
 			return 0;
 		case 0x12:
 			ins->instruction =  MFLO;
+			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1 = REG_MULTLO;
 			return 0;
 		case 0x13:
 			ins->instruction =  MTLO;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->Rd1 = REG_MULTLO;
 			return 0;
 		case 0x14:
 			ins->instruction =  DSLLV;
+			ins->R1 = M_Rt(uiMIPSword);
+			ins->R2 = M_Rs(uiMIPSword);
+			ins->Rd1 = M_Rd(uiMIPSword);
 			return 0;
 		case 0x16:
 			ins->instruction =  DSRLV;
+			ins->R1 = M_Rt(uiMIPSword);
+			ins->R2 = M_Rs(uiMIPSword);
+			ins->Rd1 = M_Rd(uiMIPSword);
 			return 0;
 		case 0x17:
 			ins->instruction =  DSRAV;
+			ins->R1 = M_Rt(uiMIPSword);
+			ins->R2 = M_Rs(uiMIPSword);
+			ins->Rd1 = M_Rd(uiMIPSword);
 			return 0;
 		case 0x18:
 			ins->instruction =  MULT;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x19:
 			ins->instruction =  MULTU;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1A:
 			ins->instruction =  DIV;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1B:
 			ins->instruction =  DIVU;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1C:
 			ins->instruction =  DMULT;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1D:
 			ins->instruction =  DMULTU;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1E:
 			ins->instruction =  DDIV;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1F:
 			ins->instruction =  DDIVU;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x20:
 			ins->instruction =  ADD;
@@ -1130,6 +1166,9 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 			return 0;
 		case 0x27:
 			ins->instruction =  NOR;
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2 = M_Rt(uiMIPSword);
+			ins->Rd1 = M_Rd(uiMIPSword);
 			return 0;
 		case 0x2A:
 			ins->instruction =  SLT;
@@ -1882,8 +1921,8 @@ void mips_print(uint32_t x, uint32_t uiMIPSword)
 
 		break;
 
-	case 0x02: 	printf(INDEX "\tJ      \t" J_OP "\n", x, OP_J(uiMIPSword)); return;	// J
-	case 0x03: 	printf(INDEX "\tJAL    \t" J_OP "\n", x, OP_J(uiMIPSword)); return;	// J
+	case 0x02: 	printf(INDEX "\tJ      \t" J_OP "\n", x, OP_J(x, uiMIPSword)); return;	// J
+	case 0x03: 	printf(INDEX "\tJAL    \t" J_OP "\n", x, OP_J(x, uiMIPSword)); return;	// J
 	case 0x04: 	printf(INDEX "\tBEQ    \t" B_OP "\n", x, OP_B(uiMIPSword)); return;	// I
 	case 0x05: 	printf(INDEX "\tBNE    \t" B_OP "\n", x, OP_B(uiMIPSword)); return;	// I
 	case 0x06: 	printf(INDEX "\tBLEZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I

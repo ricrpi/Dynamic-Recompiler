@@ -46,7 +46,7 @@ void getCmd() {
 //	memcpy(cmdHistory, line, LINE_LEN);
 
 	//clear user input so it doesn't corrupt
-	memset(userInput,0,sizeof(userInput));
+	memset(userInput, '\0', sizeof(userInput));
 
 	while (line[c] != '\0')
 	{
@@ -79,47 +79,51 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* segmentData, uint
 
 	if (!CurrentCodeSeg->MIPSReturnRegister)
 	{
-		if (CurrentCodeSeg->pCodeSegmentTargets[1] != NULL)
-		{
-			printf("Seg  0x%08x  \t0x%08x\tblock type: %d\n"
-					"next segments:\n"
-					" (1) 0x%08x  \t0x%08x\n"
-					" (2) 0x%08x  \t0x%08x\n"
-					, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->blockType
-					, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0]->MIPScode
-					, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[1], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[1]->MIPScode);
-		}
-		else
-		{
-			printf("Seg  0x%08x  \t0x%08x\tblock type: %d\n"
-					"next segments:\n"
-					" (1) 0x%08x  \t0x%08x\n"
+		printf("Seg  0x%08x  \t0x%08x\ttype: %s\n"
+				"next segments:\n"
+				, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode
+				, seg_type_s[CurrentCodeSeg->Type]);
 
-					, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->blockType
-					, (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0], (uint32_t)CurrentCodeSeg->pCodeSegmentTargets[0]->MIPScode);
+		if (CurrentCodeSeg->pContinueNext != NULL)
+		{
+			printf(" (1) 0x%08x  \t0x%08x\t (Continue)\n"
+					, (uint32_t)CurrentCodeSeg->pContinueNext, (uint32_t)CurrentCodeSeg->pContinueNext->MIPScode);
+		}
+
+		if (CurrentCodeSeg->pBranchNext != NULL)
+		{
+			if (CurrentCodeSeg->MIPScode == CurrentCodeSeg->pBranchNext->MIPScode)	//Loops on itself
+			{
+				printf(" (2) 0x%08x  \t0x%08x\t (Loop)\n"
+									, (uint32_t)CurrentCodeSeg->pBranchNext, (uint32_t)CurrentCodeSeg->pBranchNext->MIPScode);
+			}else
+			{
+				printf(" (2) 0x%08x  \t0x%08x\t (Branch)\n"
+									, (uint32_t)CurrentCodeSeg->pBranchNext, (uint32_t)CurrentCodeSeg->pBranchNext->MIPScode);
+			}
+		}
+
+		if (!CurrentCodeSeg->pBranchNext && !CurrentCodeSeg->pContinueNext)
+		{
+			printf("No linkage for code in its current location!\n");
 		}
 	}
 	else
 	{
-		printf("Seg  0x%08x  \t0x%08x\tblock type: %d\nnext segments:\n"
-				, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->blockType);
+		printf("Seg  0x%08x  \t0x%08x\ttype: %s\nnext segments:\n"
+				, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, seg_type_s[CurrentCodeSeg->Type]);
 
 		code_seg_t*  tempCodeSeg=segmentData->StaticSegments;
 		x=1;
 		while (tempCodeSeg !=NULL)
 		{
-			if (tempCodeSeg->pCodeSegmentTargets[0] == CurrentCodeSeg)
+			if (tempCodeSeg->pBranchNext == CurrentCodeSeg)
 			{
-				printf(" (%d) 0x%08x  \t0x%08x\n", x, (uint32_t)tempCodeSeg->pCodeSegmentTargets[0], (uint32_t)tempCodeSeg->pCodeSegmentTargets[0]->MIPScode);
-				x++;
-			}
-			else if (tempCodeSeg->pCodeSegmentTargets[1] == CurrentCodeSeg)
-			{
-				printf(" (%d) 0x%08x  \t0x%08x\n", x, (uint32_t)tempCodeSeg->pCodeSegmentTargets[1], (uint32_t)tempCodeSeg->pCodeSegmentTargets[1]->MIPScode);
+				printf(" (%d) 0x%08x  \t0x%08x\n", x, (uint32_t)tempCodeSeg->pBranchNext, (uint32_t)tempCodeSeg->pBranchNext->MIPScode);
 				x++;
 			}
 
-			tempCodeSeg = tempCodeSeg->nextCodeSegmentLinkedList;
+			tempCodeSeg = tempCodeSeg->next;
 		}
 	}
 }
@@ -128,7 +132,7 @@ static int Debugger_print(const code_segment_data_t* segmentData)
 {
 	//int val;
 	int x=0;
-	//char *tailPointer;
+	char *tailPointer;
 	//code_seg_t* tempCodeSeg;
 
 	//val = strtoul(userInput[1], &tailPointer, 0);
@@ -142,17 +146,32 @@ static int Debugger_print(const code_segment_data_t* segmentData)
 	else if (!strncmp(userInput[1], "mips", 1))
 	{
 
-		for (x=0; x< CurrentCodeSeg->MIPScodeLen; x++)
-		{
-			mips_print((x)*4, *(CurrentCodeSeg->MIPScode + x));
-		}
-		printLine();
+		uint32_t count;
 
-		for (x=CurrentCodeSeg->MIPScodeLen; x< CurrentCodeSeg->MIPScodeLen+3; x++)
+		if (strlen(userInput[2]))
 		{
-			mips_print((x)*4, *(CurrentCodeSeg->MIPScode + x));
+			count = strtoul(userInput[2], &tailPointer, 0);
+
+		}
+		else
+		{
+			count = CurrentCodeSeg->MIPScodeLen;
 		}
 
+		for (x=0; x< count; x++)
+		{
+			mips_print(CurrentCodeSeg->MIPScode + x, *(CurrentCodeSeg->MIPScode + x));
+		}
+
+		if (!strlen(userInput[2]))
+		{
+			printLine();
+
+			for (x=CurrentCodeSeg->MIPScodeLen; x< CurrentCodeSeg->MIPScodeLen+3; x++)
+			{
+				mips_print(CurrentCodeSeg->MIPScode + x, *(CurrentCodeSeg->MIPScode + x));
+			}
+		}
 		printf("\naddr 0x%x, len %d, return reg %d\n"
 				"0x%08X %08X %02X (%d)\n"
 				, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen, CurrentCodeSeg->MIPSReturnRegister
@@ -421,7 +440,7 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 
 	if (!strlen(userInput[1]))
 	{
-		printf("First Segment at 0x%x, number of segments %d\n", (uint32_t)segmentData->StaticSegments, segmentData->count);
+		printf("First Segment   0x%x, number of segments %d\n", (uint32_t)segmentData->StaticSegments, segmentData->count);
 
 		printf("Current Segment 0x%x\n"
 				"\tMIPS            ARM\n"
@@ -441,15 +460,16 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 		if (0 == val)
 		{
 			CurrentCodeSeg = segmentData->StaticSegments;
-		}
-		else if (1 == val)
-		{
-			CurrentCodeSeg = CurrentCodeSeg->pCodeSegmentTargets[0];
 			ok = 1;
 		}
-		else if (2 == val && CurrentCodeSeg->pCodeSegmentTargets[1] != 0)
+		else if (1 == val && CurrentCodeSeg->pContinueNext != NULL)
 		{
-			CurrentCodeSeg = CurrentCodeSeg->pCodeSegmentTargets[1];
+			CurrentCodeSeg = CurrentCodeSeg->pContinueNext;
+			ok = 1;
+		}
+		else if (2 == val && CurrentCodeSeg->pBranchNext != NULL)
+		{
+			CurrentCodeSeg = CurrentCodeSeg->pBranchNext;
 			ok = 1;
 		}
 		else
@@ -465,7 +485,7 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 					break;
 				}
 
-				tempCodeSeg = tempCodeSeg->nextCodeSegmentLinkedList;
+				tempCodeSeg = tempCodeSeg->next;
 			}
 		}
 
@@ -482,26 +502,17 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 				CurrentCodeSeg = (code_seg_t*)val;
 				break;
 			}
-			else if (tempCodeSeg->pCodeSegmentTargets[0] == CurrentCodeSeg)
+			else if (tempCodeSeg->pBranchNext == CurrentCodeSeg)
 			{
 				if (x == val)
 				{
-					CurrentCodeSeg = tempCodeSeg->pCodeSegmentTargets[0];
-					break;
-				}
-				x++;
-			}
-			else if (tempCodeSeg->pCodeSegmentTargets[1] == CurrentCodeSeg)
-			{
-				if (x == val)
-				{
-					CurrentCodeSeg = tempCodeSeg->pCodeSegmentTargets[1];
+					CurrentCodeSeg = tempCodeSeg->pBranchNext;
 					break;
 				}
 				x++;
 			}
 
-			tempCodeSeg = tempCodeSeg->nextCodeSegmentLinkedList;
+			tempCodeSeg = tempCodeSeg->next;
 		}
 	}
 

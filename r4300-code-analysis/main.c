@@ -10,13 +10,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include "rom.h"
 #include "memory.h"
 #include "CodeSegments.h"
 #include "InstructionSetMIPS4.h"
 #include "Debugger.h"
-
-uint32_t * ROM_buffer = NULL;
 
 int main(int argc, char* argv[])
 {
@@ -38,19 +37,29 @@ int main(int argc, char* argv[])
 	romlength = ftell(fPtr);
 	fseek(fPtr, 0L, SEEK_SET);
 
+	if (mmap((uint32_t*)MMAP_BASE
+			, MMAP_BASE_SIZE + romlength
+			, PROT_READ|PROT_WRITE|PROT_EXEC
+			, MAP_PRIVATE| MAP_FIXED | MAP_ANONYMOUS
+			, -1, 0 ) != (uint32_t*)MMAP_BASE)
+	{
+		printf("Could not mmap\n");
+		return 1;
+	}
+
 	unsigned char imagetype;
-	ROM_buffer = (uint32_t *) malloc(romlength);
+
 	m64p_rom_header ROM_HEADER;
 
-	if (fread(ROM_buffer, 1, romlength, fPtr) != romlength)
+	if (fread((uint32_t*)ROM_ADDRESS , 1, romlength, fPtr) != romlength)
 	{
 		printf("could not read ROM\n");
 		return 3;
 	}
 
-	swap_rom((unsigned char*)ROM_buffer, &imagetype, romlength);
+	swap_rom((unsigned char*)ROM_ADDRESS, &imagetype, romlength);
 
-	memcpy(&ROM_HEADER, ROM_buffer, sizeof(m64p_rom_header));
+	memcpy(&ROM_HEADER, (uint32_t*)ROM_ADDRESS, sizeof(m64p_rom_header));
 
 	printf("Name: %s\n", ROM_HEADER.Name);
 	printf("Rom size: %ld bytes (or %ld Mb or %ld Megabits)\n", romlength, romlength/1024/1024, romlength/1024/1024*8);
@@ -62,14 +71,14 @@ int main(int argc, char* argv[])
 
 #if 1
 	for (x=0; x< romlength/4; x++)
-		ROM_buffer[x] = sl(ROM_buffer[x]);
+		*((uint32_t*)ROM_ADDRESS + x) = sl(*((uint32_t*)ROM_ADDRESS + x));
 #endif
 
 
-#if 0
-	for (x=0x40/4; x< 172/4; x++ )
+#if 1
+	for (x=0x40/4; x< 200; x++ )
 	{
-		mips_print((uint32_t)&ROM_buffer[x], ROM_buffer[x]);
+		mips_print((uint32_t)((uint32_t*)ROM_ADDRESS + x), *((uint32_t*)ROM_ADDRESS + x));
 	}
 
 	printf("----------------------------\n");
@@ -81,22 +90,20 @@ int main(int argc, char* argv[])
 	for (x=0x40/4; x< romlength/4; x++ )
 	{
 		uint32_t temp;
-		if (ops_regs_input(ROM_buffer[x],&temp,&temp,&temp) == 2
-				|| ops_regs_output(ROM_buffer[x],&temp,&temp,&temp) == 2) mips_print((x)*4, ROM_buffer[x]);
-
+		if (ops_regs_input(((uint32_t*)ROM_ADDRESS)[x],&temp,&temp,&temp) == 2
+				|| ops_regs_output(((uint32_t*)ROM_ADDRESS)[x],&temp,&temp,&temp) == 2) mips_print((x)*4, ((uint32_t*)ROM_ADDRESS)[x]);
 	}
 
 	printf("----------------------------\n");
 #endif
 
-
-	segmentData = GenerateCodeSegmentData(ROM_buffer, romlength);
+	segmentData = GenerateCodeSegmentData(romlength);
 
 	printf("MIPS Address            Length   Regs-cpu   fpu      sp     used Next       Block type 2=end,3=br\n");
 
 	code_seg_t* nextCodeSeg = segmentData->StaticSegments;
 	int count =0;
-	while (nextCodeSeg != NULL && count < 200)
+	while (nextCodeSeg != NULL && count < 20)
 	{
 		count++;
 
@@ -123,10 +130,10 @@ int main(int argc, char* argv[])
 				nextCodeSeg->MIPSRegistersUsed[2],
 				nextCodeSeg->MIPSRegistersUsedCount,
 				(uint32_t)nextCodeSeg->MIPSnextInstructionIndex,
-				nextCodeSeg->blockType);
+				nextCodeSeg->Type);
 		}
 
-		nextCodeSeg = nextCodeSeg->nextCodeSegmentLinkedList;
+		nextCodeSeg = nextCodeSeg->next;
 	}
 
 
@@ -140,7 +147,7 @@ int main(int argc, char* argv[])
 		Debugger_start(segmentData);
 	}
 
-	free(ROM_buffer);
+	umap();
 
 	printf("\nEND\n");
 	return 0;

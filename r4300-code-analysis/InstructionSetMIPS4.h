@@ -76,7 +76,7 @@ Instruction_e ops_type(uint32_t uiMIPSword);
  * Return:
  * 		offset or 0x7FFFFFF if the instruction is not a Jump nor Branch
  * */
-int32_t ops_JumpAddressOffset(uint32_t uiMIPSword);
+int32_t ops_JumpAddressOffset(uint32_t* uiMIPSword);
 
 /*
  * Provides printf() output for the raw word

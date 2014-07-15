@@ -127,14 +127,22 @@ Instruction_t* newInstr(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1,
 	Instruction_t* newInstr = newEmptyInstr(0);
 
 	newInstr->instruction = ins;
-	newInstr->cond = cond;
-	newInstr->immediate = imm;
-	newInstr->Rd1 = Rd1;
-	newInstr->R1 = R1;
-	newInstr->R2 = R2;
+	newInstr->cond        = cond;
+	newInstr->immediate   = imm;
+	newInstr->Rd1         = Rd1;
+	newInstr->R1          = R1;
+	newInstr->R2          = R2;
 
 	return newInstr;
+}
 
+Instruction_t* newInstrS(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1, reg_t R2, int32_t imm)
+{
+	Instruction_t* newIns = newInstr(ins, cond, Rd1, R1, R2, imm);
+
+	newIns->S = 1;
+
+	return newIns;
 }
 
 Instruction_t* newInstrPUSH(Condition_e cond, uint32_t Rmask)
@@ -144,6 +152,7 @@ Instruction_t* newInstrPUSH(Condition_e cond, uint32_t Rmask)
 	newInstr->instruction = ARM_STM;
 	newInstr->cond = cond;
 	newInstr->R1 = REG_HOST_SP;
+	newInstr->Rmask = Rmask;
 	newInstr->W = 1;
 	newInstr->PR = 1;
 	newInstr->U = 0;
@@ -159,6 +168,7 @@ Instruction_t* newInstrPOP(Condition_e cond, uint32_t Rmask)
 	newInstr->instruction = ARM_LDM;
 	newInstr->cond = cond;
 	newInstr->R1 = REG_HOST_SP;
+	newInstr->Rmask = Rmask;
 	newInstr->W = 1;
 	newInstr->PR = 0;
 	newInstr->U = 1;

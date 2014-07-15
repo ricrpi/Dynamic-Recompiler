@@ -15,6 +15,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include "memory.h"
+#include "Translate.h"
+
+#define ADD_LL_NEXT(x, y) (x)->nextInstruction = (y)->nextInstruction; \
+			(y)->nextInstruction = (x); \
+			(y) = (y)->nextInstruction;
 
 typedef enum
 {
@@ -27,7 +32,11 @@ typedef enum
 
 uint32_t bCountSaturates = 0;
 uint32_t uiCountFrequency = 40;	// must be less than 128 else may not be able to encode in imm8
+uint32_t bMemoryInlineLookup = 0;
+uint32_t bMemoryOffsetCheck = 0;
+uint32_t bDoDMAonInterrupt = 1;
 
+#if 0
 /*
  * Code to generate Emulation-time Code within 32MB of dynamically compiled code.
  *
@@ -61,6 +70,82 @@ Instruction_t* Generate_BranchStubCode()
 	return firstInstruction;
 
 }
+#endif
+
+/*
+ * Function to generate Emulation-time code for calculating the Hosts memory address to use.
+ *
+ * Emulation Args:
+ * 			R0 base
+ * 			R1 offset
+ *
+ * Emulation Returns:
+ *  		R0 Host memory address
+ *			Z=1 if !bDoDMAonInterrupt && last byte is 0x5, so run DMA?
+ */
+code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
+{
+	code_seg_t* 	code_seg 		= newSegment();
+	Instruction_t* 	newInstruction;
+	Instruction_t* 	ins 			= NULL;
+
+	if (bMemoryInlineLookup){
+		printf("Generate_MemoryTranslationCode() and bMemoryInlineLookup\n");
+		return NULL;
+	}
+
+	//Add the base and offset together
+	newInstruction 		= newInstr(ADD, AL, REG_TEMP_MEM1, REG_HOST_R0, REG_HOST_R1, 0);
+	code_seg->Intermcode = ins = newInstruction;
+
+	//shift Right so that we have the final Byte
+	newInstruction 		= newInstr(SRL, AL, REG_TEMP_MEM2, REG_TEMP_MEM1, REG_NOT_USED, 24);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//If the final Byte is 0x80 then all is good
+	newInstruction 		= newInstr(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0x80);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//Move the address to R0
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_TEMP_MEM1, REG_NOT_USED, 0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// Return
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_HOST_LR, REG_NOT_USED, 0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//Else is the final byte 0xA0?
+	newInstruction 		= newInstr(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0xA0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//If so then clear bit 0x40
+	newInstruction 		= newInstr(ARM_BIC, EQ, REG_HOST_R0, REG_TEMP_MEM1, REG_NOT_USED, 0x40);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// Return
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_HOST_LR, REG_NOT_USED, 0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//The address must be Virtual
+
+	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI | REG_HOST_STM_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//TODO call C function for Lookup?
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 0);
+	//The literal !!!
+	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_HOST_PC, REG_NOT_USED, 0);
+
+	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI| REG_HOST_STM_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//Return
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_HOST_LR, REG_NOT_USED, 0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	return code_seg;
+}
+
 
 //=============================================================
 
@@ -70,36 +155,21 @@ static Instruction_t* insertCall(Instruction_t* ins, Condition_e cond, int32_t o
 
 	//push lr
 	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_LR);
-
-	//insert into Linked List
-	newInstruction->nextInstruction = ins->nextInstruction;
-	ins->nextInstruction = newInstruction;
-	ins = ins->nextInstruction;
+	ADD_LL_NEXT(newInstruction, ins);
 
 	//set lr
 	newInstruction 	= newInstr(ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 4);
-
-	//insert into Linked List
-	newInstruction->nextInstruction = ins->nextInstruction;
-	ins->nextInstruction = newInstruction;
-	ins = ins->nextInstruction;
+	ADD_LL_NEXT(newInstruction, ins);
 
 	// load function address from [fp + offset] into PC
 	newInstruction 	= newInstr(ARM_LDR, cond, REG_HOST_PC, REG_HOST_FP, REG_NOT_USED, offset);
-
-	//insert into Linked List
-	newInstruction->nextInstruction = ins->nextInstruction;
-	ins->nextInstruction = newInstruction;
-	ins = ins->nextInstruction;
+	ADD_LL_NEXT(newInstruction, ins);
 
 	// pop lr
 	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_LR);
+	ADD_LL_NEXT(newInstruction, ins);
 
-	//insert into Linked List
-	newInstruction->nextInstruction = ins->nextInstruction;
-	ins->nextInstruction = newInstruction;
-
-	return ins->nextInstruction;
+	return ins;
 }
 
 
@@ -114,11 +184,11 @@ static Instruction_t* insertCall(Instruction_t* ins, Condition_e cond, int32_t o
  * ...								...
  * ADD 	R1	R2	R3					ADD		R1	R2	R3
  * SUBI	R1	R1	#4					SUMI	R1	R1	#4
- * BNE	R1			#-1		==>		ADDI	R2	R2 	#3
+ * BNE	R1			#-1		==>	  + ADDI	R2	R2 	#3
  * ====New Segment====				BNE		R1		#-1
- * ADDI	R2	R2	#3					msr		s		#1		// TODO lookup what imm is for setting Z
+ * ADDI	R2	R2	#3				  + msr		s		#1		// TODO lookup what imm is for setting Z
  * ...								====New Segment====		// Will be a BLOCK_START_CONT Segment
- * ...								ADDIeq	R2	R2	#3		// the delaySlot instruction(s)
+ * ...						    +/- ADDIne	R2	R2	#3		// the delaySlot instruction(s)
  * ...								...
  *
  * All segments must clear the Z status flag before jumping to a BLOCK_START_CONT segment.
@@ -150,8 +220,7 @@ void Translate_DelaySlot(code_seg_t* codeSegment)
 
 		mips_decode(*(codeSegment->MIPScode + codeSegment->MIPScodeLen), newInstruction);
 
-		newInstruction->nextInstruction = ins->nextInstruction;
-		ins->nextInstruction = newInstruction;
+		ADD_LL_NEXT(newInstruction, ins);
 
 		//Set Status Register setting
 		/*	APSR.N = imm32<31>;
@@ -160,17 +229,21 @@ void Translate_DelaySlot(code_seg_t* codeSegment)
 			APSR.V = imm32<28>;
 			APSR.Q = imm32<27>;
 		 */
+
+		ins = ins->nextInstruction;	// move to the branch instruction
+
 		newInstruction 	= newInstr(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40);
 		newInstruction->rotate = 4;	// To load into bits 24-31
 		newInstruction->I = 1;
 
-		newInstruction->nextInstruction = ins->nextInstruction;
-		ins->nextInstruction = newInstruction;
+		ADD_LL_NEXT(newInstruction, ins);
 	}
-	else if(codeSegment->blockType == BLOCK_CONTINUES)	//TODO Optimize - We do not need to mess with the status register if not branching to BLOCK_START_CONT segment
+	// if segment before this one can continue, then we must make first instruction conditional
+	else if(codeSegment->Type == SEG_START
+			|| codeSegment->Type == SEG_ALONE)
 	{
 		//goto second last instruction
-		while (ins->nextInstruction->nextInstruction)
+		/*while (ins->nextInstruction->nextInstruction)
 			ins = ins->nextInstruction;
 
 		//Clear Status Register setting
@@ -178,13 +251,14 @@ void Translate_DelaySlot(code_seg_t* codeSegment)
 		newInstruction->rotate = 4;	// To load into bits 24-31
 		newInstruction->I = 1;
 
-		newInstruction->nextInstruction = ins->nextInstruction;
-		ins->nextInstruction = newInstruction;
+		ADD_LL_NEXT(newInstruction, ins);*/
 	}
 
-	// Apply the conditional execution if this is a BLOCK_START_CONT segment.
-	if (codeSegment->blockType == BLOCK_START_CONT){
-		codeSegment->Intermcode->cond = NE;
+	// if segment before this one can continue, then we must make first instruction conditional
+	else if (codeSegment->Type == SEG_SANDWICH
+			|| codeSegment->Type == SEG_END){
+
+		codeSegment->Intermcode->cond = NE;	//Make first instruction conditional
 	}
 }
 
@@ -227,17 +301,10 @@ void Translate_CountRegister(code_seg_t* codeSegment)
 			}
 			else
 			{
-				newInstruction->instruction = ARM_SUB;
-				newInstruction->S = 1;
-				newInstruction->Rd1 = REG_COUNT;
-				newInstruction->R1 = REG_COUNT;
-				newInstruction->immediate = uiCountFrequency;
-				instrCountRemaining -= uiCountFrequency;
+				newInstruction = newInstrS(ARM_SUB,AL,REG_COUNT,REG_COUNT,REG_NOT_USED,uiCountFrequency);
+				ADD_LL_NEXT(newInstruction, ins);
 
-				//insert into Linked List
-				newInstruction->nextInstruction = ins->nextInstruction;
-				ins->nextInstruction = newInstruction;
-				ins = ins->nextInstruction;
+				instrCountRemaining -= uiCountFrequency;
 
 				ins = insertCall(ins, MI, FUNC_GEN_INTERRUPT);
 				instrCount = 0;
@@ -259,16 +326,10 @@ void Translate_CountRegister(code_seg_t* codeSegment)
 		}
 		else
 		{
-			newInstruction->instruction = SUB;
-			newInstruction->S = 1;
-			newInstruction->offset = instrCountRemaining;
-			newInstruction->Rd1 = REG_COUNT;
-			newInstruction->R1 = REG_COUNT;
+			newInstruction = newInstrS(ARM_SUB,AL,REG_COUNT,REG_COUNT,REG_NOT_USED,instrCountRemaining);
 
 			newInstruction->nextInstruction = ins->nextInstruction;
-
-			ins->nextInstruction = newInstruction;
-			ins = ins->nextInstruction;
+			ADD_LL_NEXT(newInstruction, ins);
 
 			ins = insertCall(ins, MI, FUNC_GEN_INTERRUPT);
 
