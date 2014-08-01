@@ -20,6 +20,7 @@
 int main(int argc, char* argv[])
 {
 	code_segment_data_t* segmentData;
+	code_seg_t* nextCodeSeg;
 
 	if (argc <= 1)
 	{
@@ -74,8 +75,7 @@ int main(int argc, char* argv[])
 		*((uint32_t*)ROM_ADDRESS + x) = sl(*((uint32_t*)ROM_ADDRESS + x));
 #endif
 
-
-#if 1
+#if 0
 	for (x=0x40/4; x< 200; x++ )
 	{
 		mips_print((uint32_t)((uint32_t*)ROM_ADDRESS + x), *((uint32_t*)ROM_ADDRESS + x));
@@ -86,12 +86,12 @@ int main(int argc, char* argv[])
 
 	//Find all code where we don't know which registers are used
 #if 1
-	printf("Unknown register usage on these instructions:\n");
+	printf("Unknown register usage on these instructions:\n\n");
 	for (x=0x40/4; x< romlength/4; x++ )
 	{
 		uint32_t temp;
 		if (ops_regs_input(((uint32_t*)ROM_ADDRESS)[x],&temp,&temp,&temp) == 2
-				|| ops_regs_output(((uint32_t*)ROM_ADDRESS)[x],&temp,&temp,&temp) == 2) mips_print((x)*4, ((uint32_t*)ROM_ADDRESS)[x]);
+				|| ops_regs_output(((uint32_t*)ROM_ADDRESS)[x],&temp,&temp,&temp) == 2) mips_print((uint32_t*)ROM_ADDRESS + x, ((uint32_t*)ROM_ADDRESS)[x]);
 	}
 
 	printf("----------------------------\n");
@@ -99,9 +99,10 @@ int main(int argc, char* argv[])
 
 	segmentData = GenerateCodeSegmentData(romlength);
 
+#if 0
 	printf("MIPS Address            Length   Regs-cpu   fpu      sp     used Next       Block type 2=end,3=br\n");
 
-	code_seg_t* nextCodeSeg = segmentData->StaticSegments;
+	nextCodeSeg = segmentData->StaticSegments;
 	int count =0;
 	while (nextCodeSeg != NULL && count < 20)
 	{
@@ -135,10 +136,37 @@ int main(int argc, char* argv[])
 
 		nextCodeSeg = nextCodeSeg->next;
 	}
-
-
+	printf("----------------------------\n");
+#endif
 
 	printf("%d code segments generated\n", segmentData->count);
+
+// Instruction Counts for input ROM
+#if 1
+
+	uint32_t ins_count[sizeof_mips_op_t];
+	memset(ins_count,0,sizeof(ins_count));
+
+	nextCodeSeg = segmentData->StaticSegments;
+	while (nextCodeSeg)
+	{
+		for (x=0; x < nextCodeSeg->MIPScodeLen; x++)
+		{
+			ins_count[STRIP(ops_type(*(nextCodeSeg->MIPScode + x)))] ++;
+		}
+
+		nextCodeSeg = nextCodeSeg->next;
+	}
+
+	for (x=0; x < sizeof_mips_op_t; x++)
+	{
+		if (ins_count[x])
+		{
+			printf("%-9s %7d\n",Instruction_ascii[x], ins_count[x]);
+		}
+	}
+	printf("----------------------------\n");
+#endif
 
 	printf("\nFinished processing ROM\n");
 
@@ -147,7 +175,7 @@ int main(int argc, char* argv[])
 		Debugger_start(segmentData);
 	}
 
-	umap();
+	munmap((uint32_t*)MMAP_BASE, MMAP_BASE_SIZE + romlength);
 
 	printf("\nEND\n");
 	return 0;

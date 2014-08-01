@@ -6,10 +6,13 @@
 #include "CodeSegments.h"
 #include "Debugger.h"
 #include "InstructionSetMIPS4.h"
+#include "InstructionSetARM6hf.h"
 #include "Translate.h"
 
 #define LINE_LEN 400
 //#define HISTORY_LEN 5
+
+#define CMD_CMP(X, TXT) (strncasecmp(userInput[X], TXT, strlen(userInput[X])))
 
 
 static char userInput[20][20];
@@ -29,9 +32,9 @@ void getCmd() {
 
 		// TODO strip arrow key input for terminals, eclipse strips this already
 
-		if (line[c] == '\n' || line[c] == '\0')
+		if (line[c] == '\n' || line[c] == '\r')
 		{
-			line[c+1] = '\0';
+			line[c] = '\0';
 			break;
 		}
 		else if (line[c] == 128 && c > 0)
@@ -72,8 +75,7 @@ static void printLine()
 	printf("_____________________________________\n\n");
 }
 
-
-static void Debugger_seg_returnAddr(const code_segment_data_t* segmentData, uint32_t val, code_seg_t* CurrentCodeSeg)
+static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData, const uint32_t val, const code_seg_t* const CurrentCodeSeg)
 {
 	int x;
 
@@ -128,61 +130,92 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* segmentData, uint
 	}
 }
 
-static int Debugger_print(const code_segment_data_t* segmentData)
+static int Debugger_print(const code_segment_data_t* const segmentData)
 {
 	//int val;
 	int x=0;
 	char *tailPointer;
-	//code_seg_t* tempCodeSeg;
 
-	//val = strtoul(userInput[1], &tailPointer, 0);
-
-	if (!strncmp(userInput[1], "arm", 1))
+	if (!CMD_CMP(1, "arm"))
 	{
-		printf("\naddr 0x%x, len %d\n"
-				, (uint32_t)CurrentCodeSeg->ARMcode, CurrentCodeSeg->ARMcodeLen );
-		printLine();
-	}
-	else if (!strncmp(userInput[1], "mips", 1))
-	{
+		uint32_t count = CurrentCodeSeg->ARMcodeLen;
+		uint32_t* addr = CurrentCodeSeg->ARMcode;
 
-		uint32_t count;
-
-		if (strlen(userInput[2]))
+		if (strlen(userInput[3]))
+		{
+			count = strtoul(userInput[3], &tailPointer, 0);
+			addr = (uint32_t*)((strtoul(userInput[2], &tailPointer, 0))&~0x3);
+		}
+		else if (strlen(userInput[2]))
 		{
 			count = strtoul(userInput[2], &tailPointer, 0);
-
 		}
-		else
+
+		if (NULL == addr)
 		{
-			count = CurrentCodeSeg->MIPScodeLen;
+			printf("Need to Generate ARM code\n");
+			return 0;
 		}
 
 		for (x=0; x< count; x++)
 		{
-			mips_print(CurrentCodeSeg->MIPScode + x, *(CurrentCodeSeg->MIPScode + x));
+			arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}
 
+		printLine();
+	}
+	else if (!CMD_CMP(1, "mips"))
+	{
+		uint32_t count = CurrentCodeSeg->MIPScodeLen;
+		uint32_t* addr = CurrentCodeSeg->MIPScode;
+
+		if (strlen(userInput[3]))
+		{
+			count = strtoul(userInput[3], &tailPointer, 0);
+			addr = (uint32_t*)((strtoul(userInput[2], &tailPointer, 0))&~0x3);
+		}
+		else if (strlen(userInput[2]))
+		{
+			count = strtoul(userInput[2], &tailPointer, 0);
+		}
+
+		if (NULL == addr)
+		{
+			printf("Invalid Address\n");
+			return 0;
+		}
+
+		for (x=0; x< count; x++)
+		{
+			mips_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+		}
+
+		// if printing segment then print next few instructions for Delay Slot analysis
 		if (!strlen(userInput[2]))
 		{
 			printLine();
 
 			for (x=CurrentCodeSeg->MIPScodeLen; x< CurrentCodeSeg->MIPScodeLen+3; x++)
 			{
-				mips_print(CurrentCodeSeg->MIPScode + x, *(CurrentCodeSeg->MIPScode + x));
+				mips_print((uint32_t)(CurrentCodeSeg->MIPScode + x), *(CurrentCodeSeg->MIPScode + x));
 			}
-		}
-		printf("\naddr 0x%x, len %d, return reg %d\n"
+			printf("\naddr 0x%x, len %d, return reg %d\n"
 				"0x%08X %08X %02X (%d)\n"
 				, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen, CurrentCodeSeg->MIPSReturnRegister
 				, CurrentCodeSeg->MIPSRegistersUsed[0], CurrentCodeSeg->MIPSRegistersUsed[1], CurrentCodeSeg->MIPSRegistersUsed[2]
-				                                                                                                                , CurrentCodeSeg->MIPSRegistersUsedCount);
+				, CurrentCodeSeg->MIPSRegistersUsedCount);
+		}
 	}
-	else if (!strncmp(userInput[1], "intermediate", 1))
+	else if (!CMD_CMP(1, "intermediate"))
 	{
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!strncmp(userInput[1], "reg", 1))
+	else if (!CMD_CMP(1, "literals"))
+	{
+		Intermediate_Literals_print(CurrentCodeSeg);
+	}
+	//TODO I do not like this!
+	else if (!CMD_CMP(1, "reg"))
 	{
 		uint32_t cpureg_i, fpureg_i,specialreg_i, cpureg_o, fpureg_o,specialreg_o;
 		int y;
@@ -429,7 +462,7 @@ static int Debugger_print(const code_segment_data_t* segmentData)
 	return 1;
 }
 
-static int Debugger_seg(const code_segment_data_t* segmentData)
+static int Debugger_seg(const code_segment_data_t* const segmentData)
 {
 	int val;
 	int x=0;
@@ -522,80 +555,90 @@ static int Debugger_seg(const code_segment_data_t* segmentData)
 
 }
 
-static int Debugger_opt(const code_segment_data_t* segmentData)
+static int Debugger_translate(const code_segment_data_t* const segmentData)
 {
 	if (!strlen(userInput[1]))
 	{
 		Translate(CurrentCodeSeg);
-
 	}
-	else if (!strncasecmp(userInput[1], "DelaySlot", 1))
+	else if (!CMD_CMP(1, "DelaySlot"))
 	{
 		Translate_DelaySlot(CurrentCodeSeg);
 	}
-	else if (!strncasecmp(userInput[1], "CountRegister", 1))
+	else if (!CMD_CMP(1, "CountRegister"))
 	{
 		Translate_CountRegister(CurrentCodeSeg);
 	}
-	else if (!strncasecmp(userInput[1], "32BitRegisters", 1))
+	else if (!CMD_CMP(1, "32BitRegisters"))
 	{
 		Translate_32BitRegisters(CurrentCodeSeg);
 	}
-	else if (!strncasecmp(userInput[1], "ReduceRegistersUsed", 1))
+	else if (!CMD_CMP(1, "ReduceRegistersUsed"))
 	{
-		Translate_ReduceRegistersUsed(CurrentCodeSeg);
+		Translate_Registers(CurrentCodeSeg);
 	}
-	else if (!strncasecmp(userInput[1], "loadStoreWriteBack", 1))
+	else if (!CMD_CMP(1, "loadStoreWriteBack"))
 	{
 		Translate_LoadStoreWriteBack(CurrentCodeSeg);
 	}
-	else if (!strncasecmp(userInput[1], "init", 1))
+	else if (!CMD_CMP(1, "init"))
 	{
 		Translate_init(CurrentCodeSeg);
 	}
-	else if (!strncasecmp(userInput[1], "full", 1))
+	else if (!CMD_CMP(1, "full"))
 	{
 		Translate(CurrentCodeSeg);
+		emit_arm_code(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "memory"))
+	{
+		Translate_Memory(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "write"))
+	{
+		emit_arm_code(CurrentCodeSeg);
 	}
 	else
 	{
-		printf(HELP_OPT);
+		printf(HELP_TRANS);
 	}
 
 	return 0;
 }
 
-void Debugger_start(code_segment_data_t* segmentData)
+void Debugger_start(const code_segment_data_t* const segmentData)
 {
-
 	//find segment
 	if (!CurrentCodeSeg) CurrentCodeSeg = segmentData->StaticSegments;
 
 	printf("> "); fflush(stdin);
 	getCmd();
 
-	if (!strncmp(userInput[0], "quit", 1))
+	if (!CMD_CMP(0, "quit"))
 	{
 		exit(0);
 	}
-	else if (!strncmp(userInput[0], "print", 1))
+	else if (!CMD_CMP(0, "print"))
 	{
 		Debugger_print(segmentData);
 	}
-	else if (!strncmp(userInput[0], "segment", 1))
+	else if (!CMD_CMP(0, "segment"))
 	{
 		Debugger_seg(segmentData);
 	}
-	else if (!strncmp(userInput[0], "opt", 1))
+	else if (!CMD_CMP(0, "translate"))
 	{
-		Debugger_opt(segmentData);
+		Debugger_translate(segmentData);
 	}
-	else if (!strncmp(userInput[0], "help", 1))
+	else if (!CMD_CMP(0, "help"))
 	{
-		printf(HELP_GEN);
+		if 		(!CMD_CMP(1, "print"))		printf(HELP_PRINT);
+		else if (!CMD_CMP(1, "segment"))	printf(HELP_SEG);
+		else if (!CMD_CMP(1, "translate")) 	printf(HELP_TRANS);
+		else printf(HELP_GEN);
 	}
 	else
 	{
-		printf("unknown command: %s", userInput[0]);
+		printf("unknown command: %s\n", userInput[0]);
 	}
 }

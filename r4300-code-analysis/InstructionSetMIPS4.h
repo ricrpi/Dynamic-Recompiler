@@ -62,13 +62,13 @@
 /*
  * Provides a bit mask for the registers used in an instruction:
  */
-uint32_t ops_regs_input(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFPregs, uint32_t *uiSpecialRegs);
+uint32_t ops_regs_input(const uint32_t uiMIPSword, uint32_t * const uiCPUregs, uint32_t * const uiVFPregs, uint32_t * const uiSpecialRegs);
 
-uint32_t ops_regs_output(uint32_t uiMIPSword, uint32_t *uiCPUregs, uint32_t *uiVFPregs, uint32_t *uiSpecialRegs);
+uint32_t ops_regs_output(const uint32_t uiMIPSword, uint32_t * const uiCPUregs, uint32_t * const uiVFPregs, uint32_t * const uiSpecialRegs);
 /*
  * Converts a raw word into an enumeration type
  */
-Instruction_e ops_type(uint32_t uiMIPSword);
+Instruction_e ops_type(const uint32_t uiMIPSword);
 
 /*
  * Return the Jump/Branch instruction offset for the raw word provided
@@ -76,13 +76,13 @@ Instruction_e ops_type(uint32_t uiMIPSword);
  * Return:
  * 		offset or 0x7FFFFFF if the instruction is not a Jump nor Branch
  * */
-int32_t ops_JumpAddressOffset(uint32_t* uiMIPSword);
+int32_t ops_JumpAddressOffset(const uint32_t* const uiMIPSword);
 
 /*
  * Provides printf() output for the raw word
  */
-void mips_print(uint32_t x, uint32_t uiMIPSword);
+void mips_print( const uint32_t x, const uint32_t uiMIPSword);
 
-uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins);
+uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins);
 
 #endif /* MIPS_H_ */

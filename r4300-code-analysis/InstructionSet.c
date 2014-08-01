@@ -13,19 +13,33 @@
 
 static void sprintReg(char* str, reg_t r)
 {
-	if (r == REG_HOST_FP)        sprintf(str, "fp     ");
-	else if (r == REG_HOST_SP)   sprintf(str, "sp     ");
-	else if (r == REG_HOST_LR)   sprintf(str, "lr     ");
-	else if (r == REG_HOST_PC)   sprintf(str, "pc     ");
-	else if (r == REG_COUNT)     sprintf(str, "COUNT  ");
-	else if (r == REG_CAUSE)     sprintf(str, "CAUSE  ");
-	else if (r == REG_CONTEXT)   sprintf(str, "CONTXT ");
-	else if (r == REG_COMPARE)   sprintf(str, "COMPAR ");
-	else if (r == REG_STATUS)    sprintf(str, "STATUS ");
-	else if (r >= C0_REG_OFFSET) sprintf(str, "c%-3d   ", r - C0_REG_OFFSET);
-	else if (r >= FP_REG_OFFSET) sprintf(str, "f%-3d   ", r - FP_REG_OFFSET);
-	else if (r >= 0)             sprintf(str, "r%-3d   ", r);
-	else                         sprintf(str, "       ");
+	if (r == REG_NOT_USED)       sprintf(str, "        ");
+	else if (r == REG_HOST_FP)   sprintf(str, "fp      ");
+	else if (r == REG_HOST_SP)   sprintf(str, "sp      ");
+	else if (r == REG_HOST_LR)   sprintf(str, "lr      ");
+	else if (r == REG_HOST_PC)   sprintf(str, "pc      ");
+	else if (r == REG_COUNT)
+		sprintf(str, "COUNT   ");
+	else if (r == REG_CAUSE)
+		sprintf(str, "CAUSE   ");
+	else if (r == REG_CONTEXT)
+		sprintf(str, "CONTEXT ");
+	else if (r == REG_COMPARE)
+		sprintf(str, "COMPARE ");
+	else if (r == REG_STATUS)
+		sprintf(str, "STATUS  ");
+
+	else if (r == REG_PC)        sprintf(str, "MIPS_PC ");
+	else if (r == REG_FCR0)      sprintf(str, "FCR0    ");
+	else if (r == REG_FCR31)     sprintf(str, "FCR31   ");
+	else if (r == REG_MULTHI)    sprintf(str, "MULT_HI ");
+	else if (r == REG_MULTLO)    sprintf(str, "MULT_LO ");
+	else if (r == REG_LLBIT)     sprintf(str, "LLBIT   ");
+
+	else if (r >= REG_CO)        sprintf(str, "c%-3d    ", r - REG_CO);
+	else if (r >= 64)            sprintf(str, "f%-3d    ", r - 64);
+	else if (r >= 0)             sprintf(str, "r%-3d    ", r);
+	else                         sprintf(str, "        ");
 }
 static void sprintRegList(char* str, Instruction_t*ins)
 {
@@ -122,7 +136,7 @@ Instruction_t* newEmptyInstr()
 
 }
 
-Instruction_t* newInstr(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1, reg_t R2, int32_t imm)
+Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const reg_t Rd1, const reg_t R1, const reg_t R2, const int32_t imm)
 {
 	Instruction_t* newInstr = newEmptyInstr(0);
 
@@ -133,10 +147,24 @@ Instruction_t* newInstr(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1,
 	newInstr->R1          = R1;
 	newInstr->R2          = R2;
 
+	switch (ins)
+	{
+	case SLL:
+	case SLLV:
+		newInstr-> shiftType = LOGICAL_LEFT; break;
+	case SRL:
+	case SRLV:
+		newInstr-> shiftType = LOGICAL_RIGHT; break;
+	case SRA:
+	case SRAV:
+		newInstr-> shiftType = ARITHMETIC_RIGHT; break;
+	default: break;
+	}
+
 	return newInstr;
 }
 
-Instruction_t* newInstrS(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1, reg_t R2, int32_t imm)
+Instruction_t* newInstrS(const Instruction_e ins, 	const Condition_e cond, const reg_t Rd1, const reg_t R1, const reg_t R2, const int32_t imm)
 {
 	Instruction_t* newIns = newInstr(ins, cond, Rd1, R1, R2, imm);
 
@@ -145,7 +173,7 @@ Instruction_t* newInstrS(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1
 	return newIns;
 }
 
-Instruction_t* newInstrPUSH(Condition_e cond, uint32_t Rmask)
+Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask)
 {
 	Instruction_t* newInstr = newEmptyInstr(0);
 
@@ -161,7 +189,7 @@ Instruction_t* newInstrPUSH(Condition_e cond, uint32_t Rmask)
 
 }
 
-Instruction_t* newInstrPOP(Condition_e cond, uint32_t Rmask)
+Instruction_t* newInstrPOP(const Condition_e cond, const uint32_t Rmask)
 {
 	Instruction_t* newInstr = newEmptyInstr(0);
 
@@ -177,21 +205,24 @@ Instruction_t* newInstrPOP(Condition_e cond, uint32_t Rmask)
 
 }
 
-void Intermediate_print(code_seg_t* codeSegment)
+void Intermediate_print(const code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 
 	ins = codeSegment->Intermcode;
-	int x=100;
+	int x=1000;
 
-	printf("command   Rd1    Rd2    R1     R2     R3     immediate\n");
+	printf("command   Rd1     Rd2     R1      R2      R3      immediate        shift\n");
 
 	while (ins && x>0)
 	{
-		char rd1[8], rd2[8], r1[8], r2[8] , r3[8];
+#define SZE 10
+		char rd1[SZE], rd2[SZE], r1[SZE], r2[SZE] , r3[SZE];
 		char instruction[10];
 		char buffer[100];
 		char offset[25];
+		char shift[25];
+
 
 		sprintInstr(instruction, ins);
 
@@ -204,6 +235,9 @@ void Intermediate_print(code_seg_t* codeSegment)
 		if (ins->offset) sprintf(offset, "%d (0x%X)", ins->offset, ins->offset);
 		else offset[0] = '\0';
 
+		if (ins->shift) sprintf(shift, "%d (0x%X)", ins->shift, ins->shift);
+		else shift[0] = '\0';
+
 		if (ins->instruction == ARM_LDM
 				|| ins->instruction == ARM_STM )
 		{
@@ -212,10 +246,32 @@ void Intermediate_print(code_seg_t* codeSegment)
 		}
 		else
 		{
-			printf("%-9s %s%s%s%s%s%s\n", instruction, rd1, rd2, r1, r2, r3, offset);
+			printf("%-9s %s%s%s%s%s%-20s%s\n", instruction, rd1, rd2, r1, r2, r3, offset, shift);
 		}
 
 		ins = ins->nextInstruction;
 		x--;
+	}
+}
+
+void Intermediate_Literals_print(const code_seg_t* const codeSegment)
+{
+	literal_t*literal;
+	int x;
+
+	literal = codeSegment->literals;
+
+
+	if (NULL == literal)
+	{
+		printf("No literals for current segment\n");
+	}
+
+	while (literal)
+	{
+		printf("%d %d\n", x, literal->value);
+		x++;
+
+		literal = literal->next;
 	}
 }

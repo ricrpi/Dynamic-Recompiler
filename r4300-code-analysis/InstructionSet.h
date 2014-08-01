@@ -22,17 +22,37 @@
 
 #define STRIP(x) (x & 0xfff)
 
-//Offsets into General Purpose Register space
+//Register IDs
 #define REG_NOT_USED (0xffff)
-#define REG_TEMP	 (0x1000)
-#define REG_HOST	 (0x4000)
+#define REG_MIPS	 (0x007F)
+#define REG_CO		 (0x0080)
+#define REG_SPECIAL	 (0x0080) + 32
+#define REG_TEMP	 (0x0100)
+#define REG_HOST	 (0x0200)
 
-#define FP_REG_OFFSET	(256)
-#define C0_REG_OFFSET	(512)
-#define REG_MIPS	 	(640)
+#define REG_CONTEXT  	(REG_CO + 4)
+#define REG_BADVADDR 	(REG_CO + 8)
+#define REG_COUNT    	(REG_CO + 9)
+#define REG_ENTRYHI  	(REG_CO + 10)
+#define REG_COMPARE  	(REG_CO + 11)
+#define REG_STATUS   	(REG_CO + 12)
+#define REG_CAUSE    	(REG_CO + 13)
+#define REG_EPC		 	(REG_CO + 14)
+
+// MIPS R4300 Special CPU Registers			// Value also forms the offset from FP when its at 0x8000 0000
+#define REG_PC       	(REG_SPECIAL + 1)
+#define REG_FCR0	 	(REG_SPECIAL + 2)
+#define REG_FCR31    	(REG_SPECIAL + 3)
+#define REG_MULTHI  	(REG_SPECIAL + 4)
+#define REG_MULTLO   	(REG_SPECIAL + 5)
+#define REG_LLBIT    	(REG_SPECIAL + 6)
+
+//Temorary Registers
+#define REG_TEMP_MEM1 	(REG_TEMP | 0x00)
+#define REG_TEMP_MEM2 	(REG_TEMP | 0x01)
 
 //These are the HOST registers. Translation MUST not change them
-#define REG_HOST_FP	 (REG_HOST | 0xb)
+#define REG_HOST_FP	 (REG_HOST | 0x0b)
 #define REG_HOST_SP	 (REG_HOST | 0x0d)
 #define REG_HOST_LR	 (REG_HOST | 0x0e)
 #define REG_HOST_PC	 (REG_HOST | 0x0f)
@@ -50,34 +70,11 @@
 #define REG_HOST_STM_GENERAL 	(0x17FF)
 #define REG_HOST_STM_EABI 		(0x000F)
 
+#define REG_T_SIZE	 (0x020F)
+
+typedef uint16_t reg_t;
+
 //-----------------------------------------------------------------------------
-
-// MIPS R4300 Co processor 0 Registers		// Value also forms the offset from FP when its at 0x8000 0000
-#define REG_CONTEXT  	(C0_REG_OFFSET + 16)
-#define REG_BADVADDR 	(C0_REG_OFFSET + 32)
-#define REG_COUNT    	(C0_REG_OFFSET + 36)
-#define REG_ENTRYHI  	(C0_REG_OFFSET + 40)
-#define REG_COMPARE  	(C0_REG_OFFSET + 44)
-#define REG_STATUS   	(C0_REG_OFFSET + 48)
-#define REG_CAUSE    	(C0_REG_OFFSET + 52)
-#define REG_EPC		 	(C0_REG_OFFSET + 56)
-
-// MIPS R4300 Special CPU Registers			// Value also forms the offset from FP when its at 0x8000 0000
-#define REG_PC       	(REG_MIPS + 0x00)
-#define REG_FCR0	 	(REG_MIPS + 0x04)
-#define REG_FCR31    	(REG_MIPS + 0x08)
-#define REG_MULTHI  	(REG_MIPS + 0x0c)
-#define REG_MULTLO   	(REG_MIPS + 0x10)
-#define REG_LLBIT    	(REG_MIPS + 0x14)
-
-//Temorary Registers
-#define REG_TEMP_MEM1 	(REG_TEMP | 0x00)
-#define REG_TEMP_MEM2 	(REG_TEMP | 0x01)
-
-
-
-
-typedef int16_t reg_t;
 
 typedef enum
 {
@@ -85,12 +82,12 @@ typedef enum
 	LITERAL,
 	INVALID,
 
-	SLL,
-    SRL,
-    SRA,
-    SLLV,
-    SRLV,
-    SRAV,
+	SLL,	// Rd1 (rd) = R1 (rt) << imm5 				The contents of the low-order 32-bit word of GPR rt are shifted left, inserting zeroes into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
+    SRL,	// Rd1 (rd) = R1 (rt) >> imm5				The contents of the low-order 32-bit word of GPR rt are shifted right, inserting zeros into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
+    SRA,	// Rd1 (rd) = R1 (rt) >> imm5 (arithmetic)	The contents of the low-order 32-bit word of GPR rt are shifted right, duplicating the sign-bit (bit 31) in the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
+    SLLV,	// Rd1 (rd) = R1 (rt) << R2 (rs)			The contents of the low-order 32-bit word of GPR rt are shifted left, inserting zeroes into the emptied bits; the result word is placed in GPR rd. The bit shift count is specified by the low-order five bits of GPR rs. If rd is a 64-bit register, the result word is sign-extended.
+    SRLV,	// Rd1 (rd) = R1 (rt) >> R2 (rs)			The contents of the low-order 32-bit word of GPR rt are shifted right, inserting zeros into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by the low-order five bits of GPR rs. If rd is a 64-bit register, the result word is sign-extended.
+    SRAV,	// Rd1 (rd) = R1 (rt) >> R2 (rs) (arithmetic) The contents of the low-order 32-bit word of GPR rt are shifted right, duplicating the sign-bit (bit 31) in the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by the low-order five bits of GPR rs. If rd is a 64-bit register, the result word is sign-extended.
     SYSCALL,
     BREAK,	// A breakpoint exception occurs, immediately and unconditionally transferring control to the exception handler. The code field is available for use as software parameters, but is retrieved by the exception handler only by loading the contents of the memory word containing the instruction.
     SYNC,
@@ -111,43 +108,43 @@ typedef enum
     DDIVU,	// (LO, HI) = R1 (rs) / R2 (rt) 	To divide 64-bit unsigned integers. The 64-bit doubleword in GPR rs is divided by the 64-bit doubleword in GPR rt, treating both operands as unsigned values. The 64-bit quotient is placed into special register LO and the 64-bit remainder is placed into special register HI.
     ADD,	// Rd1 (rd) = R1 (rs) + R2 (rt) 	To add 32-bit integers. If overflow occurs, then trap.
     ADDU,	// Rd1 (rd) = R1 (rs) + R2 (rt) 	To add 32-bit integers.
-    SUB,	// Rd1 (rd) = R1 (rs) - R2 (rt) 	To add 32-bit integers. If overflow occurs, then trap.
-    SUBU,	// Rd1 (rd) = R1 (rs) - R2 (rt) 	To add 32-bit integers.
+    SUB,	// Rd1 (rd) = R1 (rs) - R2 (rt) 	The 32-bit word value in GPR rt is subtracted from the 32-bit value in GPR rs to produce a 32-bit result. If the subtraction results in 32-bit 2’s complement arithmetic overflow then the destination register is not modified and an Integer Overflow exception occurs. If it does not overflow, the 32-bit result is placed into GPR rd.
+    SUBU,	// Rd1 (rd) = R1 (rs) - R2 (rt) 	The 32-bit word value in GPR rt is subtracted from the 32-bit value in GPR rs and the 32-bit arithmetic result is placed into GPR rd. No integer overflow exception occurs under any circumstances.
     AND,	// Rd1 (rd) = R1 (rs) & R2 (rt) 	To do a bitwise logical AND.
     OR,		// Rd1 (rd) = R1 (rs) | R2 (rt)		The contents of GPR rs are combined with the contents of GPR rt in a bitwise logical OR operation. The result is placed into GPR rd.
-    XOR,	// Rd1 (rd) = R1 (rs) ^ R2 (rt)
+    XOR,	// Rd1 (rd) = R1 (rs) ^ R2 (rt)		Combine the contents of GPR rs and GPR rt in a bitwise logical exclusive OR operation and place the result into GPR rd.
     NOR,	// Rd1 (rd) = R1 (rs) | ~R2 (rt)	The contents of GPR rs are combined with the contents of GPR rt in a bitwise logical NOR operation. The result is placed into GPR rd.
-    SLT,
-    SLTU,
+    SLT,	// Rd1 (rd) = R1 (rs) < R2 (rt)		Compare the contents of GPR rs and GPR rt as signed integers and record the Boolean result of the comparison in GPR rd. If GPR rs is less than GPR rt the result is 1 (true), otherwise 0 (false).
+    SLTU,	// Rd1 (rd) = R1 (rs) < R2 (rt)		Compare the contents of GPR rs and GPR rt as unsigned integers and record the Boolean result of the comparison in GPR rd. If GPR rs is less than GPR rt the result is 1 (true), otherwise 0 (false).
     DADD,	// Rd1 (rd) = R1 (rs) + R2 (rt) 	To add 64-bit integers. If overflow occurs, then trap.
     DADDU,	// Rd1 (rd) = R1 (rs) + R2 (rt) 	To add 64-bit integers.
     DSUB,	// Rd1 (rd) = R1 (rs) - R2 (rt) 	To add 64-bit integers. If overflow occurs, then trap.
     DSUBU,	// Rd1 (rd) = R1 (rs) - R2 (rt) 	To add 64-bit integers.
-    TGE,
-    TGEU,
-    TLT,
-    TLTU,
-    TEQ,
-    TNE,
-    DSLL,	// Rd1 (rd) = R1 (rt) << imm5 	To left shift a doubleword by a fixed amount  0 to 31 bits.
-    DSRL,	// Rd1 (rd) = R1 (rt) >> imm5 	To right shift a doubleword by a fixed amount  0 to 31 bits.
+    TGE,	// TRAP when R1 (rs) >= R2 (rt)		Compare the contents of GPR rs and GPR rt as signed integers; if GPR rs is greater than or equal to GPR rt then take a Trap exception.
+    TGEU,	// TRAP when R1 (rs) >= R2 (rt)		Compare the contents of GPR rs and GPR rt as unsigned integers; if GPR rs is greater than or equal to GPR rt then take a Trap exception.
+    TLT,	// TRAP when R1 (rs) < R2 (rt)		Compare the contents of GPR rs and GPR rt as signed integers; if GPR rs is less than GPR rt then take a Trap exception.
+    TLTU,	// TRAP when R1 (rs) < R2 (rt)		Compare the contents of GPR rs and GPR rt as unsigned integers; if GPR rs is less than GPR rt then take a Trap exception.
+    TEQ,	// TRAP when R1 (rs) == R2 (rt)		Compare the contents of GPR rs and GPR rt as signed integers; if GPR rs is equal to GPR rt then take a Trap exception. The contents of the code field are ignored by hardware and may be used to encode information for system software. To retrieve the information, system software must load the instruction word from memory.
+    TNE,	// TRAP when R1 (rs) != R2 (rt)		Compare the contents of GPR rs and GPR rt as signed integers; if GPR rs is not equal to GPR rt then take a Trap exception.
+    DSLL,	// Rd1 (rd) = R1 (rt) << imm5 		To left shift a doubleword by a fixed amount  0 to 31 bits.
+    DSRL,	// Rd1 (rd) = R1 (rt) >> imm5 		To right shift a doubleword by a fixed amount  0 to 31 bits.
     DSRA,	// Rd1 (rd) = R1 (rt) >> imm5 (arithmetic). To right shift a doubleword by a fixed amount  0 to 31 bits.
     DSLL32,	// Rd1 (rd) = R1 (rt) << (32 + imm5) To left shift a doubleword by a fixed amount  32 to 63 bits.
     DSRL32, // Rd1 (rd) = R1 (rt) >> (32 + imm5) To right shift a doubleword by a fixed amount  32 to 63 bits.
     DSRA32, // Rd1 (rd) = R1 (rt) >> (32 + imm5) (arithmetic). To right shift a doubleword by a fixed amount  32 to 63 bits.
-	TGEI,
-	TGEIU,
-	TLTI,
-	TLTIU,
-	TEQI,
-	TNEI,
+	TGEI,	// TRAP when R1 (rs) >= imm16		Compare the contents of GPR rs and the 16-bit signed immediate as signed integers; if GPR rs is greater than or equal to immediate then take a Trap exception.
+	TGEIU,	// TRAP when R1 (rs) >= imm16		Compare the contents of GPR rs and the 16-bit sign-extended immediate as unsigned integers; if GPR rs is greater than or equal to immediate then take a Trap exception. Because the 16-bit immediate is sign-extended before comparison, the instruction is able to represent the smallest or largest unsigned numbers. The representable values are at the minimum [0, 32767] or maximum [max_unsigned-32767, max_unsigned] end of the unsigned range.
+	TLTI,	// TRAP when R1 (rs) < imm16		Compare the contents of GPR rs and the 16-bit signed immediate as signed integers; if GPR rs is less than immediate then take a Trap exception.
+	TLTIU,	// TRAP when R1 (rs) < imm16		Compare the contents of GPR rs and the 16-bit sign-extended immediate as unsigned integers; if GPR rs is less than immediate then take a Trap exception. Because the 16-bit immediate is sign-extended before comparison, the instruction is able to represent the smallest or largest unsigned numbers. The representable values are at the minimum [0, 32767] or maximum [max_unsigned-32767, max_unsigned] end of the unsigned range.
+	TEQI,	// TRAP when R1 (rs) == imm16		Compare the contents of GPR rs and the 16-bit signed immediate as signed integers; if GPR rs is equal to immediate then take a Trap exception.
+	TNEI,	// TRAP when R1 (rs) != imm16		Compare the contents of GPR rs and the 16-bit signed immediate as signed integers; if GPR rs is not equal to immediate then take a Trap exception.
 	ADDI,	// Rd1 (rt) = R1 (rs) + imm16 		To add a constant to a 32-bit integer. If overflow occurs, then trap.
 	ADDIU,	// Rd1 (rt) = R1 (rs) + imm16 		To add a constant to a 32-bit integer.
-	SLTI,
-	SLTIU,
+	SLTI,	// Rd1 (rt) = R1 (rs) + imm16		Compare the contents of GPR rs and the 16-bit signed immediate as signed integers and record the Boolean result of the comparison in GPR rt. If GPR rs is less than immediate the result is 1 (true), otherwise 0 (false).
+	SLTIU,	// Rd1 (rt) = R1 (rs) + imm16		Compare the contents of GPR rs and the sign-extended 16-bit immediate as unsigned integers and record the Boolean result of the comparison in GPR rt. If GPR rs is less than immediate the result is 1 (true), otherwise 0 (false). Because the 16-bit immediate is sign-extended before comparison, the instruction is able to represent the smallest or largest unsigned numbers. The representable values are at the minimum [0, 32767] or maximum [max_unsigned-32767, max_unsigned] end of the unsigned range.
 	ANDI,	// Rd1 (rt) = R1 (rs) & imm16 		To do a bitwise logical AND with a constant.
-	ORI,
-	XORI,
+	ORI,	// Rd1 (rt) = R1 (rs) | imm16 		To do a bitwise logical OR with a constant.
+	XORI,	// Rd1 (rt) = R1 (rs) ^ imm16 		Combine the contents of GPR rs and the 16-bit zero-extended immediate in a bitwise logical exclusive OR operation and place the result into GPR rt.
 	LUI,	// Rd1 (rt) = imm16 << 16 			The 16-bit immediate is shifted left 16 bits and concatenated with 16 bits of low-order zeros. The 32-bit result is sign-extended and placed into GPR rt.
 	MFC0,
 	MTC0,
@@ -181,9 +178,9 @@ typedef enum
 	FLOOR_L_S,
 	ROUND_W_S,
 	TRUNC_W_S,
-	CEIL_W_S,
+	CEIL_W_S,		// Rd1 (fd) = convert( R1 (fs) )		The value in FPR fs in format fmt, is converted to a value in 32-bit word fixed-point format rounding toward +∞ (rounding mode 2). The result is placed in FPR fd. When the source value is Infinity, NaN, or rounds to an integer outside the range -231 to 231-1, the result cannot be represented correctly and an IEEE Invalid Operation condition exists. The result depends on the FP exception model currently active.
 	FLOOR_W_S,
-	CVT_D_S,
+	CVT_D_S,		// Rd1 (fd) = convert( R1 (fs) )		The value in FPR fs in format fmt is converted to a value in double floating-point format rounded according to the current rounding mode in FCSR. The result is placed in FPR fd.
 	CVT_W_S,
 	CVT_L_S,
 	C_F_S,
@@ -238,7 +235,7 @@ typedef enum
 	C_LE_D,
 	C_NGT_D,
 	CVT_S_W,
-	CVT_D_W,
+	CVT_D_W,	// Rd1 (fd) = convert( R1 (fs) )		The value in FPR fs in format fmt is converted to a value in double floating-point format rounded according to the current rounding mode in FCSR. The result is placed in FPR fd.
 	CVT_S_L,
 	CVT_D_L,
 	DADDI,	// Rd1 (rt) = R1 (rs) + imm16 		To add a constant to a 64-bit integer. If overflow occurs, then trap.
@@ -249,16 +246,16 @@ typedef enum
 	LLD,	// Rd1 (rt) = memory[ R1 (base) + imm16]	The LL and SC instructions provide primitives to implement atomic Read-Modify-Write (RMW) operations for cached memory locations. The 16-bit signed offset is added to the contents of GPR base to form an effective address.
 	LDC1,	// Rd1 (rt) = memory[ R1 (base) + imm16]	The contents of the 64-bit doubleword at the memory location specified by the aligned effective address are fetched and made available to coprocessor unit 1. The 16-bit signed offset is added to the contents of GPR base to form the effective address. The manner in which each coprocessor uses the data is defined by the individual coprocessor specifications. The usual operation would place the data into coprocessor general register rt.
 	LD,		// Rd1 (rt) = memory[ R1 (base) + imm16]	The contents of the 64-bit doubleword at the memory location specified by the aligned effective address are fetched and placed in GPR rt. The 16-bit signed offset is added to the contents of GPR base to form the effective address. The effective address must be naturally aligned. If any of the three least-significant bits of the address are non-zero, an Address Error exception occurs.
-	SC,
-	SWC1,
-	SCD,
-	SDC1,
-	SD,
+	SC,		// memory[ R1 (base) + imm16] = R2 (rt)		The SC completes the RMW sequence begun by the preceding LL instruction executed on the processor. If it would complete the RMW sequence atomically, then the least-significant 32-bit word of GPR rt is stored into memory at the location specified by the aligned effective address and a one, indicating success, is written into GPR rt. Otherwise, memory is not modified and a zero, indicating failure, is written into GPR rt.
+	SWC1,	// memory[ R1 (base) + imm16] = R2 (rt)		Coprocessor unit zz supplies a 32-bit word which is stored at the memory location specified by the aligned effective address. The 16-bit signed offset is added to the contents of GPR base to form the effective address.
+	SCD,	// memory[ R1 (base) + imm16] = R2 (rt)		The SCD completes the RMW sequence begun by the preceding LLD instruction executed on the processor. If it would complete the RMW sequence atomically, then the 64-bit doubleword of GPR rt is stored into memory at the location specified by the aligned effective address and a one, indicating success, is written into GPR rt. Otherwise, memory is not modified and a zero, indicating failure, is written into GPR rt.
+	SDC1,	// memory[ R1 (base) + imm16] = R2 (rt)		Coprocessor unit zz supplies a 64-bit doubleword which is stored at the memory location specified by the aligned effective address. The 16-bit signed offset is added to the contents of GPR base to form the effective address.
+	SD,		//
 
 	//---------------------------
-	J 	// PC = PC(31:27) | (PC + imm26)(26:0) 		This is a PC-region branch (not PC-relative); the effective target address is in the “current” 256 MB aligned region. The low 28 bits of the target address is the instr_index field shifted left 2 bits. The remaining upper bits are the corresponding bits of the address of the instruction in the delay slot (not the branch itself). Jump to the effective target address. Execute the instruction following the jump, in the branch delay slot, before jumping.
+	J 		// PC = PC(31:27) | (PC + imm26)(26:0) 		This is a PC-region branch (not PC-relative); the effective target address is in the “current” 256 MB aligned region. The low 28 bits of the target address is the instr_index field shifted left 2 bits. The remaining upper bits are the corresponding bits of the address of the instruction in the delay slot (not the branch itself). Jump to the effective target address. Execute the instruction following the jump, in the branch delay slot, before jumping.
 		= OPS_JUMP + STRIP(SD) + 1,
-	JR,	// PC = R1 (rs) 							Jump to the effective target address in GPR rs. Execute the instruction following the jump, in the branch delay slot, before jumping.
+	JR,		// PC = R1 (rs) 							Jump to the effective target address in GPR rs. Execute the instruction following the jump, in the branch delay slot, before jumping.
 
 	//---------------------------
 
@@ -292,13 +289,14 @@ typedef enum
 
 	//---------------------------
 
-	SB = OPS_STR + STRIP(BGEZALL) + 1,
-	SH,
-	SWL,
-	SW,
-	SDL,
-	SDR,
-	SWR,
+	SB 		// memory[ R1 (base) + imm16] = R2 (rt)				The least-significant 8-bit byte of GPR rt is stored in memory at the location specified by the effective address. The 16-bit signed offset is added to the contents of GPR base to form the effective address.
+		= OPS_STR + STRIP(BGEZALL) + 1,
+	SH,		// memory[ R1 (base) + imm16] = R2 (rt)					The least-significant 16-bit halfword of register rt is stored in memory at the location specified by the aligned effective address. The 16-bit signed offset is added to the contents of GPR base to form the effective address.
+	SWL,	// memory[ R1 (base) + imm16] = partial-upper R2 (rt)				The 16-bit signed offset is added to the contents of GPR base to form an effective address (EffAddr). EffAddr is the address of the most-significant of four consecutive bytes forming a word in memory (W) starting at an arbitrary byte boundary. A part of W, the most-significant one to four bytes, is in the aligned word containing EffAddr. The same number of the most-significant (left) bytes from the word in GPR rt are stored into these bytes of W.
+	SW,		// memory[ R1 (base) + imm16] = R2 (rt)					The least-significant 32-bit word of register rt is stored in memory at the location specified by the aligned effective address. The 16-bit signed offset is added to the contents of GPR base to form the effective address.
+	SDL,	// memory[ R1 (base) + imm16] = partial-upper R2 (rt)	The 16-bit signed offset is added to the contents of GPR base to form an effective address (EffAddr). EffAddr is the address of the most-significant of eight consecutive bytes forming a doubleword in memory (DW) starting at an arbitrary byte boundary. A part of DW, the most-significant one to eight bytes, is in the aligned doubleword containing EffAddr. The same number of most-significant (left) bytes of GPR rt are stored into these bytes of DW.
+	SDR,	// memory[ R1 (base) + imm16] = partial-lower R2 (rt)	The 16-bit signed offset is added to the contents of GPR base to form an effective address (EffAddr). EffAddr is the address of the least-significant of eight consecutive bytes forming a doubleword in memory (DW) starting at an arbitrary byte boundary. A part of DW, the least-significant one to eight bytes, is in the aligned doubleword containing EffAddr. The same number of least-significant (right) bytes of GPR rt are stored into these bytes of DW.
+	SWR,	// memory[ R1 (base) + imm16] = partial-lower R2 (rt)	The 16-bit signed offset is added to the contents of GPR base to form an effective address (EffAddr). EffAddr is the address of the least-significant of four consecutive bytes forming a word in memory (W) starting at an arbitrary byte boundary. A part of W, the least-significant one to four bytes, is in the aligned word containing EffAddr. The same number of the least-significant (right) bytes from the word in GPR rt are stored into these bytes of W.
 
 	//---------------------------
 
@@ -320,35 +318,41 @@ typedef enum
 
 	ARM_BFC= STRIP(LWU) + 1,
 	ARM_BFI,
+	ARM_CLZ,
 	ARM_PKHBT,
 	ARM_PKHTB,
 	ARM_RBIT,
 	ARM_REV,
 	ARM_REV16,
 	ARM_REVSH,
-	ARM_AND,
+	ARM_AND,		// R1 (Rd) = R2 (Rn) & Op2
 	ARM_BRANCH,
 	ARM_EOR,
 	ARM_SUB,
 	ARM_RSB,
-	ARM_ADD,
-	ARM_ADC,
-	ARM_SBC,
+	ARM_ADD,		// Rd1 (Rd) = R1 (Rn) + Op2
+	ARM_ADC,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
+	ARM_ASR,		// Rd1 (Rd) = R1 (Rn) >> #<imm>
+	ARM_SBC,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
 	ARM_RSC,
-	ARM_TST,		// Rn AND Op2
-	ARM_TEQ,		// Rn EOR Op2
+	ARM_TST,		// Rn & Op2
+	ARM_TEQ,		// Rn ^ Op2
 	ARM_CMP,		// Rn - Op2
 	ARM_CMN,		// Rn + Op2
-	ARM_ORR,
-	ARM_MOV,
-	ARM_BIC,		// Rd = Rn AND ~Op2
-	ARM_MVN,		// Rd = ~Op2ARM_LDR
-	ARM_LDR,
-	ARM_STR,
-	ARM_LDR_LIT,
-	ARM_STD_LIT,
-	ARM_LDM,
-	ARM_STM,
+	ARM_ORR,		// Rd1 (Rd) = R2 (Rn) | Op2
+	ARM_MOV,		// Rd1 (Rd) = Op2
+	ARM_BIC,		// Rd1 (Rd) = R2 (Rn) AND ~Op2
+	ARM_MVN,		// Rd1 (Rd) = ~Op2
+	ARM_LDR,		// R1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
+	ARM_STR,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
+	ARM_LDRD,		// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
+	ARM_STRD,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
+	ARM_LDR_LIT,	// Rd1 (Rt) = memory[ R2 (Rn) + imm ]
+	ARM_STD_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
+	ARM_LDRD_LIT,	// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
+	ARM_STDD_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
+	ARM_LDM,		// Rmask (<registers>) = memory [ Rn ], if (W) Rn +-= count of registers  (+ if U, - if ~U)
+	ARM_STM,		// memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
 	ARM_MRS,
 	ARM_MSR,
 	sizeof_mips_op_t
@@ -589,6 +593,7 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] =
 
 	"bfc",
 	"bfi",
+	"clz",
 	"pkhbt",
 	"pkhtb",
 	"rbit",
@@ -602,6 +607,7 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] =
 	"rsb",
 	"add",
 	"adc",
+	"asr",
 	"sbc",
 	"rsc",
 	"tst",
@@ -614,8 +620,12 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] =
 	"mvn",
 	"ldr",
 	"str",
+	"ldrd",
+	"strd",
 	"ldr",
 	"str",
+	"ldrd",
+	"strd",
 	"ldm",
 	"stm",
 	"mrs",
@@ -666,8 +676,8 @@ typedef struct _Instruction
 	};
 
 	union{
-		int32_t shift;
-	int32_t rotate;
+		uint32_t shift;
+		uint32_t rotate;
 	};
 
 	//--------------------- registers -----------------------------
@@ -698,16 +708,19 @@ typedef struct _Instruction
 
 struct _code_seg;
 
-void Intermediate_print(struct _code_seg *codeSegment);
-
 Instruction_t* newEmptyInstr();
 
-Instruction_t* newInstr(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1, reg_t R2, int32_t imm);
-Instruction_t* newInstrS(Instruction_e ins, Condition_e cond,reg_t Rd1, reg_t R1, reg_t R2, int32_t imm);
+Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const reg_t Rd1, const reg_t R1, const reg_t R2, const int32_t imm);
 
-Instruction_t* newInstrPUSH(Condition_e cond, uint32_t Rmask);
+Instruction_t* newInstrS(const Instruction_e ins, const Condition_e cond, const reg_t Rd1, const reg_t R1, const reg_t R2, const int32_t imm);
 
-Instruction_t* newInstrPOP(Condition_e cond, uint32_t Rmask);
+Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask);
+
+Instruction_t* newInstrPOP(const Condition_e cond, const uint32_t Rmask);
+
+void Intermediate_print(const struct _code_seg * const codeSegment);
+
+void Intermediate_Literals_print(const struct _code_seg * const codeSegment);
 
 #endif
 

@@ -11,8 +11,6 @@
 #include "memory.h"
 #include "InstructionSetMIPS4.h"
 
-
-
 #define INDEX "%08x"
 
 #define I_OP "s%02u, s%02u, #%02d"
@@ -38,7 +36,6 @@
 		(x + 4 + (int)(val<<16)/(1<<16) * 4), \
 		(val)// calculate offset from current position
 
-
 #define J_OP "0x%08x\t\t// val<<2 = 0x%08x, offset = %d"
 #define OP_J(x, val) \
 		(x&0xf0000000)|((val<<2) & 0x0FFFFFFF), \
@@ -54,23 +51,7 @@
 		((val>>16)&0x1f), \
 		((int)(val<<16)/(1<<16))
 
-
-static uint32_t mip_ops[sizeof_mips_op_t];
-
-void count_ops(uint32_t* data, uint32_t len)
-{
-	memset(mip_ops, 0, sizeof_mips_op_t);
-
-	int x;
-
-	for(x=0;x<len;x++)
-	{
-		mip_ops[STRIP(ops_type(data[x]))]++;
-	}
-}
-
-
-int32_t ops_JumpAddressOffset(uint32_t* instruction)
+int32_t ops_JumpAddressOffset(const uint32_t* const instruction)
 {
 	uint32_t uiMIPSword = *instruction;
 	uint32_t op=uiMIPSword>>26;
@@ -131,12 +112,11 @@ int32_t ops_JumpAddressOffset(uint32_t* instruction)
 	return 0x7FFFFFF;
 }
 
-uint32_t ops_regs_output(uint32_t uiMIPSword, uint32_t *puiCPUregs_out, uint32_t *puiFPUregs_out, uint32_t *puiSpecialregs_out)
+uint32_t ops_regs_output(const uint32_t uiMIPSword, uint32_t * const puiCPUregs_out, uint32_t * const puiFPUregs_out, uint32_t * const puiSpecialregs_out)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
 
-	//TODO need to return registers
 	switch(op)
 	{
 		case 0x00:
@@ -413,12 +393,11 @@ uint32_t ops_regs_output(uint32_t uiMIPSword, uint32_t *puiCPUregs_out, uint32_t
 	return 1;
 }
 
-uint32_t ops_regs_input(uint32_t uiMIPSword, uint32_t *puiCPUregs_in, uint32_t *puiFPUregs_in, uint32_t *puiSpecialregs_in)
+uint32_t ops_regs_input(const uint32_t uiMIPSword, uint32_t * const puiCPUregs_in, uint32_t * const puiFPUregs_in, uint32_t * const puiSpecialregs_in)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
 
-	//TODO need to return registers
 	switch(op)
 	{
 		case 0x00:
@@ -688,7 +667,7 @@ uint32_t ops_regs_input(uint32_t uiMIPSword, uint32_t *puiCPUregs_in, uint32_t *
 	return 1;
 }
 
-Instruction_e ops_type(uint32_t uiMIPSword)
+Instruction_e ops_type(const uint32_t uiMIPSword)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
@@ -968,7 +947,7 @@ Instruction_e ops_type(uint32_t uiMIPSword)
 #define IMM(x,y) ( ( ( (int32_t)(x) & ( (1 << (y)) - 1) ) << (32 -(y)) ) / (1 << (32 - (y)) ) )
 #define IMMU(x,y) ( (uint32_t)(x) & ( (1 << (y)) - 1) )
 
-uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
+uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
@@ -1346,6 +1325,7 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 		ins->Rd1 = M_Rt(uiMIPSword);
 		ins->R1 = M_Rs(uiMIPSword);
 		ins->immediate = IMM(uiMIPSword, 16);
+		ins->I = 1;
 		return 0; 	// I
 
 	case 0x0A:
@@ -1356,31 +1336,42 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 		return 0; 	// I
 	case 0x0C:
 		ins->instruction =  ANDI;
-
+		ins->Rd1 = M_Rt(uiMIPSword);
+		ins->R1 = M_Rs(uiMIPSword);
+		ins->immediate = IMM(uiMIPSword, 16);
+		ins->I = 1;
 		return 0;  	// I
 	case 0x0D:
 		ins->instruction =  ORI;
+		ins->Rd1 = M_Rt(uiMIPSword);
+		ins->R1 = M_Rs(uiMIPSword);
+		ins->immediate = IMM(uiMIPSword, 16);
+		ins->I = 1;
 		return 0; 	// I
 	case 0x0E:
-			ins->instruction =  XORI;
-			return 0; 	// I
+		ins->instruction =  XORI;
+		ins->Rd1 = M_Rt(uiMIPSword);
+		ins->R1 = M_Rs(uiMIPSword);
+		ins->immediate = IMM(uiMIPSword, 16);
+		ins->I = 1;
+		return 0; 	// I
 	case 0x0F:
-			ins->instruction =  LUI;
-			ins->Rd1 = M_Rt(uiMIPSword);
-			ins->immediate = IMM(uiMIPSword, 16);
-			return 0; 	// I
+		ins->instruction =  LUI;
+		ins->Rd1 = M_Rt(uiMIPSword);
+		ins->immediate = IMM(uiMIPSword, 16);
+		return 0; 	// I
 	case 0x10:
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
 		{
 		case 0x00:
 			ins->instruction =  MFC0;
-			ins->R1 = C0_REG_OFFSET + M_Rd(uiMIPSword);
+			ins->R1 = REG_CO + M_Rd(uiMIPSword);
 			ins->Rd1 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x04:
 			ins->instruction =  MTC0;
-			ins->Rd1 = C0_REG_OFFSET + M_Rd(uiMIPSword);
+			ins->Rd1 = REG_CO + M_Rd(uiMIPSword);
 			ins->R1 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x10: //
@@ -1412,12 +1403,12 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 		{
 		case 0x00:
 			ins->instruction =  MFC1;
-			ins->R1 = FP_REG_OFFSET + M_Rd(uiMIPSword);
+			ins->R1 = REG_CO + M_Rd(uiMIPSword);
 			ins->Rd1 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x01:
 			ins->instruction =  DMFC1;
-			ins->R1 = FP_REG_OFFSET + M_Rd(uiMIPSword);
+			ins->R1 = REG_CO + M_Rd(uiMIPSword);
 			ins->Rd1 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x02:
@@ -1425,12 +1416,12 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 			return 0;
 		case 0x04:
 			ins->instruction =  MTC1;
-			ins->Rd1 = FP_REG_OFFSET + M_Rd(uiMIPSword);
+			ins->Rd1 = REG_CO + M_Rd(uiMIPSword);
 			ins->R1 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x05:
 			ins->instruction =  DMTC1;
-			ins->Rd1 = FP_REG_OFFSET + M_Rd(uiMIPSword);
+			ins->Rd1 = REG_CO + M_Rd(uiMIPSword);
 			ins->R1 = M_Rt(uiMIPSword);
 			return 0;
 		case 0x06:
@@ -1732,12 +1723,14 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 			ins->Rd1 = M_Rt(uiMIPSword);
 			ins->R1 = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0; 	// Load Byte
 	case 0x21:
 			ins->instruction =  LH;
 			ins->Rd1 = M_Rt(uiMIPSword);
 			ins->R1 = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0; 	// Load Halfword
 	case 0x22:
 			ins->instruction =  LWL;
@@ -1748,6 +1741,7 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 			ins->Rd1 = M_Rt(uiMIPSword);
 			ins->R1 = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0; 	// Load Word
 	case 0x24:
 			ins->instruction =  LBU;
@@ -1769,12 +1763,19 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 			ins->Rd1 = M_Rt(uiMIPSword);
 			ins->R1 = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0; 	// Load Word unsigned
 	case 0x28:
 			ins->instruction =  SB;
+			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
 			return 0; 	// I
 	case 0x29:
 			ins->instruction =  SH;
+			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
 			return 0; 	// I
 	case 0x2A:
 			ins->instruction =  SWL;
@@ -1823,13 +1824,16 @@ uint32_t mips_decode(uint32_t uiMIPSword, Instruction_t* ins)
 			return 0;
 	case 0x3F:
 			ins->instruction =  SD;
+			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1 = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
 			return 0;  	// Store Double word
 	}
 
 	return 1;
 }
 
-void mips_print(uint32_t x, uint32_t uiMIPSword)
+void mips_print(const uint32_t x, const uint32_t uiMIPSword)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;

@@ -95,35 +95,42 @@ code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
 	}
 
 	//Add the base and offset together
-	newInstruction 		= newInstr(ADD, AL, REG_TEMP_MEM1, REG_HOST_R0, REG_HOST_R1, 0);
+	newInstruction 		= newInstr(ARM_ADD, AL, REG_TEMP_MEM1, REG_HOST_R0, REG_HOST_R1, 0);
 	code_seg->Intermcode = ins = newInstruction;
 
 	//shift Right so that we have the final Byte
-	newInstruction 		= newInstr(SRL, AL, REG_TEMP_MEM2, REG_TEMP_MEM1, REG_NOT_USED, 24);
+	newInstruction 		= newInstr(SRL, AL, REG_TEMP_MEM2, REG_TEMP_MEM1, REG_NOT_USED, 0);
+	newInstruction->I = 1;
+	newInstruction->shift = 24;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//If the final Byte is 0x80 then all is good
 	newInstruction 		= newInstr(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0x80);
+	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//Move the address to R0
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_TEMP_MEM1, REG_NOT_USED, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, REG_TEMP_MEM1, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_HOST_LR, REG_NOT_USED, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//Else is the final byte 0xA0?
 	newInstruction 		= newInstr(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0xA0);
+	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//If so then clear bit 0x40
 	newInstruction 		= newInstr(ARM_BIC, EQ, REG_HOST_R0, REG_TEMP_MEM1, REG_NOT_USED, 0x40);
+	newInstruction->I = 1;
+	newInstruction->shift = 24;
+	newInstruction->shiftType = LOGICAL_LEFT;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_HOST_LR, REG_NOT_USED, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//The address must be Virtual
@@ -132,7 +139,7 @@ code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//TODO call C function for Lookup?
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC, 0);
 	//The literal !!!
 	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_HOST_PC, REG_NOT_USED, 0);
 
@@ -140,8 +147,10 @@ code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//Return
-	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_HOST_LR, REG_NOT_USED, 0);
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
 	ADD_LL_NEXT(newInstruction, ins);
+
+	Translate_Registers(code_seg);
 
 	return code_seg;
 }
@@ -149,7 +158,7 @@ code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
 
 //=============================================================
 
-static Instruction_t* insertCall(Instruction_t* ins, Condition_e cond, int32_t offset)
+static Instruction_t* insertCall(Instruction_t* ins, const Condition_e cond, const int32_t offset)
 {
 	Instruction_t* newInstruction;
 
@@ -194,7 +203,7 @@ static Instruction_t* insertCall(Instruction_t* ins, Condition_e cond, int32_t o
  * All segments must clear the Z status flag before jumping to a BLOCK_START_CONT segment.
  *
  */
-void Translate_DelaySlot(code_seg_t* codeSegment)
+void Translate_DelaySlot(code_seg_t* const codeSegment)
 {
 	Instruction_e ops = ops_type(*(codeSegment->MIPScode + codeSegment->MIPScodeLen -1));
 	Instruction_t* newInstruction;
@@ -266,7 +275,7 @@ void Translate_DelaySlot(code_seg_t* codeSegment)
  * MIPS4300 has a COUNT register that is decremented every instruction
  * when it underflows, an interrupt is triggered.
  */
-void Translate_CountRegister(code_seg_t* codeSegment)
+void Translate_CountRegister(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins = codeSegment->Intermcode;
 	uint32_t instrCount =0;
@@ -342,7 +351,7 @@ void Translate_CountRegister(code_seg_t* codeSegment)
  * Function to turn 64bit registers into multiple 32-bit registers
  *
  */
-void Translate_32BitRegisters(code_seg_t* codeSegment)
+void Translate_32BitRegisters(code_seg_t* const codeSegment)
 {
 	//Instruction_t* i = newInstr();
 
@@ -371,6 +380,41 @@ void Translate_32BitRegisters(code_seg_t* codeSegment)
 	}
 }
 
+
+static uint32_t FindRegNextUsedAgain(const Instruction_t* const ins, const reg_t Reg)
+{
+	const Instruction_t* in = ins;
+	uint32_t x = 0;
+
+	while (in)
+	{
+		if (ins->R1 == Reg || ins->R2 == Reg || ins->R3 == Reg)	return x;
+		x++;
+		in = in->nextInstruction;
+	}
+
+	return x;
+}
+
+static void UpdateRegWithReg(Instruction_t* const ins, const reg_t RegFrom, const reg_t RegTo, uint32_t MaxInstructions)
+{
+	Instruction_t* in = ins;
+	uint32_t x = MaxInstructions;
+
+	if (!x) x = 0xffffffff;
+
+	while (x && in)
+	{
+		if (in->Rd1 == RegFrom) in->Rd1 = RegTo;
+		if (in->Rd2 == RegFrom) in->Rd2 = RegTo;
+		if (in->R1 == RegFrom) in->R1 = RegTo;
+		if (in->R2 == RegFrom) in->R2 = RegTo;
+		if (in->R3 == RegFrom) in->R3 = RegTo;
+		x--;
+		in = in->nextInstruction;
+	}
+}
+
 /*
  * Function to re-number / reduce the number of registers so that they fit the HOST
  *
@@ -382,18 +426,91 @@ void Translate_32BitRegisters(code_seg_t* codeSegment)
  * with the layout of the emulated register space.
  *
  */
-void Translate_ReduceRegistersUsed(code_seg_t* codeSegment)
+void Translate_Registers(code_seg_t* const codeSegment)
 {
-	Instruction_t*ins;
+	Instruction_t* ins;
+	//Instruction_t*insSearch;
+
+	uint32_t x;
+	uint32_t NumberRegUsed = 0;
+
+	uint16_t counts[REG_T_SIZE];
+	memset(counts,0,sizeof(counts));
+
+	ins = codeSegment->Intermcode;
+	while (ins)
+	{
+		if (ins->Rd1 != REG_NOT_USED) counts[ins->Rd1]++;
+		if (ins->Rd2 != REG_NOT_USED) counts[ins->Rd2]++;
+		if (ins->R1 != REG_NOT_USED) counts[ins->R1]++;
+		if (ins->R2 != REG_NOT_USED) counts[ins->R2]++;
+		if (ins->R3 != REG_NOT_USED) counts[ins->R3]++;
+
+		ins = ins->nextInstruction;
+	}
+
+	for (x=0; x < REG_HOST + 11; x++)
+	{
+		if (counts[x]) NumberRegUsed++;
+	}
+
+	printf("Segment 0x%x uses %d registers\n",(uint32_t)codeSegment, NumberRegUsed);
+
+	if (NumberRegUsed < 10)
+	{
+		ins = codeSegment->Intermcode;
+		uint32_t CRindex = 0;
+		while (counts[REG_HOST + CRindex]) CRindex++;
+
+		for (x = 0; x < REG_HOST; x++ )
+		{
+			if (counts[x])
+			{
+				UpdateRegWithReg(ins,(reg_t)x, REG_HOST + CRindex, 0);
+				CRindex++;
+				while (counts[REG_HOST + CRindex]) CRindex++;
+			}
+		}
+	}
+	else
+	{
+		//TODO
+		fprintf(stderr, "Missing code to do register translation\n");
+	}
+
+	//Strip HOST flag from register ID leaving ARM register ID ready for writing
+	ins = codeSegment->Intermcode;
+	while (ins)
+	{
+		if (ins->Rd1 != REG_NOT_USED) ins->Rd1 &= ~REG_HOST;
+		if (ins->Rd2 != REG_NOT_USED) ins->Rd2 &= ~REG_HOST;
+		if (ins->R1 != REG_NOT_USED) ins->R1 &= ~REG_HOST;
+		if (ins->R2 != REG_NOT_USED) ins->R2 &= ~REG_HOST;
+		if (ins->R3 != REG_NOT_USED) ins->R3 &= ~REG_HOST;
+
+		ins = ins->nextInstruction;
+	}
+
+
+	// ------------ sanity check --------------
+
+#ifndef NDEBUG
 	ins = codeSegment->Intermcode;
 
 	while (ins)
 	{
+		assert( ins->Rd1 < 16 || ins->Rd1 == REG_NOT_USED);
+		assert( ins->Rd2 < 16 || ins->Rd2 == REG_NOT_USED);
+		assert( ins->R1 < 16 || ins->R1 == REG_NOT_USED);
+		assert( ins->R2 < 16 || ins->R2 == REG_NOT_USED);
+		assert( ins->R3 < 16 || ins->R3 == REG_NOT_USED);
 		ins = ins->nextInstruction;
 	}
+#endif
+	return;
 }
 
-void Translate_LoadStoreWriteBack(code_seg_t* codeSegment)
+void Translate_LoadStoreWriteBack(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
@@ -414,7 +531,7 @@ void Translate_LoadStoreWriteBack(code_seg_t* codeSegment)
  *
  *  Virtual will need to call a function to lookup address
  */
-void Translate_Memory(code_seg_t* codeSegment)
+void Translate_Memory(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
@@ -430,7 +547,30 @@ void Translate_Memory(code_seg_t* codeSegment)
 	}
 }
 
-void Translate_init(code_seg_t* codeSegment)
+void Translate_Generic(code_seg_t* const codeSegment)
+{
+	Instruction_t*ins;
+	ins = codeSegment->Intermcode;
+
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+		case MTC0:
+		case MFC0:
+			ins->instruction = ARM_MOV;
+			ins->R2 = ins->R1;
+			ins->R1 = REG_NOT_USED;
+			break;
+		default: break;
+		}
+
+		ins = ins->nextInstruction;
+	}
+}
+
+
+void Translate_init(code_seg_t* const codeSegment)
 {
 	int x;
 	Instruction_t*newInstruction;
@@ -457,15 +597,17 @@ void Translate_init(code_seg_t* codeSegment)
 		prevInstruction = newInstruction;
 	}
 
+	Translate_Generic(codeSegment);
 	return;
 }
 
-void Translate(code_seg_t* codeSegment)
+void Translate(code_seg_t* const codeSegment)
 {
 	Translate_init(codeSegment);
 
 	Translate_CountRegister(codeSegment);
 	Translate_DelaySlot(codeSegment);
+	Translate_Memory(codeSegment);
 	Translate_32BitRegisters(codeSegment);
-	Translate_ReduceRegistersUsed(codeSegment);
+	Translate_Registers(codeSegment);
 }

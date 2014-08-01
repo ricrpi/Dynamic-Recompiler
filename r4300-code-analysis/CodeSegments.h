@@ -57,9 +57,14 @@ static const char* seg_type_s[sizeof_SEG_TYPE_E] = {
 typedef struct _literal_t
 {
 	struct _literal_t* next;
-	uint32_t value;
+	int32_t value;
 } literal_t;
 
+typedef struct _caller_t
+{
+	struct _caller_t* next;
+	struct _code_seg* codeSeg;
+} caller_t;
 
 typedef struct _code_seg
 {
@@ -86,7 +91,7 @@ typedef struct _code_seg
 	struct _code_seg* pBranchNext;		// the code segment(s) we may branch to. will need relinking after DMA moves
 	struct _code_seg* pContinueNext;	// the code segment(s) we may continue to. will need relinking after DMA moves
 
-	//uint32_t callers;			// array of code segments that may call this segment
+	caller_t* callers;			// array of code segments that may call this segment
 
 } code_seg_t;
 
@@ -118,27 +123,10 @@ uint32_t delSegment(code_seg_t* codeSegment);
  */
 void freeIntermediateInstructions(code_seg_t* codeSegment);
 
-code_segment_data_t* GenerateCodeSegmentData(int32_t ROMsize);
+code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize);
 
-/*
- * Provides the length of the code segment starting at uiMIPSword.
- * It will only scan up to uiNumInstructions. if it fails to jump within
- * uinumInstructions then the function will report the segment as invalid.
- *
- * On hitting a branch or jump it will stop searching and return the instruction count.
- *
- * if pJumpToAddress is provided then it will be populated with the address the
- * branch or jump would go to.
- */
-int32_t validCodeSegment(
-		uint32_t* puiCodeBase,
-		uint32_t uiStart,
-		uint32_t uiNumInstructions,
-		uint32_t* pCodeLen,
-		uint32_t* pJumpToAddress,
-		uint32_t* ReturnRegister);
+uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, uint32_t* const offset, const uint32_t value);
 
-
-uint32_t addLiteral(code_seg_t* codeSegment, reg_t* base, uint32_t* offset, uint32_t value);
+int32_t ScanForCode(const uint32_t* const address, const uint32_t length);
 
 #endif /* CODESEGMENTS_H_ */

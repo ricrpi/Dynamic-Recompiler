@@ -24,19 +24,19 @@ typedef unsigned int (pfuvr1)();
 typedef int (pfvr1)();
 
 
-void Translate_DelaySlot(code_seg_t* codeSegment);
+void Translate_DelaySlot(code_seg_t* const codeSegment);
 
 /*
  * MIPS4300 has a COUNT register that is decremented every instruction
  * when it underflows, an interrupt is triggered.
  */
-void Translate_CountRegister(code_seg_t* codeSegment);
+void Translate_CountRegister(code_seg_t* const codeSegment);
 
 /*
  * Function to turn 64bit registers into multiple 32-bit registers
  *
  */
-void Translate_32BitRegisters(code_seg_t* codeSegment);
+void Translate_32BitRegisters(code_seg_t* const codeSegment);
 
 /*
  * Function to re-number / reduce the number of registers so that they fit the HOST
@@ -49,12 +49,14 @@ void Translate_32BitRegisters(code_seg_t* codeSegment);
  * with the layout of the emulated register space.
  *
  */
-void Translate_ReduceRegistersUsed(code_seg_t* codeSegment);
+void Translate_Registers(code_seg_t* const codeSegment);
 
-void Translate_LoadStoreWriteBack(code_seg_t* codeSegment);
+void Translate_LoadStoreWriteBack(code_seg_t* const codeSegment);
 
-void Translate_init(code_seg_t* codeSegment);
+void Translate_init(code_seg_t* const codeSegment);
 
-void Translate(code_seg_t* codeSegment);
+void Translate_Memory(code_seg_t* const codeSegment);
+
+void Translate(code_seg_t* const codeSegment);
 
 #endif /* TRANSLATE_H_ */
