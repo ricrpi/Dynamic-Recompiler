@@ -69,6 +69,7 @@ typedef struct _caller_t
 typedef struct _code_seg
 {
 	struct _code_seg* next;		//next code segment in linked list
+	struct _code_seg* prev;		//previous code segment in linked list
 	seg_type_e Type;
 
 	literal_t* literals;

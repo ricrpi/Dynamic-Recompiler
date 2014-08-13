@@ -19,6 +19,7 @@ static code_segment_data_t segmentData;
 //static uint8_t* CodeSegBounds;
 static uint32_t GlobalLiteralCount = 0;
 
+
 //==================================================================
 
 static uint32_t CountRegisers(uint32_t *bitfields)
@@ -43,6 +44,38 @@ static uint32_t CountRegisers(uint32_t *bitfields)
 static void invalidateBranch(code_seg_t* codeSegment)
 {
 
+}
+
+//================== Searching ========================================
+
+static code_seg_t* Search_MIPS(uint32_t address)
+{
+	code_seg_t* seg;
+
+	switch ((((uint32_t)address)>>23) & 0xFF)
+		{
+		case 0x80:
+		case 0xA0:
+			seg = segmentData.DynamicSegments;
+			break;
+		case 0x88:
+			seg = segmentData.StaticSegments;
+			break;
+		case 0x90:
+			printf("PIF boot ROM: ScanForCode()\n");
+			return 0;
+		default:
+			break;
+		}
+
+
+	while (seg)
+	{
+		if (address == (uint32_t)seg->MIPScode) return seg;
+
+		seg = seg->next;
+	}
+	return NULL;
 }
 
 //================== Literals ========================================
@@ -230,6 +263,8 @@ static void AddSegmentToLinkedList(code_seg_t* const newSeg)
 	code_seg_t* seg;
 	code_seg_t** pseg;
 
+	static code_seg_t* lastStaticSeg = NULL;
+
 	newSeg->next = NULL;
 
 	//TODO dynamic
@@ -238,35 +273,49 @@ static void AddSegmentToLinkedList(code_seg_t* const newSeg)
 
 	if (seg == NULL)
 	{
-		*pseg = newSeg;
+		*pseg = lastStaticSeg = newSeg;
 	}
 	else if (seg->next == NULL)
 	{
 		if ((*pseg)->MIPScode < newSeg->MIPScode)
 		{
 			(*pseg)->next = newSeg;
+			newSeg->prev = *pseg;
+			lastStaticSeg = newSeg;
 		}else
 		{
 			newSeg->next = *pseg;
-			*pseg = newSeg;
+			(*pseg)->prev = newSeg;
+			*pseg= newSeg;
 		}
 	}
 	else
 	{
+		//fast forward to last segment
+		if (lastStaticSeg->MIPScode < newSeg->MIPScode) seg = lastStaticSeg;
+
+		//TODO could rewind from last ...
 		while ((seg->next) && (seg->next->MIPScode < newSeg->MIPScode))
 		{
 			seg = seg->next;
 		}
 
+		if (NULL == seg->next) lastStaticSeg = newSeg;
+
 		// seg->next will either be NULL or seg->next->MIPScode is greater than newSeg->MIPScode
 		newSeg->next = seg->next;
+		newSeg->prev = seg;
+
+		if (seg->next) seg->next->prev = newSeg;
 		seg->next = newSeg;
 	}
 }
 
-static void RemoveSegmentFromLinkedList(code_seg_t* const newSeg)
+static void RemoveSegmentFromLinkedList(code_seg_t* const codeSegment)
 {
 	//TODO RemoveSegmentFromLinkedList()
+	if (codeSegment->prev) codeSegment->prev->next = codeSegment->next;
+	if (codeSegment->next) codeSegment->next->prev = codeSegment->prev;
 }
 
 //================ Segment Generation/Linking =========================
@@ -290,6 +339,7 @@ uint32_t delSegment(code_seg_t* codeSegment)
 	freeCallers(codeSegment);					// free memory used by callers
 
 	RemoveSegmentFromLinkedList(codeSegment);
+
 	free(codeSegment);
 
 	return ret;
@@ -307,12 +357,26 @@ static int32_t UpdateCodeBlockValidity(int8_t* const Block, const uint32_t* cons
 	code_seg_t* newSeg;
 
 	int32_t SegmentsCreated = 0;
+	int32_t percentDone = 0;
+	int32_t percentDone2 = 0;
+	int32_t countJumps = 0;
+	Instruction_e op;
 
 	for (x=0; x < length/4; x++)
 	{
-		for (y = x; y < length/4; y++)
+		percentDone = (400*x/length);
+
+		if ((percentDone%5) == 0 && (percentDone != percentDone2))
 		{
-			Instruction_e op;
+			printf("%2d%% done. x %d / %d, jumps %d\n", percentDone, x, length/4, countJumps);
+			percentDone2 = percentDone;
+		}
+
+		op = ops_type(address[x]);
+		if (INVALID == op) continue;
+
+		for (y = x+1; y < length/4; y++)
+		{
 			op = ops_type(address[y]);
 
 			//we are not in valid code
@@ -324,8 +388,9 @@ static int32_t UpdateCodeBlockValidity(int8_t* const Block, const uint32_t* cons
 
 			if ((op & OPS_JUMP) == OPS_JUMP)
 			{
+				countJumps++;
 				newSeg = newSegment();
-				newSeg->MIPScode = address + x;
+				newSeg->MIPScode = (uint32_t*)(address + x);
 				newSeg->MIPScodeLen = y - x + 1;
 
 				if (ops_type(*address) == JR) //only JR can set PC to the Link Register (or other register!)
@@ -342,10 +407,9 @@ static int32_t UpdateCodeBlockValidity(int8_t* const Block, const uint32_t* cons
 				prevWordCode = 0;
 				break;
 			}
-			else if(((op & OPS_CALL) == OPS_CALL)
-					|| ((op & OPS_BRANCH) == OPS_BRANCH)	//MIPS does not have an unconditional branch
-			)
+			else if((op & OPS_BRANCH) == OPS_BRANCH)	//MIPS does not have an unconditional branch
 			{
+				countJumps++;
 				newSeg = newSegment();
 
 				int32_t offset =  ops_JumpAddressOffset(&address[y]);
@@ -354,7 +418,7 @@ static int32_t UpdateCodeBlockValidity(int8_t* const Block, const uint32_t* cons
 				// TODO is this <= or < for x < y + offset?
 				if (offset < 0 && x <= y + offset)
 				{
-					newSeg->MIPScode = address + x;
+					newSeg->MIPScode = (uint32_t*)(address + x);
 					newSeg->MIPScodeLen = y - x + offset + 1;
 
 					if (!prevWordCode)
@@ -365,7 +429,7 @@ static int32_t UpdateCodeBlockValidity(int8_t* const Block, const uint32_t* cons
 					AddSegmentToLinkedList(newSeg);
 
 					newSeg = newSegment();
-					newSeg->MIPScode = address + y + offset + 1;
+					newSeg->MIPScode = (uint32_t*)(address + y + offset + 1);
 					newSeg->MIPScodeLen = -offset;
 					newSeg->Type = SEG_SANDWICH;
 					SegmentsCreated++;
@@ -374,7 +438,7 @@ static int32_t UpdateCodeBlockValidity(int8_t* const Block, const uint32_t* cons
 				}
 				else // if we are branching external to the block?
 				{
-					newSeg->MIPScode = address + x;
+					newSeg->MIPScode = (uint32_t*)(address + x);
 					newSeg->MIPScodeLen = y - x + 1;
 
 					if (!prevWordCode)
@@ -403,11 +467,13 @@ static void LinkStaticSegments()
 	code_seg_t* searchSeg;
 	Instruction_e op;
 	uint32_t* word;
-
+	uint32_t countSegsProcessed = 0;
 	seg = segmentData.StaticSegments;
 
 	while (seg)
 	{
+		if (countSegsProcessed%2000 == 0) printf("linking segment %d (%d%%)\n", countSegsProcessed, countSegsProcessed*100/segmentData.count);
+		countSegsProcessed++;
 		word = (seg->MIPScode + seg->MIPScodeLen - 1);
 		
 		op = ops_type(*word);
@@ -416,12 +482,12 @@ static void LinkStaticSegments()
 
 		if ((op & OPS_JUMP) == OPS_JUMP)
 		{
-			searchSeg = segmentData.StaticSegments;
-
 			offset =  ops_JumpAddressOffset(word);
 
-			if (ops_type(*word) == JR) //only JR can set PC to the Link Register (or other register!)
+			//if (ops_type(*word) == JR) //only JR can set PC to the Link Register (or other register!)
 					//(*(seg->MIPScode + seg->MIPScodeLen-1)>>21)&0x1f;
+#if 1
+			searchSeg = segmentData.StaticSegments;
 
 			while (searchSeg)
 			{
@@ -431,27 +497,34 @@ static void LinkStaticSegments()
 					addToCallers(seg, searchSeg);
 					break;
 				}
+
+				if (((uint32_t*)(((uint32_t)seg->MIPScode)&0xfc000000) + offset) < searchSeg->MIPScode)
+				{
+					break;
+				}
 				searchSeg = searchSeg->next;
 			}
-
-		}
-		else if(((op & OPS_CALL) == OPS_CALL)
-				|| ((op & OPS_BRANCH) == OPS_BRANCH)	//MIPS does not have an unconditional branch
-		)
-		{
-			offset =  ops_JumpAddressOffset(word);
-			if (-offset == seg->MIPScodeLen)
+#else
+			if (offset < 0)
 			{
-				seg->pBranchNext = seg;
-				addToCallers(seg, seg);
+				searchSeg = seg->prev;
+				while (searchSeg)
+				{
+					if (((uint32_t*)(((uint32_t)seg->MIPScode)&0xfc000000) + offset) == searchSeg->MIPScode)
+					{
+						seg->pBranchNext = searchSeg;
+						addToCallers(seg, searchSeg);
+						break;
+					}
+					searchSeg = searchSeg->prev;
+				}
 			}
 			else
 			{
-				searchSeg = segmentData.StaticSegments;
-
+				searchSeg = seg->next;
 				while (searchSeg)
 				{
-					if (word + offset == searchSeg->MIPScode)
+					if (((uint32_t*)(((uint32_t)seg->MIPScode)&0xfc000000) + offset) == searchSeg->MIPScode)
 					{
 						seg->pBranchNext = searchSeg;
 						addToCallers(seg, searchSeg);
@@ -460,6 +533,52 @@ static void LinkStaticSegments()
 					searchSeg = searchSeg->next;
 				}
 			}
+#endif
+		}
+		else if((op & OPS_BRANCH) == OPS_BRANCH)	//MIPS does not have an unconditional branch
+		{
+			offset =  ops_JumpAddressOffset(word);
+
+			if (-offset == seg->MIPScodeLen)
+			{
+				seg->pBranchNext = seg;
+				addToCallers(seg, seg);
+			}
+			else if (offset < 0)
+			{
+				searchSeg = seg->prev;
+				while (searchSeg)
+				{
+					if (word + offset == searchSeg->MIPScode)
+					{
+						seg->pBranchNext = searchSeg;
+						addToCallers(seg, searchSeg);
+						break;
+					}
+
+					if (word + offset < searchSeg->MIPScode) break;
+
+					searchSeg = searchSeg->prev;
+				}
+			}
+			else
+			{
+				searchSeg = seg->next;
+				while (searchSeg)
+				{
+					if (word + offset == searchSeg->MIPScode)
+					{
+						seg->pBranchNext = searchSeg;
+						addToCallers(seg, searchSeg);
+						break;
+					}
+
+					if (word + offset < searchSeg->MIPScode) break;
+
+					searchSeg = searchSeg->next;
+				}
+			}
+
 			seg->pContinueNext = seg->next;
 			addToCallers(seg, seg->next);
 		}
@@ -533,6 +652,8 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	*((uint32_t*)(FUNC_MEM_LOOKUP)) = (uint32_t)stub->ARMcode;
 
 	segmentData.count = ScanForCode((uint32_t*)(ROM_ADDRESS+64), ROMsize-64);
+
+	printf("%d segments created\n", segmentData.count);
 
 	LinkStaticSegments();
 

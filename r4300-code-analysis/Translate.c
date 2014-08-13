@@ -217,8 +217,8 @@ void Translate_DelaySlot(code_seg_t* const codeSegment)
 			return;
 		}
 
-	//if the last instruction is a branch or call and is not Likely
-	if ((ops & (OPS_BRANCH | OPS_CALL))
+	//if the last instruction is a branch or jump and is not Likely
+	if ((ops & (OPS_BRANCH | OPS_JUMP))
 			&& !(ops & OPS_LIKELY))
 	{
 		newInstruction 	= newEmptyInstr();

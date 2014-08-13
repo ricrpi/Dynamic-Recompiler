@@ -13,8 +13,8 @@
 //-------------------------------------------------------------------
 
 #define OPS_JUMP 	(0x01000)
-#define OPS_BRANCH 	(0x02000)
-#define OPS_CALL 	(0x04000)	//BRANCH and LINK
+#define OPS_LINK 	(0x02000)
+#define OPS_BRANCH 	(0x04000)
 
 #define OPS_LIKELY	(0x10000)
 #define OPS_STR  	(0x20000)
@@ -76,8 +76,7 @@ typedef uint16_t reg_t;
 
 //-----------------------------------------------------------------------------
 
-typedef enum
-{
+typedef enum _Instruction_e {
 	UNKNOWN,
 	LITERAL,
 	INVALID,
@@ -256,11 +255,14 @@ typedef enum
 	J 		// PC = PC(31:27) | (PC + imm26)(26:0) 		This is a PC-region branch (not PC-relative); the effective target address is in the “current” 256 MB aligned region. The low 28 bits of the target address is the instr_index field shifted left 2 bits. The remaining upper bits are the corresponding bits of the address of the instruction in the delay slot (not the branch itself). Jump to the effective target address. Execute the instruction following the jump, in the branch delay slot, before jumping.
 		= OPS_JUMP + STRIP(SD) + 1,
 	JR,		// PC = R1 (rs) 							Jump to the effective target address in GPR rs. Execute the instruction following the jump, in the branch delay slot, before jumping.
+	JAL		// Place the return address link in GPR 31. The return link is the address of the second instruction following the branch, where execution would continue after a procedure call. This is a PC-region branch (not PC-relative); the effective target address is in the “current” 256 MB aligned region. The low 28 bits of the target address is the instr_index field shifted left 2 bits. The remaining upper bits are the corresponding bits of the address of the instruction in the delay slot (not the branch itself). Jump to the effective target address. Execute the instruction following the jump, in the branch delay slot, before jumping.
+		= OPS_JUMP + OPS_LINK + STRIP(JR) + 1,
+	JALR,	// Rd = PC + 8, PC = R1 (rs)			Place the return address link in GPR rd. The return link is the address of the second instruction following the branch, where execution would continue after a procedure call. Jump to the effective target address in GPR rs. Execute the instruction following the jump, in the branch delay slot, before jumping.
 
 	//---------------------------
 
 	BLTZ 	// Branch if R1 (rs) < 0, 				offset is imm16 << 2 added to next instruction address. If the contents of GPR rs are less than zero (sign bit is 1), branch to the effective target address after the instruction in the delay slot is executed.
-		= OPS_BRANCH + STRIP(JR) + 1,
+		= OPS_BRANCH + STRIP(JALR) + 1,
 	BGEZ,	// Branch if R1 (rs) >= 0, 				offset is imm16 << 2 added to next instruction address. If the contents of GPR rs are greater than or equal to zero (sign bit is 0), branch to the effective target address after the instruction in the delay slot is executed.
 	BEQ,	// Branch if R1 (rs) == R2 (rt), 		offset is imm16 << 2 added to next instruction address. If the contents of GPR rs and GPR rt are equal, branch to the effective target address after the instruction in the delay slot is executed.
 	BNE,	// Branch if R1 (rs) != R2 (rt), 		offset is imm16 << 2 added to next instruction address. If the contents of GPR rs and GPR rt are not equal, branch to the effective target address after the instruction in the delay slot is executed.
@@ -277,14 +279,11 @@ typedef enum
 
 	//--------------------------
 
-	JAL		// Place the return address link in GPR 31. The return link is the address of the second instruction following the branch, where execution would continue after a procedure call. This is a PC-region branch (not PC-relative); the effective target address is in the “current” 256 MB aligned region. The low 28 bits of the target address is the instr_index field shifted left 2 bits. The remaining upper bits are the corresponding bits of the address of the instruction in the delay slot (not the branch itself). Jump to the effective target address. Execute the instruction following the jump, in the branch delay slot, before jumping.
-		= OPS_CALL + STRIP(BGTZL) + 1,
-	JALR,	// Rd = PC + 8, PC = R1 (rs)			Place the return address link in GPR rd. The return link is the address of the second instruction following the branch, where execution would continue after a procedure call. Jump to the effective target address in GPR rs. Execute the instruction following the jump, in the branch delay slot, before jumping.
-	BLTZAL,	// Branch Link if R1 (rs) < 0, 			offset is imm16 << 2 added to next instruction address. Place the return address link in GPR 31. The return link is the address of the second instruction following the branch (not the branch itself), where execution would continue after a procedure call. If the contents of GPR rs are less than zero (sign bit is 1), branch to the effective target address after the instruction in the delay slot is executed. GPR 31 must not be used for the source register rs
+	BLTZAL	// Branch Link if R1 (rs) < 0, 			offset is imm16 << 2 added to next instruction address. Place the return address link in GPR 31. The return link is the address of the second instruction following the branch (not the branch itself), where execution would continue after a procedure call. If the contents of GPR rs are less than zero (sign bit is 1), branch to the effective target address after the instruction in the delay slot is executed. GPR 31 must not be used for the source register rs
+		= OPS_BRANCH + OPS_LINK + STRIP(BGTZL) + 1,
 	BGEZAL,	// Branch Link if R1 (rs) >= 0, 		offset is imm16 << 2 added to next instruction address. Place the return address link in GPR 31. The return link is the address of the second instruction following the branch, where execution would continue after a procedure call. GPR 31 must not be used for the source register rs
 	BLTZALL // Branch Link Likely if R1 (rs) < 0, 	offset is imm16 << 2 added to next instruction address. Place the return address link in GPR 31. The return link is the address of the second instruction following the branch (not the branch itself), where execution would continue after a procedure call. If the contents of GPR rs are less than zero (sign bit is 1), branch to the effective target address after the instruction in the delay slot is executed. GPR 31 must not be used for the source register rs
-
-		= OPS_CALL + OPS_LIKELY + STRIP(BGEZAL)+1,
+		= OPS_BRANCH + OPS_LINK + OPS_LIKELY + STRIP(BGEZAL)+1,
 	BGEZALL,// Branch Link Likely if R1 (rs) >= 0, 	offset is imm16 << 2 added to next instruction address. Place the return address link in GPR 31. If the contents of GPR rs are greater than or equal to zero (sign bit is 0), branch to the effective target address after the instruction in the delay slot is executed. If the branch	is not taken, the instruction in the delay slot is not executed. The return link is the address of the second instruction following the branch, where execution would continue after a procedure call. GPR 31 must not be used for the source register rs
 
 	//---------------------------
@@ -358,280 +357,8 @@ typedef enum
 	sizeof_mips_op_t
 } Instruction_e;
 
-static const char* Instruction_ascii[sizeof_mips_op_t+1] =
-{
-	"UNKNOWN",
-	".word",
-	"INVALID",
 
-	"SLL",
-    "SRL",
-    "SRA",
-    "SLLV",
-    "SRLV",
-    "SRAV",
-    "SYSCALL",
-    "BREAK",
-    "SYNC",
-    "MFHI",
-    "MTHI",
-    "MFLO",
-    "MTLO",
-    "DSLLV",
-    "DSRLV",
-    "DSRAV",
-    "MULT",
-    "MULTU",
-    "DIV",
-    "DIVU",
-    "DMULT",
-    "DMULTU",
-    "DDIV",
-    "DDIVU",
-    "ADD",
-    "ADDU",
-    "SUB",
-    "SUBU",
-    "AND",
-    "OR",
-    "XOR",
-    "NOR",
-    "SLT",
-    "SLTU",
-    "DADD",
-    "DADDU",
-    "DSUB",
-    "DSUBU",
-    "TGE",
-    "TGEU",
-    "TLT",
-    "TLTU",
-    "TEQ",
-    "TNE",
-    "DSLL",
-    "DSRL",
-    "DSRA",
-    "DSLL32",
-    "DSRL32",
-    "DSRA32",
-	"TGEI",
-	"TGEIU",
-	"TLTI",
-	"TLTIU",
-	"TEQI",
-	"TNEI",
-	"ADDI",
-	"ADDIU",
-	"SLTI",
-	"SLTIU",
-	"ANDI",
-	"ORI",
-	"XORI",
-	"LUI",
-	"MFC0",
-	"MTC0",
-	"TLBR",
-	"TLBWI",
-	"TLBWR",
-	"TLBP",
-	"ERET",
-	"MFC1",
-	"DMFC1",
-	"CFC1",
-	"MTC1",
-	"DMTC1",
-	"CTC1",
-	"BC1",
-	"BC1F",
-	"BC1T",
-	"BC1FL",
-	"BC1TL",
-	"ADD_S",
-	"SUB_S",
-	"MUL_S",
-	"DIV_S",
-	"SQRT_S",
-	"ABS_S",
-	"MOV_S",
-	"NEG_S",
-	"ROUND_L_S",
-	"TRUNC_L_S",
-	"CEIL_L_S",
-	"FLOOR_L_S",
-	"ROUND_W_S",
-	"TRUNC_W_S",
-	"CEIL_W_S",
-	"FLOOR_W_S",
-	"CVT_D_S",
-	"CVT_W_S",
-	"CVT_L_S",
-	"C_F_S",
-	"C_UN_S",
-	"C_EQ_S",
-	"C_UEQ_S",
-	"C_OLT_S",
-	"C_ULT_S",
-	"C_OLE_S",
-	"C_ULE_S",
-	"C_SF_S",
-	"C_NGLE_S",
-	"C_SEQ_S",
-	"C_NGL_S",
-	"C_LT_S",
-	"C_NGE_S",
-	"C_LE_S",
-	"C_NGT_S",
-	"ADD_D",
-	"SUB_D",
-	"MUL_D",
-	"DIV_D",
-	"SQRT_D",
-	"ABS_D",
-	"MOV_D",
-	"NEG_D",
-	"ROUND_L_D",
-	"TRUNC_L_D",
-	"CEIL_L_D",
-	"FLOOR_L_D",
-	"ROUND_W_D",
-	"TRUNC_W_D",
-	"CEIL_W_D",
-	"FLOOR_W_D",
-	"CVT_S_D",
-	"CVT_W_D",
-	"CVT_L_D",
-	"C_F_D",
-	"C_UN_D",
-	"C_EQ_D",
-	"C_UEQ_D",
-	"C_OLT_D",
-	"C_ULT_D",
-	"C_OLE_D",
-	"C_ULE_D",
-	"C_SF_D",
-	"C_NGLE_D",
-	"C_SEQ_D",
-	"C_NGL_D",
-	"C_LT_D",
-	"C_NGE_D",
-	"C_LE_D",
-	"C_NGT_D",
-	"CVT_S_W",
-	"CVT_D_W",
-	"CVT_S_L",
-	"CVT_D_L",
-	"DADDI",
-	"DADDIU",
-	"CACHE",
-	"LL",
-	"LWC1",
-	"LLD",
-	"LDC1",
-	"LD",
-	"SC",
-	"SWC1",
-	"SCD",
-	"SDC1",
-	"SD",
-
-	//---------------------------
-	"J",
-	"JR",
-
-	//---------------------------
-
-	"BLTZ",
-	"BGEZ",
-	"BEQ",
-	"BNE",
-	"BLEZ",
-	"BGTZ",
-
-	"BLTZL",
-	"BGEZL",
-	"BEQL",
-	"BNEL",
-	"BLEZL",
-	"BGTZL",
-
-	//--------------------------
-
-	"JAL",
-	"JALR",
-	"BLTZAL",
-	"BGEZAL",
-
-	"BLTZALL",
-	"BGEZALL",
-
-	//---------------------------
-
-	"SB",
-	"SH",
-	"SWL",
-	"SW",
-	"SDL",
-	"SDR",
-	"SWR",
-
-	//---------------------------
-
-	"LDL",
-	"LDR",
-	"LB",
-	"LH",
-	"LWL",
-	"LW",
-	"LBU",
-	"LHU",
-	"LWR",
-	"LWU",
-
-	//---------------------------
-	// ARM assembler
-	//---------------------------
-
-	"bfc",
-	"bfi",
-	"clz",
-	"pkhbt",
-	"pkhtb",
-	"rbit",
-	"rev",
-	"rev16",
-	"revsh",
-	"and",
-	"b",
-	"eor",
-	"sub",
-	"rsb",
-	"add",
-	"adc",
-	"asr",
-	"sbc",
-	"rsc",
-	"tst",
-	"teq",
-	"cmp",
-	"cmn",
-	"orr",
-	"mov",
-	"bic",
-	"mvn",
-	"ldr",
-	"str",
-	"ldrd",
-	"strd",
-	"ldr",
-	"str",
-	"ldrd",
-	"strd",
-	"ldm",
-	"stm",
-	"mrs",
-	"msr",
-	"[size of Instruction_t]"
-};
+#include "InstructionSet_ascii.h"
 
 typedef enum
 {
