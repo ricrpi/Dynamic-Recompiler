@@ -667,11 +667,10 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	stub = Generate_CodeStart(&segmentData);
 	emit_arm_code(stub);
 
-
 	uint32_t test_val = 3;
 	*((uint32_t*)(FUNC_GEN_START)) = (uint32_t)stub->ARMcode;
 
-#if 1
+#if 0
 	pfu1ru1* test;
 	test = stub->ARMcode;
 
@@ -692,11 +691,11 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	emit_arm_code(stub);
 	*((uint32_t*)(FUNC_MEM_LOOKUP)) = (uint32_t)stub->ARMcode;
 
-	//segmentData.count = ScanForCode((uint32_t*)(ROM_ADDRESS+64), ROMsize-64);
+	segmentData.count = ScanForCode((uint32_t*)(ROM_ADDRESS+64), ROMsize-64);
 
 	printf("%d segments created\n", segmentData.count);
 
-	//LinkStaticSegments();
+	LinkStaticSegments();
 
 	return &segmentData;
 

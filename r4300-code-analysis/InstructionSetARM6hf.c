@@ -63,6 +63,12 @@ static uint32_t LDR_OP2(const Instruction_t ins)
 
 uint32_t arm_encode(const Instruction_t ins)
 {
+	assert(ins.R3 == REG_NOT_USED || ins.R3 < 16);
+	assert(ins.R2 == REG_NOT_USED || ins.R2 < 16);
+	assert(ins.R1 == REG_NOT_USED || ins.R1 < 16);
+	assert(ins.Rd2 == REG_NOT_USED || ins.Rd2 < 16);
+	assert(ins.Rd1 == REG_NOT_USED || ins.Rd1 < 16);
+
 	switch (ins.instruction)
 	{
 	case AND:
@@ -205,7 +211,7 @@ static void opsh(char* str, uint32_t word)
 }
 void arm_print(const uint32_t addr, const uint32_t word)
 {
-	printf("0x%x 0x%x", addr, word);
+	printf("0x%08x 0x%08x", addr, word);
 
 	if ((word & 0x0fb00f90) == 0x01000090) // swap
 	{
@@ -409,7 +415,7 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	//}
 	else
 	{
-		printf ("Unknown Command\n");
+		printf ("\tUnknown Command\n");
 	}
 	return;
 }

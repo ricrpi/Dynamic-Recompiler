@@ -194,6 +194,9 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
 #endif
+
+	Translate_Registers(code_seg);
+
 	return code_seg;
 }
 
@@ -210,6 +213,8 @@ code_seg_t* Generate_CodeStop()
 	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
 	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
+
+	Translate_Registers(code_seg);
 
 	return code_seg;
 }
