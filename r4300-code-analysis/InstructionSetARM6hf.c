@@ -463,7 +463,7 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	//write out code instructions
 	while (ins)
 	{
-		*out = sl(arm_encode(*ins));
+		*out = arm_encode(*ins);
 		codeSeg->ARMcodeLen++;
 		out++;
 		ins = ins->nextInstruction;

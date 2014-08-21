@@ -166,8 +166,8 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 
 	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI2 );
 	code_seg->Intermcode = ins = newInstruction;
-#if 1
 
+#if 1
 	newInstruction 		= newInstr(ARM_ADD, EQ, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED, 1);
 	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
@@ -177,7 +177,6 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 
 	// Return
 	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
-	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
 
 #else
