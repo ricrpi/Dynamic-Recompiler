@@ -101,9 +101,13 @@ typedef struct _code_segment_data
 {
 	uint32_t count;
 	code_seg_t* StaticSegments;		// code run directly in ROM
-	int8_t* StaticBounds;
+	code_seg_t** StaticBounds;
+	uint32_t StaticLength;
+
 	code_seg_t* DynamicSegments;	// code running in RDRAM (copied or DMA'd from ROM)
-	int8_t* DynamicBounds;
+	code_seg_t** DynamicBounds;
+	uint32_t DynamicLength;
+
 	literal_t* literals;
 } code_segment_data_t;
 
@@ -126,7 +130,7 @@ void freeIntermediateInstructions(code_seg_t* codeSegment);
 
 code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize);
 
-uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, uint32_t* const offset, const uint32_t value);
+uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* const offset, const uint32_t value);
 
 int32_t ScanForCode(const uint32_t* const address, const uint32_t length);
 

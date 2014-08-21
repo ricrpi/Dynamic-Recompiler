@@ -71,12 +71,14 @@ uint32_t ops_regs_output(const uint32_t uiMIPSword, uint32_t * const uiCPUregs, 
 Instruction_e ops_type(const uint32_t uiMIPSword);
 
 /*
- * Return the Jump/Branch instruction offset for the raw word provided
+ * Return the Branch instruction offset for the raw word provided
  *
  * Return:
  * 		offset or 0x7FFFFFF if the instruction is not a Jump nor Branch
  * */
-int32_t ops_JumpAddressOffset(const uint32_t* const uiMIPSword);
+int32_t ops_BranchOffset(const uint32_t* const uiMIPSword);
+
+uint32_t ops_JumpAddress(const uint32_t* const uiMIPSword);
 
 /*
  * Provides printf() output for the raw word

@@ -155,7 +155,52 @@ code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
 	return code_seg;
 }
 
+/*
+ * Function Called to Begin Running Dynamic compiled code.
+ */
+code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
+{
+	code_seg_t* 	code_seg 		= newSegment();
+	Instruction_t* 	newInstruction;
+	Instruction_t* 	ins 			= NULL;
 
+	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI2 );
+	code_seg->Intermcode = ins = newInstruction;
+#if 1
+
+	newInstruction 		= newInstr(ARM_ADD, EQ, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED, 1);
+	newInstruction->I = 1;
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// Return
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
+	newInstruction->I = 1;
+	ADD_LL_NEXT(newInstruction, ins);
+
+#else
+
+	// Need to get segment for 0x88000040, lookup the ARM address and jump to it.
+	code_seg_t* start_seg = seg_data->StaticBounds[0x40/4];
+	uint32_t* arm_address = start_seg->ARMcode;
+
+	assert(arm_address);
+
+	reg_t base;
+	int32_t offset;
+	addLiteral(code_seg, &base, &offset,(uint32_t)arm_address);
+	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_NOT_USED, base, offset);
+	ADD_LL_NEXT(newInstruction, ins);
+#endif
+	return code_seg;
+}
+
+code_seg_t* Generate_CodeStop()
+{
+
+}
 //=============================================================
 
 static Instruction_t* insertCall(Instruction_t* ins, const Condition_e cond, const int32_t offset)
@@ -476,6 +521,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 	{
 		//TODO
 		fprintf(stderr, "Missing code to do register translation\n");
+		abort();
 	}
 
 	//Strip HOST flag from register ID leaving ARM register ID ready for writing
@@ -568,7 +614,6 @@ void Translate_Generic(code_seg_t* const codeSegment)
 		ins = ins->nextInstruction;
 	}
 }
-
 
 void Translate_init(code_seg_t* const codeSegment)
 {

@@ -51,7 +51,7 @@
 		((val>>16)&0x1f), \
 		((int)(val<<16)/(1<<16))
 
-int32_t ops_JumpAddressOffset(const uint32_t* const instruction)
+int32_t ops_BranchOffset(const uint32_t* const instruction)
 {
 	uint32_t uiMIPSword = *instruction;
 	uint32_t op=uiMIPSword>>26;
@@ -59,15 +59,6 @@ int32_t ops_JumpAddressOffset(const uint32_t* const instruction)
 
 	switch(op)
 	{
-	case 0x00: //printf("special\n");
-		op2=uiMIPSword&0x3f;
-
-		switch(op2)
-		{
-		case 0x08: return 0; // JR; 	//cannot return whats in a register
-		case 0x09: return 0; // JALR;	//cannot return whats in a register
-		} break;
-
 	case 0x01:
 		op2=(uiMIPSword>>16)&0x1f;
 		switch(op2)
@@ -84,8 +75,6 @@ int32_t ops_JumpAddressOffset(const uint32_t* const instruction)
 		case 0x13: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBGEZALL\t" B_OP "\n",x, OP_B(val)); return;	// I and link likely
 		}break;
 
-	case 0x02: 	return ((int32_t)((((uint32_t)instruction&0xF0000000) | ((uiMIPSword<<2)&0x0FFFFFFF)) - (uint32_t)instruction))/4; //printf(INDEX "\tJ      \t" J_OP "\n", x, OP_J(val)); return;	// J
-	case 0x03: 	return ((int32_t)((((uint32_t)instruction&0xF0000000) | ((uiMIPSword<<2)&0x0FFFFFFF)) - (uint32_t)instruction))/4;   //printf(INDEX "\tJAL    \t" J_OP "\n", x, OP_J(val)); return;	// J
 	case 0x04: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBEQ    \t" I_OP "\n", x, OP_I(val)); return;	// I
 	case 0x05: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBNE    \t" I_OP "\n", x, OP_I(val)); return;	// I
 	case 0x06: 	return (int32_t)(uiMIPSword<<16)/(1<<16); //printf(INDEX "\tBLEZ   \t\n", x ); return;
@@ -111,6 +100,32 @@ int32_t ops_JumpAddressOffset(const uint32_t* const instruction)
 	printf("InstructionSetMIPS4.h:%d invalid ops_JumpAddressOffset() instruction %d 0x%08x\n",__LINE__, uiMIPSword, uiMIPSword);
 	return 0x7FFFFFF;
 }
+
+uint32_t ops_JumpAddress(const uint32_t* const instruction)
+{
+	uint32_t uiMIPSword = *instruction;
+	uint32_t op=uiMIPSword>>26;
+	uint32_t op2;
+
+	switch(op)
+	{
+	case 0x00: //printf("special\n");
+		op2=uiMIPSword&0x3f;
+
+		switch(op2)
+		{
+		case 0x08: return 0; // JR; 	//cannot return whats in a register
+		case 0x09: return 0; // JALR;	//cannot return whats in a register
+		} break;
+
+	case 0x02: 	//printf(INDEX "\tJ      \t" J_OP "\n", x, OP_J(val)); return;	// J
+	case 0x03: 	return ((uiMIPSword)&0x03FFFFFF)*4;   //printf(INDEX "\tJAL    \t" J_OP "\n", x, OP_J(val)); return;	// J
+
+	}
+	printf("InstructionSetMIPS4.h:%d invalid ops_JumpAddress() instruction %d 0x%08x\n",__LINE__, uiMIPSword, uiMIPSword);
+	return 0xFFFFFFFF;
+}
+
 
 uint32_t ops_regs_output(const uint32_t uiMIPSword, uint32_t * const puiCPUregs_out, uint32_t * const puiFPUregs_out, uint32_t * const puiSpecialregs_out)
 {

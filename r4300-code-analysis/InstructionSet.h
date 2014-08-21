@@ -69,6 +69,8 @@
 #define REG_HOST_STM_PC 		(0x8000)
 #define REG_HOST_STM_GENERAL 	(0x17FF)
 #define REG_HOST_STM_EABI 		(0x000F)
+#define REG_HOST_STM_EABI2      (0x7FF0)
+#define REG_HOST_STM_ALL        (0x7FFF)
 
 #define REG_T_SIZE	 (0x020F)
 

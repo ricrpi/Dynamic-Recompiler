@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 #endif
 
 	//Find all code where we don't know which registers are used
-#if 1
+#if 0
 	printf("Unknown register usage on these instructions:\n\n");
 	for (x=0x40/4; x< romlength/4; x++ )
 	{
