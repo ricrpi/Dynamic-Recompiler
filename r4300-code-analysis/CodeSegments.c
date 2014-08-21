@@ -666,20 +666,27 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	code_seg_t* stub;
 	stub = Generate_CodeStart(&segmentData);
 	emit_arm_code(stub);
+
+
 	uint32_t test_val = 3;
 	*((uint32_t*)(FUNC_GEN_START)) = (uint32_t)stub->ARMcode;
 
-#if __ARM__
-
-
+#if 1
 	pfu1ru1* test;
 	test = stub->ARMcode;
+
+	printf("going to run test %d\n", test_val);
 
 	test_val = test(test_val);
 
 	printf("test_val %d\n", test_val);
 
 #endif
+
+	stub = Generate_CodeStop();
+	emit_arm_code(stub);
+	*((uint32_t*)(FUNC_GEN_STOP)) = (uint32_t)stub->ARMcode;
+
 
 	stub = Generate_MemoryTranslationCode(NULL);
 	emit_arm_code(stub);

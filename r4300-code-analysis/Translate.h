@@ -25,6 +25,7 @@ typedef int (pfvr1)();
 
 code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f);
 code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data);
+code_seg_t* Generate_CodeStop();
 
 void Translate_DelaySlot(code_seg_t* const codeSegment);
 

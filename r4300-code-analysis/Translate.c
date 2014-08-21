@@ -199,7 +199,19 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 
 code_seg_t* Generate_CodeStop()
 {
+	code_seg_t* 	code_seg 		= newSegment();
+	Instruction_t* 	newInstruction;
+	Instruction_t* 	ins 			= NULL;
 
+	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
+	code_seg->Intermcode = ins = newInstruction;
+
+	// Return
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
+	newInstruction->I = 1;
+	ADD_LL_NEXT(newInstruction, ins);
+
+	return code_seg;
 }
 //=============================================================
 

@@ -205,6 +205,8 @@ static void opsh(char* str, uint32_t word)
 }
 void arm_print(const uint32_t addr, const uint32_t word)
 {
+	printf("0x%x 0x%x", addr, word);
+
 	if ((word & 0x0fb00f90) == 0x01000090) // swap
 	{
 		printf("\tswap\n");
@@ -223,7 +225,7 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	}
 	else if((word & 0x0f000000) == 0x0b000000) // Branch and Link
 	{
-		printf("\tbl%s\t0x%x\n",arm_cond[word>>28], word&0xffffff);
+		printf("\tbl%s\t0x%x\n",addr, arm_cond[word>>28], word&0xffffff);
 	}
 	else if((word & 0x0e400000) == 0x08000000) // LDM/STM
 	{
@@ -242,11 +244,11 @@ void arm_print(const uint32_t addr, const uint32_t word)
 
 		if (word & 0x100000)
 		{
-			printf("%x\tldm%s%s\t%s%s, {%s}\n", addr, pre, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], wb, regs);
+			printf("\tldm%s%s\t%s%s, {%s}\n", pre, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], wb, regs);
 		}
 		else
 		{
-			printf("%x\tstm%s%s\t%s%s, {%s}\n", addr, pre, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], wb, regs);
+			printf("\tstm%s%s\t%s%s, {%s}\n", pre, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], wb, regs);
 		}
 	}
 	else if((word & 0x0fbf0fff) == 0x010f0000) // MRS
@@ -281,9 +283,9 @@ void arm_print(const uint32_t addr, const uint32_t word)
 		sprintf(imm, "#0x%x", (word&0xff << ((word>>8)&0xf)));
 
 		if (word & 1 << 24) // Pre/post
-			printf("%x\t%s%s%s\t%s, [%s, %s%s]%s\n", addr, ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, imm, wb);
+			printf("\t%s%s%s\t%s, [%s, %s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, imm, wb);
 		else
-			printf("%x\t%s%s%s\t%s, [%s], %s%s\n", addr, ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, imm);
+			printf("\t%s%s%s\t%s, [%s], %s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, imm);
 	}
 	else if((word & 0x0c000000) == 0x06000000) // LDR Register
 	{
@@ -305,9 +307,9 @@ void arm_print(const uint32_t addr, const uint32_t word)
 		opsh(str_opsh, word);
 
 		if (word & 1 << 24) // Pre/post
-			printf("%x\t%s%s%s\t%s, [%s, %s%s%s]%s\n", addr, ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh, wb);
+			printf("\t%s%s%s\t%s, [%s, %s%s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh, wb);
 		else
-			printf("%x\t%s%s%s\t%s, [%s], %s%s%s\n", addr, ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh);
+			printf("\t%s%s%s\t%s, [%s], %s%s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh);
 
 	}
 	else if((word & 0x0c000000) == 0x00000000) // ALU
@@ -367,37 +369,37 @@ void arm_print(const uint32_t addr, const uint32_t word)
 		switch ((word >> 21)&0xf)
 		{
 		case 0:	// AND
-			printf("%x\tand%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tand%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 1: // EOR
-			printf("%x\teor%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\teor%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 2: // SUB
-			printf("%x\tsub%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tsub%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 3:	// RSB
-			printf("%x\trsb%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\trsb%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 4:	// ADD
-			printf("%x\tadd%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tadd%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 5: // ADC
-			printf("%x\tadc%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tadc%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 6: // SBC
-			printf("%x\tsbc%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tsbc%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 7: // RSC
-			printf("%x\trsc%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\trsc%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 8: // TST
-			printf("%x\ttst%s\t%s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\ttst%s\t%s%s\n", 		arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], Op2); 							break;
 		case 9: // TEQ
-			printf("%x\tteq%s\t%s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tteq%s\t%s%s\n", 		arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], Op2); 							break;
 		case 10: // CMP
-			printf("%x\tcmp%s\t%s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tcmp%s\t%s%s\n", 		arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], Op2); 							break;
 		case 11: // CMN
-			printf("%x\tcmn%s\t%s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tcmn%s\t%s%s\n", 		arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], Op2); 							break;
 		case 12: // ORR
-			printf("%x\torr%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\torr%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 13: // MOV
-			printf("%x\tmov%s\t%s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], Op2); break;
+			printf("\tmov%s\t%s%s\n", 		arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], Op2); 							break;
 		case 14: // BIC
-			printf("%x\tbic%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tbic%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 		case 15: // MVN
-			printf("%x\tmvn%s\t%s, %s%s\n", addr, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
+			printf("\tmvn%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 			break;
 		}
 	}
@@ -407,7 +409,7 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	//}
 	else
 	{
-		printf ("%x Unknown Command 0x%08x\n", addr, word);
+		printf ("Unknown Command\n");
 	}
 	return;
 }
@@ -423,7 +425,7 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	if (!ins)
 	{
 		printf("cannot emit arm code as not compiled yet\n");
-		return;
+		abort();
 	}
 
 	//write out start literals
@@ -455,7 +457,7 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	//write out code instructions
 	while (ins)
 	{
-		*out = arm_encode(*ins);
+		*out = sl(arm_encode(*ins));
 		codeSeg->ARMcodeLen++;
 		out++;
 		ins = ins->nextInstruction;
