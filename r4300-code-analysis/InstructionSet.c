@@ -10,36 +10,63 @@
 #include "InstructionSet.h"
 #include "InstructionSetARM6hf.h"
 #include "CodeSegments.h"
+#include <assert.h>
 
 static void sprintReg(char* str, reg_t r)
 {
-	if (r == REG_NOT_USED)       sprintf(str, "        ");
-	else if (r == REG_HOST_FP)   sprintf(str, "fp      ");
-	else if (r == REG_HOST_SP)   sprintf(str, "sp      ");
-	else if (r == REG_HOST_LR)   sprintf(str, "lr      ");
-	else if (r == REG_HOST_PC)   sprintf(str, "pc      ");
-	else if (r == REG_COUNT)
-		sprintf(str, "COUNT   ");
-	else if (r == REG_CAUSE)
-		sprintf(str, "CAUSE   ");
-	else if (r == REG_CONTEXT)
-		sprintf(str, "CONTEXT ");
-	else if (r == REG_COMPARE)
-		sprintf(str, "COMPARE ");
-	else if (r == REG_STATUS)
-		sprintf(str, "STATUS  ");
 
-	else if (r == REG_PC)        sprintf(str, "MIPS_PC ");
-	else if (r == REG_FCR0)      sprintf(str, "FCR0    ");
-	else if (r == REG_FCR31)     sprintf(str, "FCR31   ");
-	else if (r == REG_MULTHI)    sprintf(str, "MULT_HI ");
-	else if (r == REG_MULTLO)    sprintf(str, "MULT_LO ");
-	else if (r == REG_LLBIT)     sprintf(str, "LLBIT   ");
+	switch (r.state)
+	{
+		case RS_CONSTANT_I1:
+		case RS_CONSTANT_I2:
+		case RS_CONSTANT_I4:
+			sprintf(str, "0x%08x         ", (uint32_t)r.i4); break;
+		case RS_CONSTANT_I8:
+			sprintf(str, "0x%016lx ", (uint64_t)r.i8); break;
+		case RS_CONSTANT_U1:
+		case RS_CONSTANT_U2:
+		case RS_CONSTANT_U4:
+			sprintf(str, "0x%08x         ", (uint32_t)r.u4); break;
+		case RS_CONSTANT_U8:
+			sprintf(str, "0x%016lx ", (uint64_t)r.u8); break;
 
-	else if (r >= REG_CO)        sprintf(str, "c%-3d    ", r - REG_CO);
-	else if (r >= 64)            sprintf(str, "f%-3d    ", r - 64);
-	else if (r >= 0)             sprintf(str, "r%-3d    ", r);
-	else                         sprintf(str, "        ");
+		case RS_REGISTER:
+			if (r.regID == REG_NOT_USED)       sprintf(str, "                   ");
+			else if (r.regID == REG_HOST_FP)   sprintf(str, "fp                 ");
+			else if (r.regID == REG_HOST_SP)   sprintf(str, "sp                 ");
+			else if (r.regID == REG_HOST_LR)   sprintf(str, "lr                 ");
+			else if (r.regID == REG_HOST_PC)   sprintf(str, "pc                 ");
+			else if (r.regID == REG_COUNT)
+				sprintf(str, "COUNT              ");
+			else if (r.regID == REG_CAUSE)
+				sprintf(str, "CAUSE              ");
+			else if (r.regID == REG_CONTEXT)
+				sprintf(str, "CONTEXT            ");
+			else if (r.regID == REG_COMPARE)
+				sprintf(str, "COMPARE            ");
+			else if (r.regID == REG_STATUS)
+				sprintf(str, "STATUS             ");
+
+			else if (r.regID == REG_PC)        sprintf(str, "MIPS_PC            ");
+			else if (r.regID == REG_FCR0)      sprintf(str, "FCR0               ");
+			else if (r.regID == REG_FCR31)     sprintf(str, "FCR31              ");
+			else if (r.regID == REG_MULTHI)    sprintf(str, "MULT_HI            ");
+			else if (r.regID == REG_MULTLO)    sprintf(str, "MULT_LO            ");
+			else if (r.regID == REG_LLBIT)     sprintf(str, "LLBIT              ");
+
+			else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d               ", r.regID - REG_HOST);
+			else if (r.regID >= REG_TEMP)		 sprintf(str, "t%-3d               ", r.regID - REG_TEMP);
+			else if (r.regID >= REG_CO)        sprintf(str, "c%-3d               ", r.regID - REG_CO);
+			else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str, "f%-3dw              ", r.regID - (REG_WIDE|REG_FP));
+			else if (r.regID >= REG_WIDE)      sprintf(str, "r%-3dw              ", r.regID - REG_WIDE);
+			else if (r.regID >= REG_FP)        sprintf(str, "f%-3d               ", r.regID - REG_FP);
+			else if (r.regID >= 0)             sprintf(str, "r%-3d               ", r.regID);
+			else                         sprintf(str, "                   ");
+			break;
+		default:
+			printf("InstructionSet.c: sprintReg() unknown r.state");
+			abort();
+	}
 }
 static void sprintRegList(char* str, Instruction_t*ins)
 {
@@ -88,7 +115,7 @@ static void sprintInstr(char* str, Instruction_t*ins)
 		if (ins->PR == 1
 				&& ins->U == 0
 				&& ins->instruction == ARM_STM
-				&& ins->R1 == REG_HOST_SP) sprintf(writeBack, "fd%c", wb);
+				&& ins->R1.regID == REG_HOST_SP) sprintf(writeBack, "fd%c", wb);
 	}
 	else
 	{
@@ -104,6 +131,7 @@ Instruction_t* newEmptyInstr()
 	Instruction_t* newInstr;
 
 	newInstr = (Instruction_t*)malloc(sizeof(Instruction_t));
+	memset(newInstr, 0, sizeof(Instruction_t));
 
 	if (newInstr == NULL)
 	{
@@ -117,11 +145,11 @@ Instruction_t* newEmptyInstr()
 	newInstr->immediate = 0;
 	newInstr->shift = 0;
 	newInstr->Rmask = 0;
-	newInstr->Rd1 = REG_NOT_USED;
-	newInstr->Rd2 = REG_NOT_USED;
-	newInstr->R1 = REG_NOT_USED;
-	newInstr->R2 = REG_NOT_USED;
-	newInstr->R3 = REG_NOT_USED;
+	newInstr->Rd1.regID = REG_NOT_USED;
+	newInstr->Rd2.regID = REG_NOT_USED;
+	newInstr->R1.regID = REG_NOT_USED;
+	newInstr->R2.regID = REG_NOT_USED;
+	newInstr->R3.regID = REG_NOT_USED;
 
 	newInstr->A=0;			// Accumulate
 	newInstr->B=0;			// Byte/Word bit, 1 = byte
@@ -136,16 +164,15 @@ Instruction_t* newEmptyInstr()
 
 }
 
-Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const reg_t Rd1, const reg_t R1, const reg_t R2, const int32_t imm)
+Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
 {
 	Instruction_t* newInstr = newEmptyInstr(0);
 
 	newInstr->instruction = ins;
 	newInstr->cond        = cond;
-	newInstr->immediate   = imm;
-	newInstr->Rd1         = Rd1;
-	newInstr->R1          = R1;
-	newInstr->R2          = R2;
+	newInstr->Rd1.regID   = Rd1;
+	newInstr->R1.regID    = R1;
+	newInstr->R2.regID    = R2;
 
 	switch (ins)
 	{
@@ -158,15 +185,109 @@ Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const r
 	case SRA:
 	case SRAV:
 		newInstr-> shiftType = ARITHMETIC_RIGHT; break;
+	case ARM_TST:
+	case ARM_TEQ:
+	case ARM_CMP:
+	case ARM_CMN:
+		assert(Rd1 == REG_NOT_USED); break;
+
+	case ARM_MOV:
+	case ARM_MVN:
+		assert(R1 == REG_NOT_USED); break;
+
 	default: break;
 	}
 
 	return newInstr;
 }
 
-Instruction_t* newInstrS(const Instruction_e ins, 	const Condition_e cond, const reg_t Rd1, const reg_t R1, const reg_t R2, const int32_t imm)
+Instruction_t* newInstrI(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
 {
-	Instruction_t* newIns = newInstr(ins, cond, Rd1, R1, R2, imm);
+	Instruction_t* newInstr = newEmptyInstr(0);
+
+	newInstr->instruction = ins;
+	newInstr->cond        = cond;
+	newInstr->immediate   = imm;
+	newInstr->Rd1.regID   = Rd1;
+	newInstr->R1.regID    = R1;
+	newInstr->R2.regID    = R2;
+
+	newInstr->I = 1;
+
+	switch (ins)
+	{
+	case SLL:
+	case SLLV:
+		newInstr-> shiftType = LOGICAL_LEFT; break;
+	case SRL:
+	case SRLV:
+		newInstr-> shiftType = LOGICAL_RIGHT; break;
+	case SRA:
+	case SRAV:
+		newInstr-> shiftType = ARITHMETIC_RIGHT; break;
+	case ARM_TST:
+	case ARM_TEQ:
+	case ARM_CMP:
+	case ARM_CMN:
+		assert(Rd1 == REG_NOT_USED); break;
+
+	case ARM_MOV:
+	case ARM_MVN:
+		assert(R1 == REG_NOT_USED); break;
+	default: break;
+	}
+
+	return newInstr;
+}
+
+Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
+{
+	ins->instruction = ins_e;
+	ins->cond        = cond;
+	ins->immediate   = imm;
+	ins->Rd1.regID   = Rd1;
+	ins->R1.regID    = R1;
+	ins->R2.regID    = R2;
+
+	ins->I = 1;
+
+	switch (ins_e)
+	{
+	case SLL:
+	case SLLV:
+		ins-> shiftType = LOGICAL_LEFT; break;
+	case SRL:
+	case SRLV:
+		ins-> shiftType = LOGICAL_RIGHT; break;
+	case SRA:
+	case SRAV:
+		ins-> shiftType = ARITHMETIC_RIGHT; break;
+	case ARM_TST:
+	case ARM_TEQ:
+	case ARM_CMP:
+	case ARM_CMN:
+		assert(Rd1 == REG_NOT_USED); break;
+
+	case ARM_MOV:
+	case ARM_MVN:
+		assert(R1 == REG_NOT_USED); break;
+	default: break;
+	}
+
+	return ins;
+}
+
+Instruction_t* newInstrS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
+{
+	Instruction_t* newIns = newInstr(ins, cond, Rd1, R1, R2);
+
+	newIns->S = 1;
+
+	return newIns;
+}
+Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
+{
+	Instruction_t* newIns = newInstrI(ins, cond, Rd1, R1, R2, imm);
 
 	newIns->S = 1;
 
@@ -179,7 +300,7 @@ Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask)
 
 	newInstr->instruction = ARM_STM;
 	newInstr->cond = cond;
-	newInstr->R1 = REG_HOST_SP;
+	newInstr->R1.regID = REG_HOST_SP;
 	newInstr->Rmask = Rmask;
 	newInstr->W = 1;
 	newInstr->PR = 1;
@@ -195,7 +316,7 @@ Instruction_t* newInstrPOP(const Condition_e cond, const uint32_t Rmask)
 
 	newInstr->instruction = ARM_LDM;
 	newInstr->cond = cond;
-	newInstr->R1 = REG_HOST_SP;
+	newInstr->R1.regID = REG_HOST_SP;
 	newInstr->Rmask = Rmask;
 	newInstr->W = 1;
 	newInstr->PR = 0;
@@ -212,11 +333,11 @@ void Intermediate_print(const code_seg_t* const codeSegment)
 	ins = codeSegment->Intermcode;
 	int x=1000;
 
-	printf("command   Rd1     Rd2     R1      R2      R3      immediate        shift\n");
+	printf("command   Rd1                Rd2                R1                 R2                 R3                 immediate                 shift\n");
 
 	while (ins && x>0)
 	{
-#define SZE 10
+#define SZE 50
 		char rd1[SZE], rd2[SZE], r1[SZE], r2[SZE] , r3[SZE];
 		char instruction[10];
 		char buffer[100];
@@ -232,11 +353,8 @@ void Intermediate_print(const code_seg_t* const codeSegment)
 		sprintReg(r2, ins->R2);
 		sprintReg(r3, ins->R3);
 
-		if (ins->offset) sprintf(offset, "%d (0x%X)", ins->offset, ins->offset);
-		else offset[0] = '\0';
-
-		if (ins->shift) sprintf(shift, "%d (0x%X)", ins->shift, ins->shift);
-		else shift[0] = '\0';
+		sprintf(offset, "%-11d (0x%08X)", ins->offset, ins->offset);
+		sprintf(shift, "%-2d (0x%02X)", ins->shift, ins->shift);
 
 		if (ins->instruction == ARM_LDM
 				|| ins->instruction == ARM_STM )
@@ -246,7 +364,7 @@ void Intermediate_print(const code_seg_t* const codeSegment)
 		}
 		else
 		{
-			printf("%-9s %s%s%s%s%s%-20s%s\n", instruction, rd1, rd2, r1, r2, r3, offset, shift);
+			printf("%-9s %s%s%s%s%s%-25s %-9s\n", instruction, rd1, rd2, r1, r2, r3, offset, shift);
 		}
 
 		ins = ins->nextInstruction;

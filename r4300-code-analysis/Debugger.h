@@ -8,17 +8,22 @@
 #ifndef DEBUGGER_H_
 #define DEBUGGER_H_
 
-void Debugger_start(const code_segment_data_t* const segmentData);
+int Debugger_start(const code_segment_data_t* const segmentData);
 
 #define HELP_TRANS 	"\ttranslate                         Translate Current Segment\n" \
-					"\ttranslate full                    Translate Current Segment and Generate ARM code\n" \
+					"\ttranslate full                    Translate Current Segment and Generate ARM code\n\n" \
+					"\ttranslate init                    Initialize segment for translation\n"\
 					"\ttranslate DelaySlot               Perform DelaySlot Translation\n"\
-					"\ttranslate CountRegister           Perform CountRegister Translation\n"\
+					"\ttranslate Count                   Perform Count Register Translation\n"\
+					"\ttranslate Constants               Perform Constant Optimization\n"\
 					"\ttranslate 32BitRegisters          Perform 32BitRegisters Translation\n"\
-					"\ttranslate ReduceRegistersUsed     Perform ReduceRegistersUsed Translation\n"\
-					"\ttranslate LoadStoreWriteBack      Perform LoadStoreWriteBack Translation\n"\
 					"\ttranslate memory                  Perform Memory Translation\n"\
+					"\ttranslate LoadStoreWriteBack      Perform LoadStoreWriteBack Translation\n"\
+					"\ttranslate LoadCacheRegisters      Load Register from Cache\n"\
+					"\ttranslate Registers               Perform Register renumbering\n"\
+					"\ttranslate StoreCacheRegisters     Store Registers to Cache\n"\
 					"\ttranslate write                   Generate ARM code from Intermediate code\n"
+
 
 #define HELP_PRINT 	"\tprint mips                        Print current segment MIPS code\n"\
 					"\tprint mips [x]                    Print [x] instructions from current segment MIPS code\n"\

@@ -21,20 +21,12 @@
 			(y)->nextInstruction = (x); \
 			(y) = (y)->nextInstruction;
 
-typedef enum
-{
-	AVAILABLE,
-	CLEAN,
-	DIRTY,
-	CONSTANT,
-	RESERVED
-} RegisterState;
-
 uint32_t bCountSaturates = 0;
 uint32_t uiCountFrequency = 40;	// must be less than 128 else may not be able to encode in imm8
 uint32_t bMemoryInlineLookup = 0;
 uint32_t bMemoryOffsetCheck = 0;
 uint32_t bDoDMAonInterrupt = 1;
+uint8_t uMemoryBase = 0x80;
 
 #if 0
 /*
@@ -83,7 +75,7 @@ Instruction_t* Generate_BranchStubCode()
  *  		R0 Host memory address
  *			Z=1 if !bDoDMAonInterrupt && last byte is 0x5, so run DMA?
  */
-code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
+code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru1 f)
 {
 	code_seg_t* 	code_seg 		= newSegment();
 	Instruction_t* 	newInstruction;
@@ -95,42 +87,42 @@ code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
 	}
 
 	//Add the base and offset together
-	newInstruction 		= newInstr(ARM_ADD, AL, REG_TEMP_MEM1, REG_HOST_R0, REG_HOST_R1, 0);
+	newInstruction 		= newInstr(ARM_ADD, AL, REG_TEMP_MEM1, REG_HOST_R0, REG_HOST_R1);
 	code_seg->Intermcode = ins = newInstruction;
 
 	//shift Right so that we have the final Byte
-	newInstruction 		= newInstr(SRL, AL, REG_TEMP_MEM2, REG_TEMP_MEM1, REG_NOT_USED, 0);
+	newInstruction 		= newInstr(SRL, AL, REG_TEMP_MEM2, REG_TEMP_MEM1, REG_NOT_USED);
 	newInstruction->I = 1;
 	newInstruction->shift = 24;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//If the final Byte is 0x80 then all is good
-	newInstruction 		= newInstr(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0x80);
+	newInstruction 		= newInstrI(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0x80);
 	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//Move the address to R0
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, REG_TEMP_MEM1, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, REG_TEMP_MEM1);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//Else is the final byte 0xA0?
-	newInstruction 		= newInstr(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0xA0);
+	newInstruction 		= newInstrI(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0xA0);
 	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//If so then clear bit 0x40
-	newInstruction 		= newInstr(ARM_BIC, EQ, REG_HOST_R0, REG_TEMP_MEM1, REG_NOT_USED, 0x40);
+	newInstruction 		= newInstrI(ARM_BIC, EQ, REG_HOST_R0, REG_TEMP_MEM1, REG_NOT_USED, 0x40);
 	newInstruction->I = 1;
 	newInstruction->shift = 24;
 	newInstruction->shiftType = LOGICAL_LEFT;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//The address must be Virtual
@@ -139,15 +131,15 @@ code_seg_t* Generate_MemoryTranslationCode(pfu1ru1 f)
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//TODO call C function for Lookup?
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC);
 	//The literal !!!
-	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_HOST_PC, REG_NOT_USED, 0);
+	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_HOST_PC, REG_NOT_USED);
 
 	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI| REG_HOST_STM_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//Return
-	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	Translate_Registers(code_seg);
@@ -164,25 +156,13 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	Instruction_t* 	newInstruction;
 	Instruction_t* 	ins 			= NULL;
 
+	seg_data->dbgCurrentSegment = code_seg;
+
 	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI2 );
 	code_seg->Intermcode = ins = newInstruction;
 
-#if 1
-	newInstruction 		= newInstr(ARM_ADD, EQ, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED, 1);
-	newInstruction->I = 1;
-	ADD_LL_NEXT(newInstruction, ins);
-
-	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
-	ADD_LL_NEXT(newInstruction, ins);
-
-	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
-	ADD_LL_NEXT(newInstruction, ins);
-
-#else
-
 	// Need to get segment for 0x88000040, lookup the ARM address and jump to it.
-	code_seg_t* start_seg = seg_data->StaticBounds[0x40/4];
+	/*code_seg_t* start_seg = seg_data->StaticBounds[0x40/4];
 	uint32_t* arm_address = start_seg->ARMcode;
 
 	assert(arm_address);
@@ -192,24 +172,25 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	addLiteral(code_seg, &base, &offset,(uint32_t)arm_address);
 	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
-#endif
-
+*/
 	Translate_Registers(code_seg);
 
 	return code_seg;
 }
 
-code_seg_t* Generate_CodeStop()
+code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data)
 {
 	code_seg_t* 	code_seg 		= newSegment();
 	Instruction_t* 	newInstruction;
 	Instruction_t* 	ins 			= NULL;
 
-	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
+	seg_data->dbgCurrentSegment = code_seg;
+
+		newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
 	code_seg->Intermcode = ins = newInstruction;
 
 	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR, 0);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
 
@@ -228,11 +209,11 @@ static Instruction_t* insertCall(Instruction_t* ins, const Condition_e cond, con
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//set lr
-	newInstruction 	= newInstr(ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 4);
+	newInstruction 	= newInstrI(ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 8);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// load function address from [fp + offset] into PC
-	newInstruction 	= newInstr(ARM_LDR, cond, REG_HOST_PC, REG_HOST_FP, REG_NOT_USED, offset);
+	newInstruction 	= newInstrI(ARM_LDR, cond, REG_HOST_PC, REG_HOST_FP, REG_NOT_USED, offset);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// pop lr
@@ -242,6 +223,86 @@ static Instruction_t* insertCall(Instruction_t* ins, const Condition_e cond, con
 	return ins;
 }
 
+static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_t Reg)
+{
+	const Instruction_t* in = ins;
+	uint32_t x = 0;
+
+	while (in)
+	{
+		if (ins->R1.regID == Reg || ins->R2.regID == Reg || ins->R3.regID == Reg)	return x;
+		if (ins->Rd1.regID == Reg || ins->Rd2.regID == Reg) return -1;
+
+		x++;
+		in = in->nextInstruction;
+	}
+
+	return x;
+}
+
+static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, const regID_t RegTo, uint32_t MaxInstructions)
+{
+	Instruction_t* in = ins;
+	uint32_t x = MaxInstructions;
+
+	if (!x) x = 0xffffffff;
+
+	if (RegFrom >= REG_HOST)
+	{
+		if (RegTo >= REG_HOST) 	printf("Reg host %3d => host %3d\n", RegFrom-REG_HOST, RegTo-REG_HOST);
+		else					printf("Reg host %3d =>      %3d\n", RegFrom-REG_HOST, RegTo);
+	}
+	else
+	{
+		if (RegTo >= REG_HOST) 	printf("Reg      %3d => host %3d\n", RegFrom, RegTo-REG_HOST);
+		else					printf("Reg      %3d =>      %3d\n", RegFrom, RegTo);
+	}
+
+
+	while (x && in)
+	{
+		if (in->Rd1.regID == RegFrom && in->Rd1.state == RS_REGISTER) in->Rd1.regID = RegTo;
+		if (in->Rd2.regID == RegFrom && in->Rd2.state == RS_REGISTER) in->Rd2.regID = RegTo;
+		if (in->R1.regID == RegFrom && in->R1.state == RS_REGISTER) in->R1.regID = RegTo;
+		if (in->R2.regID == RegFrom && in->R2.state == RS_REGISTER) in->R2.regID = RegTo;
+		if (in->R3.regID == RegFrom && in->R3.state == RS_REGISTER) in->R3.regID = RegTo;
+		x--;
+		in = in->nextInstruction;
+	}
+}
+
+//=============================================================
+
+
+void Translate_init(code_seg_t* const codeSegment)
+{
+	int x;
+	Instruction_t*newInstruction;
+	Instruction_t*prevInstruction = NULL;
+
+	freeIntermediateInstructions(codeSegment);
+
+	//now build new Intermediate code
+	for (x=0; x < codeSegment->MIPScodeLen; x++)
+	{
+		newInstruction = newEmptyInstr();
+
+		mips_decode(*(codeSegment->MIPScode + x), newInstruction);
+
+		if (x == 0)
+		{
+			codeSegment->Intermcode = newInstruction;
+
+		}
+		else
+		{
+			prevInstruction->nextInstruction = newInstruction;
+		}
+		prevInstruction = newInstruction;
+	}
+
+	return;
+}
 
 /*
  * MIPS4300 executes instruction after a branch or jump if it is not LINK_LIKELY
@@ -302,7 +363,7 @@ void Translate_DelaySlot(code_seg_t* const codeSegment)
 
 		ins = ins->nextInstruction;	// move to the branch instruction
 
-		newInstruction 	= newInstr(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40);
+		newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40);
 		newInstruction->rotate = 4;	// To load into bits 24-31
 		newInstruction->I = 1;
 
@@ -351,7 +412,7 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 	if (bCountSaturates)
 	{
 		printf("Optimize_CountRegister failed. Not implemented QSUB \n");
-		return;
+		abort();
 	}
 
 	//loop through the instructions and update COUNT every countFrequency
@@ -371,7 +432,7 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 			}
 			else
 			{
-				newInstruction = newInstrS(ARM_SUB,AL,REG_COUNT,REG_COUNT,REG_NOT_USED,uiCountFrequency);
+				newInstruction = newInstrIS(ARM_SUB,AL,REG_COUNT,REG_COUNT,REG_NOT_USED,uiCountFrequency);
 				ADD_LL_NEXT(newInstruction, ins);
 
 				instrCountRemaining -= uiCountFrequency;
@@ -396,7 +457,8 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 		}
 		else
 		{
-			newInstruction = newInstrS(ARM_SUB,AL,REG_COUNT,REG_COUNT,REG_NOT_USED,instrCountRemaining);
+			//TODO think this might be add and on, overflow or positive, we branch
+			newInstruction = newInstrIS(ARM_SUB,AL,REG_COUNT,REG_COUNT,REG_NOT_USED,instrCountRemaining);
 
 			newInstruction->nextInstruction = ins->nextInstruction;
 			ADD_LL_NEXT(newInstruction, ins);
@@ -409,70 +471,585 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 }
 
 /*
+ *
+ */
+void Translate_Constants(code_seg_t* const codeSegment)
+{
+	//First off r0 is ALWAYS 0 so lets do that first
+
+	Instruction_t*ins = codeSegment->Intermcode;
+
+	while (ins)
+	{
+		if ((ins->Rd1.regID & ~REG_WIDE) == 0)
+		{
+			ins->Rd1.state = RS_CONSTANT_U8;
+			ins->Rd1.u8 = 0;
+		}
+
+		if ((ins->Rd2.regID & ~REG_WIDE) == 0)
+		{
+			ins->Rd2.state = RS_CONSTANT_U8;
+			ins->Rd2.u8 = 0;
+		}
+
+		if ((ins->R1.regID & ~REG_WIDE) == 0)
+		{
+			ins->R1.state = RS_CONSTANT_U8;
+			ins->R1.u8 = 0;
+		}
+
+		if ((ins->R2.regID & ~REG_WIDE) == 0)
+		{
+			ins->R2.state = RS_CONSTANT_U8;
+			ins->R2.u8 = 0;
+		}
+
+		if ((ins->R3.regID & ~REG_WIDE) == 0)
+		{
+			ins->R3.state = RS_CONSTANT_U8;
+			ins->R3.u8 = 0;
+		}
+
+		ins = ins->nextInstruction;
+	}
+
+	ins = codeSegment->Intermcode;
+
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+		case LUI:
+			ins->Rd1.state = RS_CONSTANT_I8;
+			if (ins->immediate < 0)
+			{
+				ins->Rd1.i8 = 0xffffffff00000000 | (ins->immediate << 16);
+			}else
+			{
+			ins->Rd1.i8 = ins->immediate;
+			}
+			break;
+		default: break;
+		}
+		ins = ins->nextInstruction;
+	}
+}
+
+/*
  * Function to turn 64bit registers into multiple 32-bit registers
  *
  */
 void Translate_32BitRegisters(code_seg_t* const codeSegment)
 {
-	//Instruction_t* i = newInstr();
+	Instruction_t*ins;
+	Instruction_t*new_ins;
+	ins = codeSegment->Intermcode;
 
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+			case SLL: break;
+			case SRL: break;
+			case SRA: break;
+			case SLLV: break;
+			case SRLV: break;
+			case SRAV: break;
+			case SYSCALL: break;
+			case BREAK: break;
+			case SYNC: break;
+			case MFHI: break;
+			case MTHI: break;
+			case MFLO: break;
+			case MTLO: break;
+			case DSLLV:
+				/*
+				 *		Rd1 W        Rd1            R1 W           R1               R2 W          R2
+				 * [FF FF FF FF | FF FF FF FE] = [FF FF FF FF | FF FF FF FF] << [00 00 00 00 | 00 00 00 3F]
+				 *
+				 *
+				 */
+
+				// 1. Work out lower Word
+				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID , REG_NOT_USED, ins->R1.regID);
+				new_ins->shiftType = LOGICAL_LEFT;
+				new_ins->R3.regID = ins->R2.regID;
+				ADD_LL_NEXT(new_ins, ins);
+
+				// 2. Work out upper word
+				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID | REG_WIDE, REG_NOT_USED, ins->R1.regID | REG_WIDE);
+				new_ins->shiftType = LOGICAL_LEFT;
+				new_ins->R3.regID = ins->R2.regID;
+				ADD_LL_NEXT(new_ins, ins);
+
+				// 3. Work out lower shifted to upper
+				new_ins = newInstrIS(ARM_RSB, AL, REG_TEMP_GEN2, REG_NOT_USED, ins->R2.regID, 32);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_ORR, PL, ins->Rd1.regID | REG_WIDE, REG_NOT_USED, ins->R1.regID);
+				new_ins->shiftType = LOGICAL_RIGHT;
+				new_ins->R3.regID = REG_TEMP_GEN2;
+				ADD_LL_NEXT(new_ins, ins);
+
+				// 4. Work out R1 << into Rd1 W (i.e. where R2 > 32) If this occurs then Step 1 and 2 didn't do anything
+				new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_GEN1, REG_NOT_USED, ins->R1.regID, 32);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_ORR, PL, ins->Rd1.regID | REG_WIDE, ins->R1.regID, REG_TEMP_GEN1);
+				ADD_LL_NEXT(new_ins, ins);
+
+				break;
+			case DSRLV:
+				/*
+				 *
+				 * [7F FF FF FF | FF FF FF FF] = [FF FF FF FF | FF FF FF FF] >> [00 00 00 00 | 00 00 00 3F]
+				 *
+				 *
+				 */
+
+				//Work out lower Word
+				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID, REG_NOT_USED, ins->R1.regID);
+				new_ins->shiftType = LOGICAL_RIGHT;
+				new_ins->R3.regID = ins->R2.regID;
+				ADD_LL_NEXT(new_ins, ins);
+
+				//Work out upper word
+				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID| REG_WIDE, REG_NOT_USED, ins->Rd1.regID | REG_WIDE);
+				new_ins->shiftType = LOGICAL_RIGHT;
+				new_ins->R3.regID = ins->R2.regID;
+				ADD_LL_NEXT(new_ins, ins);
+
+				//Work out upper shifted to lower
+				new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_GEN1, REG_NOT_USED, ins->R1.regID, 32);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, PL, REG_TEMP_GEN2, ins->R1.regID, REG_NOT_USED);
+				new_ins->shiftType = LOGICAL_RIGHT;
+				new_ins->R3.regID = REG_TEMP_GEN1;
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_ORR, PL, ins->Rd1.regID| REG_WIDE, ins->Rd1.regID | REG_WIDE, REG_TEMP_GEN1);
+				ADD_LL_NEXT(new_ins, ins);
+				break;
+			case DSRAV: break;
+			case MULT: break;
+			case MULTU: break;
+			case DIV: break;
+			case DIVU: break;
+			case DMULT: break;
+			case DMULTU: break;
+			case DDIV: break;
+			case DDIVU: break;
+			case ADD: break;
+			case ADDU: break;
+			case SUB: break;
+			case SUBU: break;
+			case AND: break;
+			case OR: break;
+			case XOR: break;
+			case NOR: break;
+			case SLT: break;
+			case SLTU: break;
+			case DADD: break;
+			case DADDU: break;
+			case DSUB: break;
+			case DSUBU: break;
+			case TGE: break;
+			case TGEU: break;
+			case TLT: break;
+			case TLTU: break;
+			case TEQ: break;
+			case TNE: break;
+			case DSLL: break;
+			case DSRL: break;
+			case DSRA: break;
+			case DSLL32: break;
+			case DSRL32: break;
+			case DSRA32: break;
+			case TGEI: break;
+			case TGEIU: break;
+			case TLTI: break;
+			case TLTIU: break;
+			case TEQI: break;
+			case TNEI: break;
+			case ADDI: break;
+			case ADDIU: break;
+			case SLTI: break;
+			case SLTIU: break;
+			case ANDI: break;
+			case ORI: break;
+			case XORI: break;
+			case LUI: break;
+			case MFC0: break;
+			case MTC0: break;
+			case TLBR: break;
+			case TLBWI: break;
+			case TLBWR: break;
+			case TLBP: break;
+			case ERET: break;
+			case MFC1: break;
+			case DMFC1: break;
+			case CFC1: break;
+			case MTC1: break;
+			case DMTC1: break;
+			case CTC1: break;
+			case BC1: break;
+			case BC1F: break;
+			case BC1T: break;
+			case BC1FL: break;
+			case BC1TL: break;
+			case ADD_S: break;
+			case SUB_S: break;
+			case MUL_S: break;
+			case DIV_S: break;
+			case SQRT_S: break;
+			case ABS_S: break;
+			case MOV_S: break;
+			case NEG_S: break;
+			case ROUND_L_S: break;
+			case TRUNC_L_S: break;
+			case CEIL_L_S: break;
+			case FLOOR_L_S: break;
+			case ROUND_W_S: break;
+			case TRUNC_W_S: break;
+			case CEIL_W_S: break;
+			case FLOOR_W_S: break;
+			case CVT_D_S: break;
+			case CVT_W_S: break;
+			case CVT_L_S: break;
+			case C_F_S: break;
+			case C_UN_S: break;
+			case C_EQ_S: break;
+			case C_UEQ_S: break;
+			case C_OLT_S: break;
+			case C_ULT_S: break;
+			case C_OLE_S: break;
+			case C_ULE_S: break;
+			case C_SF_S: break;
+			case C_NGLE_S: break;
+			case C_SEQ_S: break;
+			case C_NGL_S: break;
+			case C_LT_S: break;
+			case C_NGE_S: break;
+			case C_LE_S: break;
+			case C_NGT_S: break;
+			case ADD_D: break;
+			case SUB_D: break;
+			case MUL_D: break;
+			case DIV_D: break;
+			case SQRT_D: break;
+			case ABS_D: break;
+			case MOV_D: break;
+			case NEG_D: break;
+			case ROUND_L_D: break;
+			case TRUNC_L_D: break;
+			case CEIL_L_D: break;
+			case FLOOR_L_D: break;
+			case ROUND_W_D: break;
+			case TRUNC_W_D: break;
+			case CEIL_W_D: break;
+			case FLOOR_W_D: break;
+			case CVT_S_D: break;
+			case CVT_W_D: break;
+			case CVT_L_D: break;
+			case C_F_D: break;
+			case C_UN_D: break;
+			case C_EQ_D: break;
+			case C_UEQ_D: break;
+			case C_OLT_D: break;
+			case C_ULT_D: break;
+			case C_OLE_D: break;
+			case C_ULE_D: break;
+			case C_SF_D: break;
+			case C_NGLE_D: break;
+			case C_SEQ_D: break;
+			case C_NGL_D: break;
+			case C_LT_D: break;
+			case C_NGE_D: break;
+			case C_LE_D: break;
+			case C_NGT_D: break;
+			case CVT_S_W: break;
+			case CVT_D_W: break;
+			case CVT_S_L: break;
+			case CVT_D_L: break;
+			case DADDI: break;
+			case DADDIU: break;
+			case CACHE: break;
+			case LL: break;
+			case LWC1: break;
+			case LLD: break;
+			case LDC1: break;
+			case LD: break;
+			case SC: break;
+			case SWC1: break;
+			case SCD: break;
+			case SDC1: break;
+			case SD: break;
+
+			case J: break;
+			case JR: break;
+			case JAL: break;
+			case JALR: break;
+
+			case BLTZ: break;
+			case BGEZ: break;
+			case BEQ: break;
+			case BNE: break;
+			case BLEZ: break;
+			case BGTZ: break;
+
+			case BLTZL: break;
+			case BGEZL: break;
+			case BEQL: break;
+			case BNEL: break;
+			case BLEZL: break;
+			case BGTZL: break;
+
+			case BLTZAL: break;
+			case BGEZAL: break;
+			case BLTZALL: break;
+			case BGEZALL: break;
+
+			case SB: break;
+			case SH: break;
+			case SWL: break;
+			case SW: break;
+			case SDL: break;
+			case SDR: break;
+			case SWR: break;
+
+			case LDL: break;
+			case LDR: break;
+			case LB: break;
+			case LH: break;
+			case LWL: break;
+			case LW: break;
+			case LBU: break;
+			case LHU: break;
+			case LWR: break;
+			case LWU: break;
+
+		default: break;
+		}
+
+		ins = ins->nextInstruction;
+	}
+}
+
+/*
+ *	Function to Translate memory operations into Emulated equivalent
+ *
+ *  Emulated memory access can be cached, non-cached or virtual
+ *
+ *  As the emulator memory will be mmaped to 0x??000000, non-cached need not do
+ *  any translation. cached memory 'just needs' BIC Rd, R1, #1, LSL # 29
+ *
+ *  Virtual will need to call a function to lookup address
+ */
+void Translate_Memory(code_seg_t* const codeSegment)
+{
+	Instruction_t*ins;
+	ins = codeSegment->Intermcode;
+
+	Instruction_t*prev_ins;
+	//TODO we need to check that memory being modified is not MIPS code!
+
+	regID_t	funcTempReg;
+	int32_t	funcTempImm;
+
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+		case MFHI: break;
+		case MTHI: break;
+		case MFLO: break;
+		case MTLO: break;
+
+		case MULT: break;
+		case MULTU: break;
+		case DIV: break;
+		case DIVU: break;
+		case DMULT: break;
+		case DMULTU: break;
+		case DDIV: break;
+		case DDIVU: break;
+
+		case SLT: break;
+		case SLTU: break;
+
+		case LUI: break;
+		case MFC0: break;
+		case MTC0: break;
+
+		case MFC1: break;
+		case DMFC1: break;
+		case CFC1: break;
+		case MTC1: break;
+		case DMTC1: break;
+		case CTC1: break;
+
+		case LL: break;
+		case LWC1: break;
+		case LLD: break;
+		case LDC1: break;
+		case LD: break;
+		case SC: break;
+		case SWC1: break;
+		case SCD: break;
+		case SDC1: break;
+		case SD: break;
+
+		case SB: break;
+		case SH: break;
+		case SWL: break;
+		case SW: break;
+		case SDL: break;
+		case SDR: break;
+		case SWR: break;
+
+		case LDL: break;
+		case LDR: break;
+		case LB: break;
+		case LH: break;
+		case LWL: break;
+		case LW:
+
+			//TODO test for cache/non-cache or virtual
+			funcTempReg = ins->Rd1.regID;
+			funcTempImm = ins->immediate;
+
+			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0x08 << 24);
+
+			Instruction_t* new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, uMemoryBase << 24);
+			ADD_LL_NEXT(new_ins, ins);
+
+			if (funcTempImm > 0xFFF || funcTempImm < -0xFFF)
+			{
+				new_ins = newInstrI(ARM_ORR, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, funcTempImm&0xf000);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+
+			new_ins = newInstrI(ARM_LDR_LIT, NE, funcTempReg, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
+			ADD_LL_NEXT(new_ins, ins);
+
+			ins = insertCall(ins, EQ, FUNC_GEN_LOOKUP);
+
+			break;
+		case LBU: break;
+		case LHU: break;
+		case LWR: break;
+		case LWU: break;
+		default: break;
+		}
+
+		prev_ins = ins;
+		ins = ins->nextInstruction;
+	}
+}
+
+void Translate_LoadStoreWriteBack(code_seg_t* const codeSegment)
+{
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
 
 	while (ins)
 	{
-	/*	switch (ins->instruction)
-		{
-		case DADDIU: //TODO this is an immediate.
-			//Change into 32bit then add instruction to accumulate
-			ins->instruction = ADDIU;
-
-			i->instruction = ARM_ADC;
-			i->M_Rs = 32 + ins->M_Rs;
-			i->M_Rt = 32 + ins->M_Rt;
-			i->Rd = 32 + ins->Rd;
-
-			break;
-		default:
-			break;
-		}
-*/
 		ins = ins->nextInstruction;
 	}
 }
 
-
-static uint32_t FindRegNextUsedAgain(const Instruction_t* const ins, const reg_t Reg)
+void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 {
-	const Instruction_t* in = ins;
-	uint32_t x = 0;
+	Instruction_t*ins = codeSegment->Intermcode;
+	Instruction_t*new_ins;
+	uint8_t RegUsed[64];
 
-	while (in)
+	memset(RegUsed,0,sizeof(RegUsed));
+
+	while (ins->nextInstruction)
 	{
-		if (ins->R1 == Reg || ins->R2 == Reg || ins->R3 == Reg)	return x;
-		x++;
-		in = in->nextInstruction;
+		//Does the next instruction use a Register
+		if (ins->nextInstruction->Rd1.regID != REG_NOT_USED && ins->nextInstruction->Rd1.state == RS_REGISTER)
+		{
+			//Add to the count for next instructions Register
+			RegUsed[ins->nextInstruction->Rd1.regID]++;
+
+			// Is this the first time the next instructions register has been used?
+			if (!RegUsed[ins->nextInstruction->Rd1.regID])
+			{
+				// Create an instruction to load register from cache
+				new_ins = newInstrI(LW, AL, ins->nextInstruction->Rd1.regID, REG_HOST_FP, REG_NOT_USED, ins->nextInstruction->Rd1.regID * 8);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+		}
+
+		if (ins->Rd2.regID != REG_NOT_USED && ins->nextInstruction->Rd2.state == RS_REGISTER && !RegUsed[ins->Rd2.regID])
+		{
+			RegUsed[ins->Rd2.regID]++;
+			new_ins = newInstrI(LW, AL, ins->Rd2.regID, REG_HOST_FP, REG_NOT_USED, ins->Rd2.regID * 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+		if (ins->R1.regID != REG_NOT_USED && ins->nextInstruction->R1.state == RS_REGISTER && !RegUsed[ins->R1.regID])
+		{
+			RegUsed[ins->R1.regID]++;
+			new_ins = newInstrI(LW, AL, ins->R1.regID, REG_HOST_FP, REG_NOT_USED, ins->R1.regID * 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+		if (ins->R2.regID != REG_NOT_USED && ins->nextInstruction->R2.state == RS_REGISTER && !RegUsed[ins->R2.regID])
+		{
+			RegUsed[ins->R2.regID]++;
+			new_ins = newInstrI(LW, AL, ins->R2.regID, REG_HOST_FP, REG_NOT_USED, ins->R2.regID * 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+		if (ins->R3.regID != REG_NOT_USED && ins->nextInstruction->R3.state == RS_REGISTER && !RegUsed[ins->R3.regID])
+		{
+			RegUsed[ins->R3.regID]++;
+			new_ins = newInstrI(LW, AL, ins->R3.regID, REG_HOST_FP, REG_NOT_USED, ins->R3.regID * 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+
+		ins = ins->nextInstruction;
 	}
 
-	return x;
-}
+	//Now look for last references to registers so that we can save them back to cache
 
-static void UpdateRegWithReg(Instruction_t* const ins, const reg_t RegFrom, const reg_t RegTo, uint32_t MaxInstructions)
-{
-	Instruction_t* in = ins;
-	uint32_t x = MaxInstructions;
+	ins = codeSegment->Intermcode;
 
-	if (!x) x = 0xffffffff;
-
-	while (x && in)
+	while (ins)
 	{
-		if (in->Rd1 == RegFrom) in->Rd1 = RegTo;
-		if (in->Rd2 == RegFrom) in->Rd2 = RegTo;
-		if (in->R1 == RegFrom) in->R1 = RegTo;
-		if (in->R2 == RegFrom) in->R2 = RegTo;
-		if (in->R3 == RegFrom) in->R3 = RegTo;
-		x--;
-		in = in->nextInstruction;
+		if (ins->Rd1.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->Rd1.regID) > 0))
+		{
+			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->Rd1.regID, ins->Rd1.regID* 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+
+		if (ins->Rd2.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->Rd2.regID) > 0))
+		{
+			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->Rd2.regID, ins->Rd2.regID * 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+
+		if (ins->R1.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->R1.regID) > 0))
+		{
+			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->R1.regID, ins->R1.regID * 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+
+		if (ins->R2.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->R2.regID) > 0))
+		{
+			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->R2.regID, ins->R2.regID * 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+
+		if (ins->R3.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->R3.regID) > 0))
+		{
+			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->R3.regID, ins->R3.regID * 8);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+
+		ins = ins->nextInstruction;
 	}
 }
 
@@ -501,11 +1078,11 @@ void Translate_Registers(code_seg_t* const codeSegment)
 	ins = codeSegment->Intermcode;
 	while (ins)
 	{
-		if (ins->Rd1 != REG_NOT_USED) counts[ins->Rd1]++;
-		if (ins->Rd2 != REG_NOT_USED) counts[ins->Rd2]++;
-		if (ins->R1 != REG_NOT_USED) counts[ins->R1]++;
-		if (ins->R2 != REG_NOT_USED) counts[ins->R2]++;
-		if (ins->R3 != REG_NOT_USED) counts[ins->R3]++;
+		if (ins->Rd1.regID != REG_NOT_USED && ins->Rd1.state == RS_REGISTER) counts[ins->Rd1.regID]++;
+		if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.state == RS_REGISTER) counts[ins->Rd2.regID]++;
+		if (ins->R1.regID != REG_NOT_USED && ins->R1.state == RS_REGISTER) counts[ins->R1.regID]++;
+		if (ins->R2.regID != REG_NOT_USED && ins->R2.state == RS_REGISTER) counts[ins->R2.regID]++;
+		if (ins->R3.regID != REG_NOT_USED && ins->R3.state == RS_REGISTER) counts[ins->R3.regID]++;
 
 		ins = ins->nextInstruction;
 	}
@@ -516,39 +1093,150 @@ void Translate_Registers(code_seg_t* const codeSegment)
 	}
 
 	printf("Segment 0x%x uses %d registers\n",(uint32_t)codeSegment, NumberRegUsed);
-
-	if (NumberRegUsed < 10)
+	
+	if (NumberRegUsed <= 11)
 	{
 		ins = codeSegment->Intermcode;
-		uint32_t CRindex = 0;
-		while (counts[REG_HOST + CRindex]) CRindex++;
+		uint32_t uiCurrentRegister = 0;
+
+		while (counts[REG_HOST + uiCurrentRegister])
+			uiCurrentRegister++; // Find the next free HOST register
 
 		for (x = 0; x < REG_HOST; x++ )
 		{
 			if (counts[x])
 			{
-				UpdateRegWithReg(ins,(reg_t)x, REG_HOST + CRindex, 0);
-				CRindex++;
-				while (counts[REG_HOST + CRindex]) CRindex++;
+				UpdateRegWithReg(ins,(regID_t)x, REG_HOST + uiCurrentRegister, 0);
+				uiCurrentRegister++;
+				while (counts[REG_HOST + uiCurrentRegister]) uiCurrentRegister++; // Find the next free HOST register
 			}
 		}
 	}
 	else
 	{
-		//TODO
-		fprintf(stderr, "Missing code to do register translation\n");
-		abort();
+		ins = codeSegment->Intermcode;
+
+		//we should do this in the 'instruction' domain so that non-overlapping register usage can be 'flattened'
+
+		uint32_t uiCurrentRegister = 0;
+		uint32_t uiLastRegister = 0;
+
+		while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister)> 0))
+		{
+			uiCurrentRegister++;
+			if (uiCurrentRegister > 10) uiCurrentRegister = 0;
+
+			// Have we looped round all registers?
+			if (uiLastRegister == uiCurrentRegister){
+				abort();
+			}
+		}
+
+		while (ins)
+		{
+			/*
+			if (ins->instruction == UNKNOWN)
+			{
+				printf("Unknown Instruction in segment 0x%x\n", codeSegment);
+
+				uint32_t x;
+				for (x=0; x < codeSegment->MIPScodeLen; x++)
+				{
+					mips_print((uint32_t)codeSegment->MIPScode + x*4, *(codeSegment->MIPScode + x));
+				}
+				abort();
+			}*/
+
+			if (ins->Rd1.regID != REG_NOT_USED  && ins->Rd1.state == RS_REGISTER && ins->Rd1.regID < REG_HOST){
+				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + uiCurrentRegister, 0);
+				uiLastRegister = uiCurrentRegister;
+				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
+				{
+					uiCurrentRegister++;
+					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
+
+					// Have we looped round all registers?
+					if (uiLastRegister == uiCurrentRegister){
+
+						abort();
+					}
+				}
+			}
+
+			if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.state == RS_REGISTER && ins->Rd2.regID < REG_HOST){
+				UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + uiCurrentRegister, 0);
+				uiLastRegister = uiCurrentRegister;
+				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
+				{
+					uiCurrentRegister++;
+					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
+
+					// Have we looped round all registers?
+					if (uiLastRegister == uiCurrentRegister){
+						abort();
+					}
+				}
+			}
+
+			if (ins->R1.regID != REG_NOT_USED && ins->R1.state == RS_REGISTER && ins->R1.regID < REG_HOST){
+				UpdateRegWithReg(ins,ins->R1.regID, REG_HOST + uiCurrentRegister, 0);
+				uiLastRegister = uiCurrentRegister;
+				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
+				{
+					uiLastRegister = uiCurrentRegister;
+					uiCurrentRegister++;
+					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
+
+					// Have we looped round all registers?
+					if (uiLastRegister == uiCurrentRegister){
+						abort();
+					}
+				}
+			}
+
+			if (ins->R2.regID != REG_NOT_USED && ins->R2.state == RS_REGISTER && ins->R2.regID < REG_HOST){
+				UpdateRegWithReg(ins,ins->R2.regID, REG_HOST + uiCurrentRegister, 0);
+				uiLastRegister = uiCurrentRegister;
+				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
+				{
+					uiCurrentRegister++;
+					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
+
+					// Have we looped round all registers?
+					if (uiLastRegister == uiCurrentRegister){
+						abort();
+					}
+				}
+			}
+
+			if (ins->R3.regID != REG_NOT_USED && ins->R3.state == RS_REGISTER && ins->R3.regID < REG_HOST){
+				UpdateRegWithReg(ins,ins->R3.regID, REG_HOST + uiCurrentRegister, 0);
+				uiLastRegister = uiCurrentRegister;
+				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
+				{
+					uiCurrentRegister++;
+					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
+
+					// Have we looped round all registers?
+					if (uiLastRegister == uiCurrentRegister){
+						abort();
+					}
+				}
+			}
+
+			ins = ins->nextInstruction;
+		}
 	}
 
 	//Strip HOST flag from register ID leaving ARM register ID ready for writing
 	ins = codeSegment->Intermcode;
 	while (ins)
 	{
-		if (ins->Rd1 != REG_NOT_USED) ins->Rd1 &= ~REG_HOST;
-		if (ins->Rd2 != REG_NOT_USED) ins->Rd2 &= ~REG_HOST;
-		if (ins->R1 != REG_NOT_USED) ins->R1 &= ~REG_HOST;
-		if (ins->R2 != REG_NOT_USED) ins->R2 &= ~REG_HOST;
-		if (ins->R3 != REG_NOT_USED) ins->R3 &= ~REG_HOST;
+		if (ins->Rd1.regID != REG_NOT_USED && ins->Rd1.state == RS_REGISTER) ins->Rd1.regID &= ~REG_HOST;
+		if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.state == RS_REGISTER) ins->Rd2.regID &= ~REG_HOST;
+		if (ins->R1.regID != REG_NOT_USED && ins->R1.state == RS_REGISTER) ins->R1.regID &= ~REG_HOST;
+		if (ins->R2.regID != REG_NOT_USED && ins->R2.state == RS_REGISTER) ins->R2.regID &= ~REG_HOST;
+		if (ins->R3.regID != REG_NOT_USED && ins->R3.state == RS_REGISTER) ins->R3.regID &= ~REG_HOST;
 
 		ins = ins->nextInstruction;
 	}
@@ -561,114 +1249,268 @@ void Translate_Registers(code_seg_t* const codeSegment)
 
 	while (ins)
 	{
-		assert( ins->Rd1 < 16 || ins->Rd1 == REG_NOT_USED);
-		assert( ins->Rd2 < 16 || ins->Rd2 == REG_NOT_USED);
-		assert( ins->R1 < 16 || ins->R1 == REG_NOT_USED);
-		assert( ins->R2 < 16 || ins->R2 == REG_NOT_USED);
-		assert( ins->R3 < 16 || ins->R3 == REG_NOT_USED);
+		assert( ins->Rd1.state != RS_REGISTER || ins->Rd1.regID < 16 || ins->Rd1.regID == REG_NOT_USED);
+		assert( ins->Rd2.state != RS_REGISTER || ins->Rd2.regID < 16 || ins->Rd2.regID == REG_NOT_USED);
+		assert( ins->R1.state != RS_REGISTER || ins->R1.regID < 16 || ins->R1.regID == REG_NOT_USED);
+		assert( ins->R2.state != RS_REGISTER || ins->R2.regID < 16 || ins->R2.regID == REG_NOT_USED);
+		assert( ins->R3.state != RS_REGISTER || ins->R3.regID < 16 || ins->R3.regID == REG_NOT_USED);
 		ins = ins->nextInstruction;
 	}
 #endif
 	return;
 }
 
-void Translate_LoadStoreWriteBack(code_seg_t* const codeSegment)
+void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 {
-	Instruction_t*ins;
-	ins = codeSegment->Intermcode;
 
-	while (ins)
-	{
-		ins = ins->nextInstruction;
-	}
 }
 
-/*
- *	Function to Translate memory operations into Emulated equivalent
- *
- *  Emulated memory access can be cached, non-cached or virtual
- *
- *  As the emulator memory will be mmaped to 0x80000000, non-cached need not do
- *  any translation. cached memory 'just needs' BIC Rd, R1, #1, LSL # 29
- *
- *  Virtual will need to call a function to lookup address
- */
-void Translate_Memory(code_seg_t* const codeSegment)
-{
-	Instruction_t*ins;
-	ins = codeSegment->Intermcode;
-
-	while (ins)
-	{
-		if (ins->nextInstruction->instruction == LW)
-		{
-
-		}
-
-		ins = ins->nextInstruction;
-	}
-}
-
+#if 0
 void Translate_Generic(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
+	Instruction_t*new_ins;
 	ins = codeSegment->Intermcode;
 
 	while (ins)
 	{
 		switch (ins->instruction)
 		{
-		case MTC0:
-		case MFC0:
-			ins->instruction = ARM_MOV;
-			ins->R2 = ins->R1;
-			ins->R1 = REG_NOT_USED;
-			break;
+			case SLL: break;
+			case SRL: break;
+			case SRA: break;
+			case SLLV: break;
+			case SRLV: break;
+			case SRAV: break;
+			case SYSCALL: break;
+			case BREAK: break;
+			case SYNC: break;
+			case MFHI: break;
+			case MTHI: break;
+			case MFLO: break;
+			case MTLO: break;
+			case DSLLV:break;
+			case DSRLV:break;
+			case DSRAV: break;
+			case MULT: break;
+			case MULTU: break;
+			case DIV: break;
+			case DIVU: break;
+			case DMULT: break;
+			case DMULTU: break;
+			case DDIV: break;
+			case DDIVU: break;
+			case ADD: break;
+			case ADDU: break;
+			case SUB: break;
+			case SUBU: break;
+			case AND: break;
+			case OR: break;
+			case XOR: break;
+			case NOR: break;
+			case SLT: break;
+			case SLTU: break;
+			case DADD: break;
+			case DADDU: break;
+			case DSUB: break;
+			case DSUBU: break;
+			case TGE: break;
+			case TGEU: break;
+			case TLT: break;
+			case TLTU: break;
+			case TEQ: break;
+			case TNE: break;
+			case DSLL: break;
+			case DSRL: break;
+			case DSRA: break;
+			case DSLL32: break;
+			case DSRL32: break;
+			case DSRA32: break;
+			case TGEI: break;
+			case TGEIU: break;
+			case TLTI: break;
+			case TLTIU: break;
+			case TEQI: break;
+			case TNEI: break;
+			case ADDI: break;
+			case ADDIU: break;
+			case SLTI: break;
+			case SLTIU: break;
+			case ANDI: break;
+			case ORI: break;
+			case XORI: break;
+			case LUI: break;
+			case MFC0: break;
+			case MTC0: break;
+			case TLBR: break;
+			case TLBWI: break;
+			case TLBWR: break;
+			case TLBP: break;
+			case ERET: break;
+			case MFC1: break;
+			case DMFC1: break;
+			case CFC1: break;
+			case MTC1: break;
+			case DMTC1: break;
+			case CTC1: break;
+			case BC1: break;
+			case BC1F: break;
+			case BC1T: break;
+			case BC1FL: break;
+			case BC1TL: break;
+			case ADD_S: break;
+			case SUB_S: break;
+			case MUL_S: break;
+			case DIV_S: break;
+			case SQRT_S: break;
+			case ABS_S: break;
+			case MOV_S: break;
+			case NEG_S: break;
+			case ROUND_L_S: break;
+			case TRUNC_L_S: break;
+			case CEIL_L_S: break;
+			case FLOOR_L_S: break;
+			case ROUND_W_S: break;
+			case TRUNC_W_S: break;
+			case CEIL_W_S: break;
+			case FLOOR_W_S: break;
+			case CVT_D_S: break;
+			case CVT_W_S: break;
+			case CVT_L_S: break;
+			case C_F_S: break;
+			case C_UN_S: break;
+			case C_EQ_S: break;
+			case C_UEQ_S: break;
+			case C_OLT_S: break;
+			case C_ULT_S: break;
+			case C_OLE_S: break;
+			case C_ULE_S: break;
+			case C_SF_S: break;
+			case C_NGLE_S: break;
+			case C_SEQ_S: break;
+			case C_NGL_S: break;
+			case C_LT_S: break;
+			case C_NGE_S: break;
+			case C_LE_S: break;
+			case C_NGT_S: break;
+			case ADD_D: break;
+			case SUB_D: break;
+			case MUL_D: break;
+			case DIV_D: break;
+			case SQRT_D: break;
+			case ABS_D: break;
+			case MOV_D: break;
+			case NEG_D: break;
+			case ROUND_L_D: break;
+			case TRUNC_L_D: break;
+			case CEIL_L_D: break;
+			case FLOOR_L_D: break;
+			case ROUND_W_D: break;
+			case TRUNC_W_D: break;
+			case CEIL_W_D: break;
+			case FLOOR_W_D: break;
+			case CVT_S_D: break;
+			case CVT_W_D: break;
+			case CVT_L_D: break;
+			case C_F_D: break;
+			case C_UN_D: break;
+			case C_EQ_D: break;
+			case C_UEQ_D: break;
+			case C_OLT_D: break;
+			case C_ULT_D: break;
+			case C_OLE_D: break;
+			case C_ULE_D: break;
+			case C_SF_D: break;
+			case C_NGLE_D: break;
+			case C_SEQ_D: break;
+			case C_NGL_D: break;
+			case C_LT_D: break;
+			case C_NGE_D: break;
+			case C_LE_D: break;
+			case C_NGT_D: break;
+			case CVT_S_W: break;
+			case CVT_D_W: break;
+			case CVT_S_L: break;
+			case CVT_D_L: break;
+			case DADDI: break;
+			case DADDIU: break;
+			case CACHE: break;
+			case LL: break;
+			case LWC1: break;
+			case LLD: break;
+			case LDC1: break;
+			case LD: break;
+			case SC: break;
+			case SWC1: break;
+			case SCD: break;
+			case SDC1: break;
+			case SD: break;
+
+			case J: break;
+			case JR: break;
+			case JAL: break;
+			case JALR: break;
+
+			case BLTZ: break;
+			case BGEZ: break;
+			case BEQ: break;
+			case BNE: break;
+			case BLEZ: break;
+			case BGTZ: break;
+
+			case BLTZL: break;
+			case BGEZL: break;
+			case BEQL: break;
+			case BNEL: break;
+			case BLEZL: break;
+			case BGTZL: break;
+
+			case BLTZAL: break;
+			case BGEZAL: break;
+			case BLTZALL: break;
+			case BGEZALL: break;
+
+			case SB: break;
+			case SH: break;
+			case SWL: break;
+			case SW: break;
+			case SDL: break;
+			case SDR: break;
+			case SWR: break;
+
+			case LDL: break;
+			case LDR: break;
+			case LB: break;
+			case LH: break;
+			case LWL: break;
+			case LW: break;
+			case LBU: break;
+			case LHU: break;
+			case LWR: break;
+			case LWU: break;
+
 		default: break;
 		}
 
 		ins = ins->nextInstruction;
 	}
 }
-
-void Translate_init(code_seg_t* const codeSegment)
-{
-	int x;
-	Instruction_t*newInstruction;
-	Instruction_t*prevInstruction = NULL;
-
-	freeIntermediateInstructions(codeSegment);
-
-	//now build new Intermediate code
-	for (x=0; x < codeSegment->MIPScodeLen; x++)
-	{
-		newInstruction = newEmptyInstr();
-
-		mips_decode(*(codeSegment->MIPScode + x), newInstruction);
-
-		if (x == 0)
-		{
-			codeSegment->Intermcode = newInstruction;
-
-		}
-		else
-		{
-			prevInstruction->nextInstruction = newInstruction;
-		}
-		prevInstruction = newInstruction;
-	}
-
-	Translate_Generic(codeSegment);
-	return;
-}
+#endif
 
 void Translate(code_seg_t* const codeSegment)
 {
 	Translate_init(codeSegment);
 
-	Translate_CountRegister(codeSegment);
 	Translate_DelaySlot(codeSegment);
-	Translate_Memory(codeSegment);
+	Translate_CountRegister(codeSegment);
+
+	Translate_Constants(codeSegment);
 	Translate_32BitRegisters(codeSegment);
+	Translate_Memory(codeSegment);
+
+	Translate_LoadStoreWriteBack(codeSegment);
+
+//	Translate_LoadCachedRegisters(codeSegment);
 	Translate_Registers(codeSegment);
+//	Translate_StoreCachedRegisters(codeSegment);
 }

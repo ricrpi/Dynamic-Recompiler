@@ -26,6 +26,7 @@ void getCmd() {
 	int c,d;
 	int argN = 0;
 
+	memset(line, '\0', sizeof(line));
 
 	for(c=0;c<sizeof(userInput[argN])-1;c++) {
 		line[c] = fgetc(stdin);
@@ -176,7 +177,15 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 		}
 		else if (strlen(userInput[2]))
 		{
-			count = strtoul(userInput[2], &tailPointer, 0);
+				if (!strncasecmp(userInput[2], "0x", 2))
+				{
+					addr = (uint32_t*)((strtoul(userInput[2], &tailPointer, 0))&~0x3);
+				}
+				else
+				{
+					count = strtoul(userInput[2], &tailPointer, 0);
+				}
+
 		}
 
 		if (NULL == addr)
@@ -561,40 +570,52 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	{
 		Translate(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "DelaySlot"))
-	{
-		Translate_DelaySlot(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "CountRegister"))
-	{
-		Translate_CountRegister(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "32BitRegisters"))
-	{
-		Translate_32BitRegisters(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "ReduceRegistersUsed"))
-	{
-		Translate_Registers(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "loadStoreWriteBack"))
-	{
-		Translate_LoadStoreWriteBack(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "init"))
-	{
-		Translate_init(CurrentCodeSeg);
-	}
 	else if (!CMD_CMP(1, "full"))
 	{
 		Translate(CurrentCodeSeg);
 		emit_arm_code(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "memory"))
+	else if (!CMD_CMP(1, "init")				|| !CMD_CMP(1, "1"))
+	{
+		Translate_init(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "DelaySlot") 			|| !CMD_CMP(1, "2"))
+	{
+		Translate_DelaySlot(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "Count") 				|| !CMD_CMP(1, "3"))
+	{
+		Translate_CountRegister(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "Constants") 			|| !CMD_CMP(1, "4"))
+	{
+		Translate_Constants(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "32BitRegisters") 		|| !CMD_CMP(1, "5"))
+	{
+		Translate_32BitRegisters(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "memory") 				|| !CMD_CMP(1, "6"))
 	{
 		Translate_Memory(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "write"))
+	else if (!CMD_CMP(1, "loadStoreWriteBack") 	|| !CMD_CMP(1, "7"))
+	{
+		Translate_LoadStoreWriteBack(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "LoadCacheRegisters") 	|| !CMD_CMP(1, "8"))
+	{
+		Translate_LoadCachedRegisters(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "9"))
+	{
+		Translate_Registers(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "10"))
+	{
+		Translate_StoreCachedRegisters(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "11"))
 	{
 		emit_arm_code(CurrentCodeSeg);
 	}
@@ -606,17 +627,17 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	return 0;
 }
 
-void Debugger_start(const code_segment_data_t* const segmentData)
+int Debugger_start(const code_segment_data_t* const segmentData)
 {
 	//find segment
-	if (!CurrentCodeSeg) CurrentCodeSeg = segmentData->StaticSegments;
+	if (!CurrentCodeSeg) CurrentCodeSeg = segmentData->dbgCurrentSegment;
 
 	printf("> "); fflush(stdin);
 	getCmd();
 
 	if (!CMD_CMP(0, "quit"))
 	{
-		exit(0);
+		return 0;
 	}
 	else if (!CMD_CMP(0, "print"))
 	{
@@ -630,6 +651,16 @@ void Debugger_start(const code_segment_data_t* const segmentData)
 	{
 		Debugger_translate(segmentData);
 	}
+	else if (!CMD_CMP(0, "start"))
+	{
+		pfvv run = (pfvv)segmentData->segStart->ARMcode;
+
+		printf("Starting ...\n");
+
+		run();
+
+		printf("End run\n");
+	}
 	else if (!CMD_CMP(0, "help"))
 	{
 		if 		(!CMD_CMP(1, "print"))		printf(HELP_PRINT);
@@ -641,4 +672,5 @@ void Debugger_start(const code_segment_data_t* const segmentData)
 	{
 		printf("unknown command: %s\n", userInput[0]);
 	}
+	return 1;
 }

@@ -47,8 +47,8 @@
 
 #define L_OP "r%02u, [r%02u, #%02d]"
 #define OP_L(val) \
-		((val>>21)&0x1f), \
 		((val>>16)&0x1f), \
+		((val>>21)&0x1f), \
 		((int)(val<<16)/(1<<16))
 
 int32_t ops_BranchOffset(const uint32_t* const instruction)
@@ -978,53 +978,53 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			ins->shiftType = LOGICAL_LEFT;
 			ins->I = 1;
 			ins->shift = (uiMIPSword>>6)&0x1f;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x02:
 			ins->instruction = SRL;
 			ins->shiftType = LOGICAL_RIGHT;
 			ins->I = 1;
 			ins->shift = (uiMIPSword>>6)&0x1f;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x03:
 			ins->instruction = SRA;
 			ins->shiftType = ARITHMETIC_RIGHT;
 			ins->I = 1;
 			ins->shift = (uiMIPSword>>6)&0x1f;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x04:
 			ins->instruction = SLLV;
 			ins->shiftType = LOGICAL_LEFT;
 			ins->I = 0;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = M_Rt(uiMIPSword);
-			ins->R2 = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
+			ins->R2.regID = M_Rs(uiMIPSword);
 			return 0;
 		case 0x07:
 			ins->instruction = SRAV;
 			ins->shiftType = ARITHMETIC_RIGHT;
 			ins->I = 0;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = M_Rt(uiMIPSword);
-			ins->R2 = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
+			ins->R2.regID = M_Rs(uiMIPSword);
 			return 0;
 		case 0x08:
 			ins->instruction = JR;
 			ins->I = 0;
 			ins->Ln = 0;
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			return 0;
 
 		case 0x09:
 			ins->instruction = JALR;
 			ins->I = 0;
 			ins->Ln = 1;
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			return 0;
 
 		case 0x0C:
@@ -1038,196 +1038,196 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 		case 0x10:
 			ins->instruction =  MFHI;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = REG_MULTHI;
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = REG_MULTHI;
 			return 0;
 		case 0x11:
 			ins->instruction =  MTHI;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->Rd1 = REG_MULTHI;
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->Rd1.regID = REG_MULTHI;
 			return 0;
 		case 0x12:
 			ins->instruction =  MFLO;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = REG_MULTLO;
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = REG_MULTLO;
 			return 0;
 		case 0x13:
 			ins->instruction =  MTLO;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->Rd1 = REG_MULTLO;
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->Rd1.regID = REG_MULTLO;
 			return 0;
 		case 0x14:
 			ins->instruction =  DSLLV;
-			ins->R1 = M_Rt(uiMIPSword);
-			ins->R2 = M_Rs(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
+			ins->R2.regID = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x16:
 			ins->instruction =  DSRLV;
-			ins->R1 = M_Rt(uiMIPSword);
-			ins->R2 = M_Rs(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
+			ins->R2.regID = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x17:
 			ins->instruction =  DSRAV;
-			ins->R1 = M_Rt(uiMIPSword);
-			ins->R2 = M_Rs(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
+			ins->R2.regID = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x18:
 			ins->instruction =  MULT;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x19:
 			ins->instruction =  MULTU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1A:
 			ins->instruction =  DIV;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1B:
 			ins->instruction =  DIVU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1C:
 			ins->instruction =  DMULT;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1D:
 			ins->instruction =  DMULTU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1E:
 			ins->instruction =  DDIV;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x1F:
 			ins->instruction =  DDIVU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x20:
 			ins->instruction =  ADD;
 			ins->I = 0;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x21:
 			ins->instruction =  ADDU;
 			ins->I = 0;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x22:
 			ins->instruction =  SUB;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x23:
 			ins->instruction =  SUBU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x24:
 			ins->instruction =  AND;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x25:
 			ins->instruction =  OR;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x26:
 			ins->instruction =  XOR;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x27:
 			ins->instruction =  NOR;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x2A:
 			ins->instruction =  SLT;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x2B:
 			ins->instruction =  SLTU;
-			ins->Rd1 = M_Rd(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x2C:
 			ins->instruction =  DADD;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2= M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID= M_Rd(uiMIPSword);
 			return 0;
 		case 0x2D:
 			ins->instruction =  DADDU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x2E:
 			ins->instruction =  DSUB;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x2F:
 			ins->instruction =  DSUBU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->Rd1 = M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x30:
 			ins->instruction =  TGE;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x31:
 			ins->instruction =  TGEU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x32:
 			ins->instruction =  TLT;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x33:
 			ins->instruction =  TLTU;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x34:
 			ins->instruction =  TEQ;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x36:
 			ins->instruction =  TNE;
-			ins->R1 = M_Rs(uiMIPSword);
-			ins->R2 = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x38:
 			ins->instruction =  DSLL;
@@ -1268,12 +1268,12 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 		case 0x08:
 			ins->instruction =  TGEI;
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword,16);
 			return 0;
 		case 0x09:
 			ins->instruction =  TGEIU;
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword,16);
 			return 0;
 		case 0x0A:
@@ -1313,14 +1313,14 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		return 0;
 	case 0x04:
 		ins->instruction = BEQ;
-		ins->R1 = M_Rs(uiMIPSword);
-		ins->R2 = M_Rt(uiMIPSword);
+		ins->R1.regID = M_Rs(uiMIPSword);
+		ins->R2.regID = M_Rt(uiMIPSword);
 		ins->offset = IMM(uiMIPSword, 16);
 		return 0; 	// I
 	case 0x05:
 		ins->instruction = BNE;
-		ins->R1 = M_Rs(uiMIPSword);
-		ins->R2 = M_Rt(uiMIPSword);
+		ins->R1.regID = M_Rs(uiMIPSword);
+		ins->R2.regID = M_Rt(uiMIPSword);
 		ins->offset = IMM(uiMIPSword, 16);
 		return 0; 	// I
 	case 0x06:
@@ -1331,14 +1331,14 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		return 0;
 	case 0x08:
 		ins->instruction = ADDI;
-		ins->R1 = M_Rs(uiMIPSword);
-		ins->Rd1 = M_Rt(uiMIPSword);
+		ins->R1.regID = M_Rs(uiMIPSword);
+		ins->Rd1.regID = M_Rt(uiMIPSword);
 		ins->immediate = IMM(uiMIPSword, 16);
 		return 0; 	// I
 	case 0x09:
 		ins->instruction = ADDIU;
-		ins->Rd1 = M_Rt(uiMIPSword);
-		ins->R1 = M_Rs(uiMIPSword);
+		ins->Rd1.regID = M_Rt(uiMIPSword);
+		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->immediate = IMM(uiMIPSword, 16);
 		ins->I = 1;
 		return 0; 	// I
@@ -1351,28 +1351,28 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		return 0; 	// I
 	case 0x0C:
 		ins->instruction =  ANDI;
-		ins->Rd1 = M_Rt(uiMIPSword);
-		ins->R1 = M_Rs(uiMIPSword);
+		ins->Rd1.regID = M_Rt(uiMIPSword);
+		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->immediate = IMM(uiMIPSword, 16);
 		ins->I = 1;
 		return 0;  	// I
 	case 0x0D:
 		ins->instruction =  ORI;
-		ins->Rd1 = M_Rt(uiMIPSword);
-		ins->R1 = M_Rs(uiMIPSword);
+		ins->Rd1.regID = M_Rt(uiMIPSword);
+		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->immediate = IMM(uiMIPSword, 16);
 		ins->I = 1;
 		return 0; 	// I
 	case 0x0E:
 		ins->instruction =  XORI;
-		ins->Rd1 = M_Rt(uiMIPSword);
-		ins->R1 = M_Rs(uiMIPSword);
+		ins->Rd1.regID = M_Rt(uiMIPSword);
+		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->immediate = IMM(uiMIPSword, 16);
 		ins->I = 1;
 		return 0; 	// I
 	case 0x0F:
 		ins->instruction =  LUI;
-		ins->Rd1 = M_Rt(uiMIPSword);
+		ins->Rd1.regID = M_Rt(uiMIPSword);
 		ins->immediate = IMM(uiMIPSword, 16);
 		return 0; 	// I
 	case 0x10:
@@ -1381,13 +1381,13 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		{
 		case 0x00:
 			ins->instruction =  MFC0;
-			ins->R1 = REG_CO + M_Rd(uiMIPSword);
-			ins->Rd1 = M_Rt(uiMIPSword);
+			ins->R1.regID = REG_CO + M_Rd(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x04:
 			ins->instruction =  MTC0;
-			ins->Rd1 = REG_CO + M_Rd(uiMIPSword);
-			ins->R1 = M_Rt(uiMIPSword);
+			ins->Rd1.regID = REG_CO + M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x10: //
 			switch(uiMIPSword&0x3f)
@@ -1418,26 +1418,26 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		{
 		case 0x00:
 			ins->instruction =  MFC1;
-			ins->R1 = REG_CO + M_Rd(uiMIPSword);
-			ins->Rd1 = M_Rt(uiMIPSword);
+			ins->R1.regID = REG_CO + M_Rd(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x01:
 			ins->instruction =  DMFC1;
-			ins->R1 = REG_CO + M_Rd(uiMIPSword);
-			ins->Rd1 = M_Rt(uiMIPSword);
+			ins->R1.regID = REG_CO + M_Rd(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x02:
 			ins->instruction =  CFC1;
 			return 0;
 		case 0x04:
 			ins->instruction =  MTC1;
-			ins->Rd1 = REG_CO + M_Rd(uiMIPSword);
-			ins->R1 = M_Rt(uiMIPSword);
+			ins->Rd1.regID = REG_CO + M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x05:
 			ins->instruction =  DMTC1;
-			ins->Rd1 = REG_CO + M_Rd(uiMIPSword);
-			ins->R1 = M_Rt(uiMIPSword);
+			ins->Rd1.regID = REG_CO + M_Rd(uiMIPSword);
+			ins->R1.regID = M_Rt(uiMIPSword);
 			return 0;
 		case 0x06:
 			ins->instruction =  CTC1;
@@ -1735,15 +1735,15 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 	case 0x20:
 			ins->instruction =  LB;
-			ins->Rd1 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			ins->I = 1;
 			return 0; 	// Load Byte
 	case 0x21:
 			ins->instruction =  LH;
-			ins->Rd1 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			ins->I = 1;
 			return 0; 	// Load Halfword
@@ -1753,21 +1753,21 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 	case 0x23:
 			ins->instruction =  LW;
-			ins->Rd1 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			ins->I = 1;
 			return 0; 	// Load Word
 	case 0x24:
 			ins->instruction =  LBU;
-			ins->Rd1 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			return 0; 	// Load Unsigned Byte
 	case 0x25:
 			ins->instruction =  LHU;
-			ins->Rd1 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			return 0; 	// Load Halfword unsigned
 	case 0x26:
@@ -1775,21 +1775,21 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 	case 0x27:
 			ins->instruction =  LWU;
-			ins->Rd1 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			ins->I = 1;
 			return 0; 	// Load Word unsigned
 	case 0x28:
 			ins->instruction =  SB;
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			return 0; 	// I
 	case 0x29:
 			ins->instruction =  SH;
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			return 0; 	// I
 	case 0x2A:
@@ -1839,8 +1839,8 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 	case 0x3F:
 			ins->instruction =  SD;
-			ins->R2 = M_Rt(uiMIPSword);
-			ins->R1 = M_Rs(uiMIPSword);
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->immediate = IMM(uiMIPSword, 16);
 			return 0;  	// Store Double word
 	}

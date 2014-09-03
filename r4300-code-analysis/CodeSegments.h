@@ -29,6 +29,7 @@ typedef enum
 	sizeof_BLOCK_TYPE_E
 } block_type_e;
 
+/*
 static const char* block_type_s[sizeof_BLOCK_TYPE_E] = {
 	"BLOCK_INVALID",
 	"BLOCK_START",
@@ -36,7 +37,7 @@ static const char* block_type_s[sizeof_BLOCK_TYPE_E] = {
 	"BLOCK_PART",
 	"BLOCK_END",
 	"BLOCK_END_CONT"
-};
+};*/
 
 typedef enum
 {
@@ -83,7 +84,7 @@ typedef struct _code_seg
 
 	uint32_t MIPSRegistersUsedCount;		// Count of the registers read/written by segment
 
-	uint32_t* ARMcode;						// a pointer to arm code
+	void* ARMcode;						// a pointer to arm code
 	uint32_t ARMcodeLen;					// a length to arm code
 
 	Instruction_t* Intermcode;				// a pointer to Intermediate code
@@ -109,6 +110,15 @@ typedef struct _code_segment_data
 	uint32_t DynamicLength;
 
 	literal_t* literals;
+
+	// special stubs
+
+	code_seg_t* segStart;
+	code_seg_t* segStop;
+	code_seg_t* segInterrupt;
+	code_seg_t* segMem;
+
+	code_seg_t* dbgCurrentSegment;
 } code_segment_data_t;
 
 //-------------------------------------------------------------------

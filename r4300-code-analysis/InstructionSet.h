@@ -24,11 +24,14 @@
 
 //Register IDs
 #define REG_NOT_USED (0xffff)
-#define REG_MIPS	 (0x007F)
+#define REG_FP		 (0x0020)
+#define REG_WIDE	 (0x0040)			// 64-32 bit part of (register&0x3F).
 #define REG_CO		 (0x0080)
-#define REG_SPECIAL	 (0x0080) + 32
+#define REG_SPECIAL	 (REG_CO) + 32
+
 #define REG_TEMP	 (0x0100)
 #define REG_HOST	 (0x0200)
+
 
 #define REG_CONTEXT  	(REG_CO + 4)
 #define REG_BADVADDR 	(REG_CO + 8)
@@ -50,6 +53,11 @@
 //Temorary Registers
 #define REG_TEMP_MEM1 	(REG_TEMP | 0x00)
 #define REG_TEMP_MEM2 	(REG_TEMP | 0x01)
+#define REG_TEMP_GEN1 	(REG_TEMP | 0x02)
+#define REG_TEMP_GEN2 	(REG_TEMP | 0x03)
+#define REG_TEMP_GEN3 	(REG_TEMP | 0x04)
+#define REG_TEMP_GEN4 	(REG_TEMP | 0x05)
+
 
 //These are the HOST registers. Translation MUST not change them
 #define REG_HOST_FP	 (REG_HOST | 0x0b)
@@ -72,9 +80,42 @@
 #define REG_HOST_STM_EABI2      (0x7FF0)
 #define REG_HOST_STM_ALL        (0x7FFF)
 
-#define REG_T_SIZE	 (0x020F)
+#define REG_T_SIZE	 (REG_HOST + 0x10)
 
-typedef uint16_t reg_t;
+typedef enum _r_state_e {
+	RS_REGISTER,
+	RS_CONSTANT,
+	RS_CONSTANT_I1,
+	RS_CONSTANT_U1,
+	RS_CONSTANT_I2,
+	RS_CONSTANT_U2,
+	RS_CONSTANT_I4,
+	RS_CONSTANT_U4,
+	RS_CONSTANT_I8,
+	RS_CONSTANT_U8
+} registerState_e;
+
+typedef uint16_t regID_t;
+
+typedef struct reg
+{
+	registerState_e state;
+
+	union
+	{
+		regID_t regID;
+		uint64_t u8;
+		int64_t i8;
+		uint32_t u4[2];
+		int32_t i4[2];
+		uint16_t u2[4];
+		int16_t i2[4];
+		uint8_t u1[8];
+		int8_t i1[8];
+	};
+} reg_t;
+
+
 
 //-----------------------------------------------------------------------------
 
@@ -340,9 +381,9 @@ typedef enum _Instruction_e {
 	ARM_TEQ,		// Rn ^ Op2
 	ARM_CMP,		// Rn - Op2
 	ARM_CMN,		// Rn + Op2
-	ARM_ORR,		// Rd1 (Rd) = R2 (Rn) | Op2
+	ARM_ORR,		// Rd1 (Rd) = R1 (Rn) | Op2
 	ARM_MOV,		// Rd1 (Rd) = Op2
-	ARM_BIC,		// Rd1 (Rd) = R2 (Rn) AND ~Op2
+	ARM_BIC,		// Rd1 (Rd) = R1 (Rn) AND ~Op2
 	ARM_MVN,		// Rd1 (Rd) = ~Op2
 	ARM_LDR,		// R1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
 	ARM_STR,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
@@ -356,6 +397,22 @@ typedef enum _Instruction_e {
 	ARM_STM,		// memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
 	ARM_MRS,
 	ARM_MSR,
+
+	// VFP Instructions
+
+	ARM_VCMP,
+	ARM_VCVT,
+	ARM_VDIV,
+	ARM_VLDM,
+	ARM_VLDR,
+	ARM_VMOV,
+	ARM_VMRS,
+	ARM_VMSR,
+	ARM_VPOP,
+	ARM_VPUSH,
+	ARM_VSQRT,
+	ARM_VSTM32,
+	ARM_VSTM64,
 	sizeof_mips_op_t
 } Instruction_e;
 
@@ -396,6 +453,8 @@ typedef struct _Instruction
 	Instruction_e instruction;
 	Condition_e cond;
 	Shift_e shiftType;
+
+	struct _Instruction * branchToThisInstruction;
 
 	// ------------------- immediates --------------------------
 
@@ -439,13 +498,19 @@ struct _code_seg;
 
 Instruction_t* newEmptyInstr();
 
-Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const reg_t Rd1, const reg_t R1, const reg_t R2, const int32_t imm);
+Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
 
-Instruction_t* newInstrS(const Instruction_e ins, const Condition_e cond, const reg_t Rd1, const reg_t R1, const reg_t R2, const int32_t imm);
+Instruction_t* newInstrI(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
+
+Instruction_t* newInstrS(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
+
+Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
 
 Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask);
 
 Instruction_t* newInstrPOP(const Condition_e cond, const uint32_t Rmask);
+
+Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
 
 void Intermediate_print(const struct _code_seg * const codeSegment);
 

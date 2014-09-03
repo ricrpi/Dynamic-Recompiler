@@ -17,9 +17,30 @@
 #include "InstructionSetMIPS4.h"
 #include "Debugger.h"
 
+#include <signal.h>
+
+extern code_segment_data_t segmentData;
+
+static void handler(int sig, siginfo_t *si, void *unused)
+{
+	static int level = 0;
+
+	printf("\nSIG_SEGV detected trying to access %p\n", si->si_addr);
+
+	if (level) exit(0);
+
+	level++;
+
+	printf("Current segment 0x%X\n\n", (uint32_t)segmentData.dbgCurrentSegment);
+
+	while (Debugger_start(&segmentData));
+
+	exit(0);
+}
+
 int main(int argc, char* argv[])
 {
-	code_segment_data_t* segmentData;
+
 	code_seg_t* nextCodeSeg;
 
 	if (argc <= 1)
@@ -27,6 +48,14 @@ int main(int argc, char* argv[])
 		printf("Please specify a file\n");
 		return 1;
 	}
+
+	struct sigaction sa;
+
+	sa.sa_flags = SA_SIGINFO | SA_NODEFER;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_sigaction = handler;
+
+	sigaction(SIGSEGV, &sa, NULL);
 
 	printf("R4300 Decompiler\n\nOpening %s\n",argv[1]);
 
@@ -38,11 +67,11 @@ int main(int argc, char* argv[])
 	romlength = ftell(fPtr);
 	fseek(fPtr, 0L, SEEK_SET);
 
-	if (mmap((uint32_t*)MMAP_BASE
-			, MMAP_BASE_SIZE + romlength
+	if (mmap((uint32_t*)(MMAP_BASE-4096)
+			, MMAP_BASE_SIZE + romlength + 4096
 			, PROT_READ|PROT_WRITE|PROT_EXEC
 			, MAP_PRIVATE| MAP_FIXED | MAP_ANONYMOUS
-			, -1, 0 ) != (uint32_t*)MMAP_BASE)
+			, -1, 0 ) != (uint32_t*)(MMAP_BASE-4096))
 	{
 		printf("Could not mmap\n");
 		return 1;
@@ -97,7 +126,7 @@ int main(int argc, char* argv[])
 	printf("----------------------------\n");
 #endif
 
-	segmentData = GenerateCodeSegmentData(romlength);
+	GenerateCodeSegmentData(romlength);
 
 #if 0
 	printf("MIPS Address            Length   Regs-cpu   fpu      sp     used Next       Block type 2=end,3=br\n");
@@ -139,20 +168,22 @@ int main(int argc, char* argv[])
 	printf("----------------------------\n");
 #endif
 
-	printf("%d code segments generated\n", segmentData->count);
+	printf("%d code segments generated\n", segmentData.count);
 
 // Instruction Counts for input ROM
 #if 1
 
 	uint32_t ins_count[sizeof_mips_op_t];
+	uint32_t ins_count_total=0;
 	memset(ins_count,0,sizeof(ins_count));
 
-	nextCodeSeg = segmentData->StaticSegments;
+	nextCodeSeg = segmentData.StaticSegments;
 	while (nextCodeSeg)
 	{
 		for (x=0; x < nextCodeSeg->MIPScodeLen; x++)
 		{
 			ins_count[STRIP(ops_type(*(nextCodeSeg->MIPScode + x)))] ++;
+			ins_count_total++;
 		}
 
 		nextCodeSeg = nextCodeSeg->next;
@@ -162,7 +193,7 @@ int main(int argc, char* argv[])
 	{
 		if (ins_count[x])
 		{
-			printf("%-9s %7d\n",Instruction_ascii[x], ins_count[x]);
+			printf("%-9s %7d (%2.2f%%)\n",Instruction_ascii[x], ins_count[x], (double)ins_count[x] * 100 / ins_count_total);
 		}
 	}
 	printf("----------------------------\n");
@@ -170,16 +201,13 @@ int main(int argc, char* argv[])
 
 	printf("\nFinished processing ROM\n");
 
-	while (1)
-	{
-		Debugger_start(segmentData);
-	}
+	while (Debugger_start(&segmentData));
+
 
 	munmap((uint32_t*)MMAP_BASE, MMAP_BASE_SIZE + romlength);
 
 	printf("\nEND\n");
 	return 0;
 }
-
 
 

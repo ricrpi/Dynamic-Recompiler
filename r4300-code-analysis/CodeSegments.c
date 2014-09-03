@@ -7,6 +7,7 @@
 
 #include "CodeSegments.h"
 #include "InstructionSetMIPS4.h"
+#include "InstructionSetARM6hf.h"
 #include "InstructionSet.h"
 #include "Translate.h"
 #include <stdio.h>
@@ -16,10 +17,9 @@
 
 //-------------------------------------------------------------------
 
-static code_segment_data_t segmentData;
+code_segment_data_t segmentData;
 //static uint8_t* CodeSegBounds;
 static uint32_t GlobalLiteralCount = 0;
-
 
 //==================================================================
 
@@ -124,7 +124,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* c
 			if (*((uint32_t*)MMAP_FP_BASE - x) == value)
 			{
 				*offset = x;
-				*base = REG_HOST_FP;
+				base->regID = REG_HOST_FP;
 				return 0;
 			}
 		}
@@ -135,7 +135,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* c
 		}
 
 		*offset = -(GlobalLiteralCount+1)*4;
-		*base = REG_HOST_FP;
+		base->regID = REG_HOST_FP;
 		*((uint32_t*)MMAP_FP_BASE - GlobalLiteralCount-1) = value;
 		GlobalLiteralCount++;
 		return 0;
@@ -151,13 +151,13 @@ uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* c
 		}
 		nxt->next = newLiteral(value);
 		*offset = index;
-		*base = REG_HOST_PC;
+		base->regID = REG_HOST_PC;
 	}
 	else
 	{
 		codeSegment->literals = newLiteral(value);
 		*offset = 0;
-		*base = REG_HOST_PC;
+		base->regID = REG_HOST_PC;
 	}
 
 	return 0;
@@ -528,6 +528,8 @@ static void LinkStaticSegments()
 
 	while (seg)
 	{
+		segmentData.dbgCurrentSegment = seg;
+
 		//if (uiCountSegsProcessed%2000 == 0) printf("linking segment %d (%d%%)\n", uiCountSegsProcessed, uiCountSegsProcessed*100/segmentData.count);
 		uiCountSegsProcessed++;
 		pMIPSinstuction = (seg->MIPScode + seg->MIPScodeLen - 1);
@@ -544,13 +546,26 @@ static void LinkStaticSegments()
 			//if (ops_type(*word) == JR) //only JR can set PC to the Link Register (or other register!)
 					//(*(seg->MIPScode + seg->MIPScodeLen-1)>>21)&0x1f;
 			searchSeg = (segmentData.StaticBounds[uiAddress/4]);
+
+			if (searchSeg)
+			{
+				seg->pBranchNext = searchSeg;
+				addToCallers(seg, searchSeg);
+			}
 		}
 		//TODO use StaticBounds map to get segment for linking
 		else if((op & OPS_BRANCH) == OPS_BRANCH)	//MIPS does not have an unconditional branch
 		{
 			int32_t offset =  ops_BranchOffset(pMIPSinstuction);
 
-			if (-offset == seg->MIPScodeLen)
+			searchSeg = (segmentData.StaticBounds[((uint32_t)seg->MIPScode - MMSAP_STATIC_REGION)/4 + offset]);
+			if (searchSeg)
+			{
+				seg->pBranchNext = searchSeg;
+				addToCallers(seg, searchSeg);
+			}
+
+			/*if (-offset == seg->MIPScodeLen)
 			{
 				seg->pBranchNext = seg;
 				addToCallers(seg, seg);
@@ -588,7 +603,7 @@ static void LinkStaticSegments()
 
 					searchSeg = searchSeg->next;
 				}
-			}
+			}*/
 
 			seg->pContinueNext = seg->next;
 			addToCallers(seg, seg->next);
@@ -663,39 +678,35 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	memset(segmentData.DynamicBounds, 0, segmentData.DynamicLength);
 	printf("DynamicBounds %d Bytes (0x%x), %d elements\n", segmentData.DynamicLength, segmentData.DynamicLength, segmentData.DynamicLength/sizeof(*segmentData.DynamicBounds));
 
-	code_seg_t* stub;
-	stub = Generate_CodeStart(&segmentData);
-	emit_arm_code(stub);
-
-	uint32_t test_val = 3;
-	*((uint32_t*)(FUNC_GEN_START)) = (uint32_t)stub->ARMcode;
-
-#if 0
-	pfu1ru1* test;
-	test = stub->ARMcode;
-
-	printf("going to run test %d\n", test_val);
-
-	test_val = test(test_val);
-
-	printf("test_val %d\n", test_val);
-
-#endif
-
-	stub = Generate_CodeStop();
-	emit_arm_code(stub);
-	*((uint32_t*)(FUNC_GEN_STOP)) = (uint32_t)stub->ARMcode;
-
-
-	stub = Generate_MemoryTranslationCode(NULL);
-	emit_arm_code(stub);
-	*((uint32_t*)(FUNC_MEM_LOOKUP)) = (uint32_t)stub->ARMcode;
-
 	segmentData.count = ScanForCode((uint32_t*)(ROM_ADDRESS+64), ROMsize-64);
 
 	printf("%d segments created\n", segmentData.count);
 
 	LinkStaticSegments();
+
+	// Compile the First contiguous block of Segments
+	code_seg_t* seg = segmentData.StaticSegments;
+
+	while (seg->pContinueNext)
+	{
+		segmentData.dbgCurrentSegment = seg;
+		Translate(seg);
+		seg = seg->next;
+	}
+	segmentData.dbgCurrentSegment = seg;
+	Translate(seg);
+
+	segmentData.segStart = Generate_CodeStart(&segmentData);
+	emit_arm_code(segmentData.segStart);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_START)) = (uint32_t)segmentData.segStart->ARMcode;
+
+	segmentData.segStop = Generate_CodeStop(&segmentData);
+	emit_arm_code(segmentData.segStop);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_STOP)) = (uint32_t)segmentData.segStop->ARMcode;
+
+	segmentData.segMem = Generate_MemoryTranslationCode(&segmentData, NULL);
+	emit_arm_code(segmentData.segMem);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_LOOKUP)) = (uint32_t)segmentData.segMem->ARMcode;
 
 	return &segmentData;
 

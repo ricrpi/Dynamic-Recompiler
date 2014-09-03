@@ -20,133 +20,136 @@ static const char* alu_ops[] = {"and", "eor", "sub", "rsb",
 								"orr", "mov", "bic", "mvn"};
 
 
-static uint32_t ALU_OP2(const Instruction_t ins)
+static uint32_t ALU_OP2(Instruction_t ins)
 {
-
 	if (ins.I)
 	{
+		if (ins.immediate > 255 && 0 == ins.shift )
+		{
+			int x;
+
+			for (x = 24; x > 0; x--)
+			{
+
+				if (ins.immediate & (0x80 << x))
+				{
+					//Found start of bits TODO what if imm is negative?
+					assert((ins.immediate & (0xFF << x)) == ins.immediate);
+					ins.immediate = ins.immediate >> x;
+					ins.rotate = x;						//TODO check this isnt reversed
+
+					break;
+				}
+			}
+		}
+
 		assert(ins.rotate < 32);
 		assert(ins.shiftType != ROTATE_RIGHT ||  ins.rotate < 16);
 		assert(ins.immediate < 256);
 		return ins.rotate << 8 | ins.immediate;
 	}
-	else if (ins.R3 != REG_NOT_USED)
+	else if (ins.R3.regID != REG_NOT_USED)
 	{
 		assert(ins.shiftType < 4);
-		assert(ins.R3 < 16);
-		assert(ins.R2 < 16);
-		return ins.R3 << 8 | ins.shiftType << 5 | 1 << 4 | ins.R2;
+		assert(ins.R3.regID < 16);
+		assert(ins.R2.regID < 16);
+		return ins.R3.regID << 8 | ins.shiftType << 5 | 1 << 4 | ins.R2.regID;
 	}
 	else
 	{
 		assert(ins.shift < 32);
 		assert(ins.shiftType < 4);
-		assert(ins.R2 < 16);
-		return ins.shift << 7 | ins.shiftType << 5 | ins.R2;
+		assert(ins.R2.regID < 16);
+		return ins.shift << 7 | ins.shiftType << 5 | ins.R2.regID;
 	}
 }
-
-#if 0
-static uint32_t LDR_OP2(const Instruction_t ins)
-{
-	if (ins.I)
-	{
-		assert(ins.shift < 256);
-		assert(ins.R2 < 16);
-		return ins.shift << 8 | ins.R2;
-	}else{
-		assert(ins.immediate < 256*16);
-		return (ins.immediate&0xfff);
-	}
-}
-#endif
 
 uint32_t arm_encode(const Instruction_t ins)
 {
-	assert(ins.R3 == REG_NOT_USED || ins.R3 < 16);
-	assert(ins.R2 == REG_NOT_USED || ins.R2 < 16);
-	assert(ins.R1 == REG_NOT_USED || ins.R1 < 16);
-	assert(ins.Rd2 == REG_NOT_USED || ins.Rd2 < 16);
-	assert(ins.Rd1 == REG_NOT_USED || ins.Rd1 < 16);
+	assert(ins.R3.regID == REG_NOT_USED || ins.R3.regID < 16);
+	assert(ins.R2.regID == REG_NOT_USED || ins.R2.regID < 16);
+	assert(ins.R1.regID == REG_NOT_USED || ins.R1.regID < 16);
+	assert(ins.Rd2.regID == REG_NOT_USED || ins.Rd2.regID < 16);
+	assert(ins.Rd1.regID == REG_NOT_USED || ins.Rd1.regID < 16);
 
 	switch (ins.instruction)
 	{
 	case AND:
 	case ANDI:
 	case ARM_AND:
-		return ins.cond << 28 | ins.I << 25 | 0x0 << 21 | ins.S << 20 | ins.R1 << 16 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x0 << 21 | ins.S << 20 | ins.R1.regID << 16 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case XOR:
 	case XORI:
 	case ARM_EOR:
-		return ins.cond << 28 | ins.I << 25 | 0x1 << 21 | ins.S << 20 | ins.R1 << 16 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x1 << 21 | ins.S << 20 | ins.R1.regID << 16 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case SUB:
 	case ARM_SUB:
-		return ins.cond << 28 | ins.I << 25 | 0x2 << 21 | ins.S << 20 | ins.R1 << 16 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x2 << 21 | ins.S << 20 | ins.R1.regID << 16 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ARM_RSB:
-		return ins.cond << 28 | ins.I << 25 | 0x3 << 21 | ins.S << 20 | ins.R1 << 16 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x3 << 21 | ins.S << 20 | ins.R1.regID << 16 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ADD:
 	case ADDI:
 	case ADDIU:
 	case ARM_ADD:
-		return ins.cond << 28 | ins.I << 25 | 0x4 << 21 | ins.S << 20 | ins.R1 << 16 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x4 << 21 | ins.S << 20 | ins.R1.regID << 16 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ARM_ADC:
-		return ins.cond << 28 | ins.I << 25 | 0x5 << 21 | ins.S << 20 | ins.R1 << 16 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x5 << 21 | ins.S << 20 | ins.R1.regID << 16 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ARM_SBC:
-		return ins.cond << 28 | ins.I << 25 | 0x6 << 21 | ins.S << 20 | ins.R1 << 16 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x6 << 21 | ins.S << 20 | ins.R1.regID << 16 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ARM_RSC:
-		return ins.cond << 28 | ins.I << 25 | 0x7 << 21 | ins.S << 20 | ins.R1 << 16 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x7 << 21 | ins.S << 20 | ins.R1.regID << 16 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ARM_TST:
-		return ins.cond << 28 | ins.I << 25 | 0x8 << 21 | 1 << 20 | ins.R1 << 16 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x8 << 21 | 1 << 20 | ins.R1.regID << 16 | ALU_OP2(ins);
 	case ARM_TEQ:
-		return ins.cond << 28 | ins.I << 25 | 0x9 << 21 | 1 << 20 | ins.R1 << 16 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0x9 << 21 | 1 << 20 | ins.R1.regID << 16 | ALU_OP2(ins);
 	case ARM_CMP:
-		return ins.cond << 28 | ins.I << 25 | 0xA << 21 | 1 << 20 | ins.R1 << 16 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0xA << 21 | 1 << 20 | ins.R1.regID << 16 | ALU_OP2(ins);
 	case ARM_CMN:
-		return ins.cond << 28 | ins.I << 25 | 0xB << 21 | 1 << 20 | ins.R1 << 16 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0xB << 21 | 1 << 20 | ins.R1.regID << 16 | ALU_OP2(ins);
 	case ORI:
 	case OR:
 	case ARM_ORR:
-		return ins.cond << 28 | ins.I << 25 | 0xC << 21 | ins.S << 20 | ins.R1 << 16 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0xC << 21 | ins.S << 20 | ins.R1.regID << 16 | ALU_OP2(ins);
 	case SLL:
 	case SRL:
 	case SRA:
-		return ins.cond << 28 | 0xD << 21 | ins.S << 20 | ins.Rd1 << 12 | (ins.shift&0x1f) << 7 | ins.shiftType << 5 | ins.R1;
+		return ins.cond << 28 | 0xD << 21 | ins.S << 20 | ins.Rd1.regID << 12 | (ins.shift&0x1f) << 7 | ins.shiftType << 5 | ins.R1.regID;
 	case SLLV:
 	case SRAV:
 	case SRLV:
-		return ins.cond << 28 | 0xD << 21 | ins.S << 20 | ins.Rd1 << 12 | (ins.R2) << 8 | ins.shiftType << 5 | 1 << 4 | ins.R1;
+		return ins.cond << 28 | 0xD << 21 | ins.S << 20 | ins.Rd1.regID << 12 | (ins.R2.regID) << 8 | ins.shiftType << 5 | 1 << 4 | ins.R1.regID;
 	case ARM_MOV:
-		return ins.cond << 28 | ins.I << 25 | 0xD << 21 | ins.S << 20 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0xD << 21 | ins.S << 20 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ARM_BIC:
-		return ins.cond << 28 | ins.I << 25 | 0xE << 21 | ins.S << 20 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0xE << 21 | ins.S << 20 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ARM_MVN:
-		return ins.cond << 28 | ins.I << 25 | 0xF << 21 | ins.S << 20 | ins.Rd1 << 12 | ALU_OP2(ins);
+		return ins.cond << 28 | ins.I << 25 | 0xF << 21 | ins.S << 20 | ins.Rd1.regID << 12 | ALU_OP2(ins);
 	case ARM_BFC:
 		return ins.cond << 28 | 0x3E << 21 | 0x1F; // TODO
 	case ARM_BFI:
-		return ins.cond << 28 | 0x3E << 21 | 0x1 << 4 | ins.R1; // TODO
+		return ins.cond << 28 | 0x3E << 21 | 0x1 << 4 | ins.R1.regID; // TODO
 	case ARM_CLZ:
-		return 0x16F0F10 | ins.S << 20 | ins.Rd1 << 12 | ins.R1;
+		return 0x16F0F10 | ins.S << 20 | ins.Rd1.regID << 12 | ins.R1.regID;
 	case ARM_LDM:
-		return ins.cond << 28 | 1 << 27 | ins.PR << 24 | ins.U << 23 | ins.W << 21 | 1 << 20 | ins.R1 << 16 | ins.Rmask;
+		return ins.cond << 28 | 1 << 27 | ins.PR << 24 | ins.U << 23 | ins.W << 21 | 1 << 20 | ins.R1.regID << 16 | ins.Rmask;
 	case ARM_STM:
-		return ins.cond << 28 | 1 << 27 | ins.PR << 24 | ins.U << 23 | ins.W << 21 | ins.R1 << 16 | ins.Rmask;
+		return ins.cond << 28 | 1 << 27 | ins.PR << 24 | ins.U << 23 | ins.W << 21 | ins.R1.regID << 16 | ins.Rmask;
 	case ARM_LDR:
 		if (ins.I)
-			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | ins.Rd1 << 16 | ins.R1 << 12 | (ins.offset&0xFFF);
+			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | ins.Rd1.regID << 16 | ins.R1.regID << 12 | (ins.offset&0xFFF);
 		else
-			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | ins.Rd1 << 16 | ins.R1 << 12 | (ins.offset&0xFFF);
+			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | ins.Rd1.regID << 16 | ins.R1.regID << 12 | (ins.offset&0xFFF);
 	case ARM_STR:
 		if (ins.I)
-			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | ins.Rd1 << 16 | ins.R1 << 12 | (ins.offset&0xFFF);
+			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | ins.Rd1.regID << 16 | ins.R1.regID << 12 | (ins.offset&0xFFF);
 		else
-			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | ins.Rd1 << 16 | ins.R1 << 12 | (ins.offset&0xFFF);
+			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | ins.Rd1.regID << 16 | ins.R1.regID << 12 | (ins.offset&0xFFF);
 
 
 	case JR:
 		assert(ins.I == 0);
 		// we just need to move the specified register into the pc on arm
-		return ins.cond << 28 | 0xd << 21 | ins.S << 20 | (REG_HOST_PC&0xf) << 12 | 1 << 4 | ins.R1;
+		return ins.cond << 28 | 0xd << 21 | ins.S << 20 | (REG_HOST_PC&0xf) << 12 | 1 << 4 | ins.R1.regID;
 
 		//-------------------------------------------
 
@@ -423,7 +426,9 @@ void arm_print(const uint32_t addr, const uint32_t word)
 
 void emit_arm_code(code_seg_t* const codeSeg)
 {
-	static uint32_t* out = (uint32_t*)MMAP_DR_BASE;
+	static uint32_t* out = NULL;
+
+	if (!out) out = (uint32_t*)MMAP_DR_BASE;
 
 	Instruction_t *ins = codeSeg->Intermcode;
 	literal_t* lits = codeSeg->literals;

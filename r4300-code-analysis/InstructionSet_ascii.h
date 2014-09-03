@@ -277,5 +277,21 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "stm",		 //  memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
 "mrs",
 "msr",
+
+ //  VFP Instructions
+
+"vcmp",
+"vcvt",
+"vdiv",
+"vldm",
+"vldr",
+"vmov",
+"vmrs",
+"vmsr",
+"vpop",
+"vpush",
+"vsqrt",
+"vstm32",
+"vstm64",
 "sizeof_mips_op_t"
 };
