@@ -478,7 +478,6 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 	char *tailPointer;
 	code_seg_t* tempCodeSeg;
 
-	val = strtoul(userInput[1], &tailPointer, 0);
 
 	if (!strlen(userInput[1]))
 	{
@@ -491,73 +490,91 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				(uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen,
 				(uint32_t)CurrentCodeSeg->ARMcode, CurrentCodeSeg->ARMcodeLen);
 
-		Debugger_seg_returnAddr(segmentData, val, CurrentCodeSeg);
-
 		return 0;
 	}
-
-	if (!CurrentCodeSeg->MIPSReturnRegister)
+	else if (!CMD_CMP(1, "start"))
 	{
-		int ok = 0;
-		if (0 == val)
+		CurrentCodeSeg = segmentData->segStart;
+
+	}
+	else if (!CMD_CMP(1, "stop"))
+	{
+		CurrentCodeSeg = segmentData->segStop;
+	}
+	else if (!CMD_CMP(1, "memory"))
+	{
+		CurrentCodeSeg = segmentData->segMem;
+	}
+	else if (!CMD_CMP(1, "interrupt"))
+	{
+		CurrentCodeSeg = segmentData->segInterrupt;
+	}
+	else
+	{
+		val = strtoul(userInput[1], &tailPointer, 0);
+
+		if (!CurrentCodeSeg->MIPSReturnRegister)
 		{
-			CurrentCodeSeg = segmentData->StaticSegments;
-			ok = 1;
-		}
-		else if (1 == val && CurrentCodeSeg->pContinueNext != NULL)
-		{
-			CurrentCodeSeg = CurrentCodeSeg->pContinueNext;
-			ok = 1;
-		}
-		else if (2 == val && CurrentCodeSeg->pBranchNext != NULL)
-		{
-			CurrentCodeSeg = CurrentCodeSeg->pBranchNext;
-			ok = 1;
+			int ok = 0;
+			if (0 == val)
+			{
+				CurrentCodeSeg = segmentData->StaticSegments;
+				ok = 1;
+			}
+			else if (1 == val && CurrentCodeSeg->pContinueNext != NULL)
+			{
+				CurrentCodeSeg = CurrentCodeSeg->pContinueNext;
+				ok = 1;
+			}
+			else if (2 == val && CurrentCodeSeg->pBranchNext != NULL)
+			{
+				CurrentCodeSeg = CurrentCodeSeg->pBranchNext;
+				ok = 1;
+			}
+			else
+			{
+				tempCodeSeg=segmentData->StaticSegments;
+
+				while (tempCodeSeg != NULL)
+				{
+					if ((uint32_t)tempCodeSeg == val || (uint32_t)tempCodeSeg->MIPScode == val)
+					{
+						CurrentCodeSeg = tempCodeSeg;
+						ok = 1;
+						break;
+					}
+
+					tempCodeSeg = tempCodeSeg->next;
+				}
+			}
+
+			if (!ok) printf("Invalid entry\n");
 		}
 		else
 		{
-			tempCodeSeg=segmentData->StaticSegments;
-
+			tempCodeSeg = segmentData->StaticSegments;
+			x=1;
 			while (tempCodeSeg != NULL)
 			{
-				if ((uint32_t)tempCodeSeg == val || (uint32_t)tempCodeSeg->MIPScode == val)
+				if (tempCodeSeg == (code_seg_t*)val)
 				{
-					CurrentCodeSeg = tempCodeSeg;
-					ok = 1;
+					CurrentCodeSeg = (code_seg_t*)val;
 					break;
+				}
+				else if (tempCodeSeg->pBranchNext == CurrentCodeSeg)
+				{
+					if (x == val)
+					{
+						CurrentCodeSeg = tempCodeSeg->pBranchNext;
+						break;
+					}
+					x++;
 				}
 
 				tempCodeSeg = tempCodeSeg->next;
 			}
 		}
-
-		if (!ok) printf("Invalid entry\n");
 	}
-	else
-	{
-		tempCodeSeg = segmentData->StaticSegments;
-		x=1;
-		while (tempCodeSeg != NULL)
-		{
-			if (tempCodeSeg == (code_seg_t*)val)
-			{
-				CurrentCodeSeg = (code_seg_t*)val;
-				break;
-			}
-			else if (tempCodeSeg->pBranchNext == CurrentCodeSeg)
-			{
-				if (x == val)
-				{
-					CurrentCodeSeg = tempCodeSeg->pBranchNext;
-					break;
-				}
-				x++;
-			}
-
-			tempCodeSeg = tempCodeSeg->next;
-		}
-	}
-
 	Debugger_seg_returnAddr(segmentData, val, CurrentCodeSeg);
 
 	return 0;
@@ -607,13 +624,13 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	{
 		Translate_LoadCachedRegisters(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "9"))
-	{
-		Translate_Registers(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "10"))
+	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "9"))
 	{
 		Translate_StoreCachedRegisters(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "10"))
+	{
+		Translate_Registers(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "11"))
 	{

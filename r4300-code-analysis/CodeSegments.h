@@ -41,8 +41,8 @@ static const char* block_type_s[sizeof_BLOCK_TYPE_E] = {
 
 typedef enum
 {
-	SEG_SANDWICH,		// segment has code before and after - literals need to be global
 	SEG_START,			// segment has no code before - literals go before
+	SEG_SANDWICH,		// segment has code before and after - literals need to be global
 	SEG_END,			// segment has no code after - literals go after
 	SEG_ALONE,			// segment has no code before or after - literals can go either side
 	sizeof_SEG_TYPE_E
@@ -140,7 +140,7 @@ void freeIntermediateInstructions(code_seg_t* codeSegment);
 
 code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize);
 
-uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* const offset, const uint32_t value);
+uint32_t addLiteral(code_seg_t* const codeSegment,  regID_t* const base, int32_t* const offset, const uint32_t value);
 
 int32_t ScanForCode(const uint32_t* const address, const uint32_t length);
 

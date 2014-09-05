@@ -54,12 +54,12 @@ typedef struct _RegMap
 code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru1 f);
 code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data);
 code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data);
-
+code_seg_t* Generate_ISR(code_segment_data_t* seg_data);
 
 
 void Translate_init(code_seg_t* const codeSegment);
 
-void Translate_DelaySlot(code_seg_t* const codeSegment);
+void Translate_DelaySlot(code_seg_t* codeSegment);
 
 /*
  * MIPS4300 has a COUNT register that is decremented every instruction

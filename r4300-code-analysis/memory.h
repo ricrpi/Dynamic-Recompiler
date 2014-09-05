@@ -23,9 +23,6 @@ extern uint8_t uMemoryBase;
 #define MMAP_BASE			((uint32_t)uMemoryBase << 24)	// This is the base address for MMAP. It is also where RDRAM starts
 
 
-#define MMAP_DR_SIZE		(0x02000000)	//Dynamic compiled code space size (32MB).
-#define RD_RAM_SIZE 		(0x00800000)
-#define MMAP_BASE_SIZE 		(0x08000000)	// This is the base size (excluding ROM and PIF areas)
 
 /*
  *  MMAP_FP_BASE is where the REG_HOST_FP predominately points to i.e. where the emulated MIPS registers
@@ -33,12 +30,18 @@ extern uint8_t uMemoryBase;
  *  just using LDR pc [fp, #offset].
  */
 
-#define MMSAP_STATIC_REGION (MMAP_BASE | (0x08000000))
-#define MMAP_DR_BASE		(MMAP_BASE | (0x01000000))	//Base address where Dynamic compiled code is written to.
-#define MMAP_FP_BASE		(MMAP_BASE | (0x03F10000))	// must be > 0x83F00027 + 4096 (4096 being for global literals)
+#define MMAP_CODE_SEG_BASE  (MMAP_BASE - (sizeof(void*) * 8 * 1024 * 1024 / 4))
+#define MMAP_STATIC_REGION  (MMAP_BASE + (0x08000000))
+#define MMAP_DR_BASE		(MMAP_BASE + (0x01000000))	//Base address where Dynamic compiled code is written to.
+#define MMAP_FP_BASE		(MMAP_BASE + (0x03F01028))	// must be > 0x83F00027 + 4096 (4096 being for global literals)
 
 //#define MMAP_FUNC			(MMAP_FP_BASE + 676)
 #define MMAP_FUNC			(676)
+#define MMAP_DR_SIZE		(0x02000000)	//Dynamic compiled code space size (32MB).
+#define RD_RAM_SIZE 		(0x00800000)
+#define MMAP_BASE_SIZE 		(0x08000000 + sizeof(void*) * 8 * 1024 * 1024 / 4 )	// This is the base size (excluding ROM and PIF areas)
+
+
 
 #define FUNC_GEN_START			(MMAP_FUNC + 0)
 #define FUNC_GEN_STOP			(MMAP_FUNC + 4)
@@ -46,6 +49,6 @@ extern uint8_t uMemoryBase;
 #define FUNC_GEN_BRANCH_UNKNOWN (MMAP_FUNC + 12)
 #define FUNC_GEN_LOOKUP			(MMAP_FUNC + 16)
 
-#define ROM_ADDRESS		 	(MMAP_BASE + MMAP_BASE_SIZE)
+#define ROM_ADDRESS		 	(MMAP_STATIC_REGION)
 
 #endif /* MEMORY_H_ */

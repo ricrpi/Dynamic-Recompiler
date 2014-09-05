@@ -974,12 +974,22 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		switch(op2)
 		{
 		case 0x00:
-			ins->instruction = SLL;
-			ins->shiftType = LOGICAL_LEFT;
-			ins->I = 1;
-			ins->shift = (uiMIPSword>>6)&0x1f;
-			ins->Rd1.regID = M_Rd(uiMIPSword);
-			ins->R1.regID = M_Rt(uiMIPSword);
+
+			if (0 == uiMIPSword)
+			{
+				ins->instruction = NO_OP;
+			}
+			else
+			{
+				ins->instruction = SLL;
+				ins->shiftType = LOGICAL_LEFT;
+				ins->I = 1;
+				ins->shift = (uiMIPSword>>6)&0x1f;
+				ins->Rd1.regID = M_Rd(uiMIPSword);
+				ins->R1.regID = M_Rt(uiMIPSword);
+			}
+
+
 			return 0;
 		case 0x02:
 			ins->instruction = SRL;
@@ -1953,7 +1963,7 @@ void mips_print(const uint32_t x, const uint32_t uiMIPSword)
 	case 0x0C: 	printf(INDEX "\tANDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 	case 0x0D: 	printf(INDEX "\tORI    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 	case 0x0E: 	printf(INDEX "\tXORI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0F: 	printf(INDEX "\tLUI    \t" I_OP "\t// Load upper half of word\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0F: 	printf(INDEX "\tLUI    \t s%02u, #%02d\t// Load upper half of word\n", x, ((uiMIPSword & 0x001F0000) >> 16), (int)(uiMIPSword<<16)/(1<<16)); return;	// I
 	case 0x10: 	// cop0
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)

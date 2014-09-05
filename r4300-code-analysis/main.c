@@ -67,11 +67,12 @@ int main(int argc, char* argv[])
 	romlength = ftell(fPtr);
 	fseek(fPtr, 0L, SEEK_SET);
 
-	if (mmap((uint32_t*)(MMAP_BASE-4096)
-			, MMAP_BASE_SIZE + romlength + 4096
+	if (mmap((uint32_t*)(MMAP_CODE_SEG_BASE)
+			, MMAP_BASE_SIZE + romlength
 			, PROT_READ|PROT_WRITE|PROT_EXEC
 			, MAP_PRIVATE| MAP_FIXED | MAP_ANONYMOUS
-			, -1, 0 ) != (uint32_t*)(MMAP_BASE-4096))
+			, -1
+			, 0 ) != (uint32_t*)(MMAP_CODE_SEG_BASE))
 	{
 		printf("Could not mmap\n");
 		return 1;
@@ -171,7 +172,7 @@ int main(int argc, char* argv[])
 	printf("%d code segments generated\n", segmentData.count);
 
 // Instruction Counts for input ROM
-#if 1
+#if 0
 
 	uint32_t ins_count[sizeof_mips_op_t];
 	uint32_t ins_count_total=0;

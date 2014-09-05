@@ -11,62 +11,63 @@
 #include "InstructionSetARM6hf.h"
 #include "CodeSegments.h"
 #include <assert.h>
+#include <stdlib.h>
 
 static void sprintReg(char* str, reg_t r)
 {
+	char cnst[20];
+
 
 	switch (r.state)
 	{
 		case RS_CONSTANT_I1:
 		case RS_CONSTANT_I2:
 		case RS_CONSTANT_I4:
-			sprintf(str, "0x%08x         ", (uint32_t)r.i4); break;
+			sprintf(cnst, "0x%08x         ", (uint32_t)r.i4); break;
 		case RS_CONSTANT_I8:
-			sprintf(str, "0x%016lx ", (uint64_t)r.i8); break;
+			sprintf(cnst, "0x%016llx ", (uint64_t)r.i8); break;
 		case RS_CONSTANT_U1:
 		case RS_CONSTANT_U2:
 		case RS_CONSTANT_U4:
-			sprintf(str, "0x%08x         ", (uint32_t)r.u4); break;
+			sprintf(cnst, "0x%08x         ", (uint32_t)r.u4); break;
 		case RS_CONSTANT_U8:
-			sprintf(str, "0x%016lx ", (uint64_t)r.u8); break;
-
-		case RS_REGISTER:
-			if (r.regID == REG_NOT_USED)       sprintf(str, "                   ");
-			else if (r.regID == REG_HOST_FP)   sprintf(str, "fp                 ");
-			else if (r.regID == REG_HOST_SP)   sprintf(str, "sp                 ");
-			else if (r.regID == REG_HOST_LR)   sprintf(str, "lr                 ");
-			else if (r.regID == REG_HOST_PC)   sprintf(str, "pc                 ");
-			else if (r.regID == REG_COUNT)
-				sprintf(str, "COUNT              ");
-			else if (r.regID == REG_CAUSE)
-				sprintf(str, "CAUSE              ");
-			else if (r.regID == REG_CONTEXT)
-				sprintf(str, "CONTEXT            ");
-			else if (r.regID == REG_COMPARE)
-				sprintf(str, "COMPARE            ");
-			else if (r.regID == REG_STATUS)
-				sprintf(str, "STATUS             ");
-
-			else if (r.regID == REG_PC)        sprintf(str, "MIPS_PC            ");
-			else if (r.regID == REG_FCR0)      sprintf(str, "FCR0               ");
-			else if (r.regID == REG_FCR31)     sprintf(str, "FCR31              ");
-			else if (r.regID == REG_MULTHI)    sprintf(str, "MULT_HI            ");
-			else if (r.regID == REG_MULTLO)    sprintf(str, "MULT_LO            ");
-			else if (r.regID == REG_LLBIT)     sprintf(str, "LLBIT              ");
-
-			else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d               ", r.regID - REG_HOST);
-			else if (r.regID >= REG_TEMP)		 sprintf(str, "t%-3d               ", r.regID - REG_TEMP);
-			else if (r.regID >= REG_CO)        sprintf(str, "c%-3d               ", r.regID - REG_CO);
-			else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str, "f%-3dw              ", r.regID - (REG_WIDE|REG_FP));
-			else if (r.regID >= REG_WIDE)      sprintf(str, "r%-3dw              ", r.regID - REG_WIDE);
-			else if (r.regID >= REG_FP)        sprintf(str, "f%-3d               ", r.regID - REG_FP);
-			else if (r.regID >= 0)             sprintf(str, "r%-3d               ", r.regID);
-			else                         sprintf(str, "                   ");
-			break;
+			sprintf(cnst, "0x%016llx ", (uint64_t)r.u8); break;
 		default:
-			printf("InstructionSet.c: sprintReg() unknown r.state");
-			abort();
+			cnst[0] = '\0'; break;
 	}
+
+	if (r.regID == REG_NOT_USED)       sprintf(str, "                        ");
+	else if (r.regID == REG_HOST_FP)   sprintf(str, "fp                      ");
+	else if (r.regID == REG_HOST_SP)   sprintf(str, "sp                      ");
+	else if (r.regID == REG_HOST_LR)   sprintf(str, "lr                      ");
+	else if (r.regID == REG_HOST_PC)   sprintf(str, "pc                      ");
+	else if (r.regID == REG_COUNT)
+		sprintf(str, "COUNT                   ");
+	else if (r.regID == REG_CAUSE)
+		sprintf(str, "CAUSE                   ");
+	else if (r.regID == REG_CONTEXT)
+		sprintf(str, "CONTEXT                 ");
+	else if (r.regID == REG_COMPARE)
+		sprintf(str, "COMPARE                 ");
+	else if (r.regID == REG_STATUS)
+		sprintf(str, "STATUS                  ");
+
+	else if (r.regID == REG_PC)        sprintf(str, "MIPS_PC                 ");
+	else if (r.regID == REG_FCR0)      sprintf(str, "FCR0                    ");
+	else if (r.regID == REG_FCR31)     sprintf(str, "FCR31                   ");
+	else if (r.regID == REG_MULTHI)    sprintf(str, "MULT_HI                 ");
+	else if (r.regID == REG_MULTLO)    sprintf(str, "MULT_LO                 ");
+	else if (r.regID == REG_LLBIT)     sprintf(str, "LLBIT                   ");
+
+	else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d %-18s", r.regID - REG_HOST, 			cnst);
+	else if (r.regID >= REG_TEMP)		 sprintf(str, "t%-3d %-18s", r.regID - REG_TEMP, 			cnst);
+	else if (r.regID >= REG_CO)          sprintf(str, "c%-3d %-18s", r.regID - REG_CO, 			cnst);
+	else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str,"f%-3dw%-18s", r.regID - (REG_WIDE|REG_FP), 	cnst);
+	else if (r.regID >= REG_WIDE)        sprintf(str, "r%-3dw%-18s", r.regID - REG_WIDE, 			cnst);
+	else if (r.regID >= REG_FP)          sprintf(str, "f%-3d %-18s", r.regID - REG_FP, 			cnst);
+	else if (r.regID >= 0)               sprintf(str, "r%-3d %-18s", r.regID, 						cnst);
+	else                                 sprintf(str, "                      ");
+
 }
 static void sprintRegList(char* str, Instruction_t*ins)
 {
@@ -333,7 +334,7 @@ void Intermediate_print(const code_seg_t* const codeSegment)
 	ins = codeSegment->Intermcode;
 	int x=1000;
 
-	printf("command   Rd1                Rd2                R1                 R2                 R3                 immediate                 shift\n");
+	printf("command   Rd1                     Rd2                     R1                      R2                      R3                      immediate                 shift\n");
 
 	while (ins && x>0)
 	{
@@ -364,7 +365,7 @@ void Intermediate_print(const code_seg_t* const codeSegment)
 		}
 		else
 		{
-			printf("%-9s %s%s%s%s%s%-25s %-9s\n", instruction, rd1, rd2, r1, r2, r3, offset, shift);
+			printf("%-9s %-24s%-24s%-24s%-24s%-24s%-25s %-9s\n", instruction, rd1, rd2, r1, r2, r3, offset, shift);
 		}
 
 		ins = ins->nextInstruction;

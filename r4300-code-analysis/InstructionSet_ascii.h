@@ -3,6 +3,7 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "UNKNOWN",
 "LITERAL",
 "INVALID",
+"NO_OP",
 
 "SLL",	 //  Rd1 (rd) = R1 (rt) << imm5 				The contents of the low-order 32-bit word of GPR rt are shifted left, inserting zeroes into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
 "SRL",	 //  Rd1 (rd) = R1 (rt) >> imm5				The contents of the low-order 32-bit word of GPR rt are shifted right, inserting zeros into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
@@ -250,8 +251,8 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "and",		 //  R1 (Rd) = R2 (Rn) & Op2
 "branch",
 "eor",
-"sub",
-"rsb",
+"sub",		 //  Rd` (Rd) = R1 - Op2
+"rsb",		 //  Rd1 (Rd) = Op2 - R1
 "add",		 //  Rd1 (Rd) = R1 (Rn) + Op2
 "adc",		 //  Rd1 (Rd) = R1 (Rn) + Op2 + Carry
 "asr",		 //  Rd1 (Rd) = R1 (Rn) >> #<imm>
@@ -261,20 +262,31 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "teq",		 //  Rn ^ Op2
 "cmp",		 //  Rn - Op2
 "cmn",		 //  Rn + Op2
-"orr",		 //  Rd1 (Rd) = R2 (Rn) | Op2
+"orr",		 //  Rd1 (Rd) = R1 (Rn) | Op2
 "mov",		 //  Rd1 (Rd) = Op2
-"bic",		 //  Rd1 (Rd) = R2 (Rn) AND ~Op2
+"bic",		 //  Rd1 (Rd) = R1 (Rn) AND ~Op2
 "mvn",		 //  Rd1 (Rd) = ~Op2
 "ldr",		 //  R1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
 "str",		 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
 "ldrd",		 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
 "strd",		 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
 "ldr",	 //  Rd1 (Rt) = memory[ R2 (Rn) + imm ]
-"std",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+"str",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
 "ldrd",	 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
-"stdd",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+"strd",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
 "ldm",		 //  Rmask (<registers>) = memory [ Rn ], if (W) Rn +-= count of registers  (+ if U, - if ~U)
 "stm",		 //  memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
+
+"ldrh",		 //  Rd1 (Rd
+"strh",
+"ldrsh",
+"strsh",
+
+"ldrb",
+"strb",
+"ldrsb",
+"strsb",
+
 "mrs",
 "msr",
 

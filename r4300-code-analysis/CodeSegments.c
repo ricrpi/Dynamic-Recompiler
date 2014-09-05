@@ -112,7 +112,7 @@ static void freeLiterals(code_seg_t* codeSegment)
 }
 
 // TODO what if segment length means offset > 4096?
-uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* const offset, const uint32_t value)
+uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t* const offset, const uint32_t value)
 {
 	int index = 1;
 
@@ -124,7 +124,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* c
 			if (*((uint32_t*)MMAP_FP_BASE - x) == value)
 			{
 				*offset = x;
-				base->regID = REG_HOST_FP;
+				*base = REG_HOST_FP;
 				return 0;
 			}
 		}
@@ -135,7 +135,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* c
 		}
 
 		*offset = -(GlobalLiteralCount+1)*4;
-		base->regID = REG_HOST_FP;
+		*base = REG_HOST_FP;
 		*((uint32_t*)MMAP_FP_BASE - GlobalLiteralCount-1) = value;
 		GlobalLiteralCount++;
 		return 0;
@@ -151,13 +151,13 @@ uint32_t addLiteral(code_seg_t* const codeSegment, reg_t* const base, int32_t* c
 		}
 		nxt->next = newLiteral(value);
 		*offset = index;
-		base->regID = REG_HOST_PC;
+		*base = REG_HOST_PC;
 	}
 	else
 	{
 		codeSegment->literals = newLiteral(value);
 		*offset = 0;
-		base->regID = REG_HOST_PC;
+		*base = REG_HOST_PC;
 	}
 
 	return 0;
@@ -558,7 +558,7 @@ static void LinkStaticSegments()
 		{
 			int32_t offset =  ops_BranchOffset(pMIPSinstuction);
 
-			searchSeg = (segmentData.StaticBounds[((uint32_t)seg->MIPScode - MMSAP_STATIC_REGION)/4 + offset]);
+			searchSeg = (segmentData.StaticBounds[((uint32_t)seg->MIPScode - MMAP_STATIC_REGION)/4 + offset]);
 			if (searchSeg)
 			{
 				seg->pBranchNext = searchSeg;
@@ -707,6 +707,12 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	segmentData.segMem = Generate_MemoryTranslationCode(&segmentData, NULL);
 	emit_arm_code(segmentData.segMem);
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_LOOKUP)) = (uint32_t)segmentData.segMem->ARMcode;
+
+	segmentData.segInterrupt = Generate_ISR(&segmentData);
+	emit_arm_code(segmentData.segInterrupt);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_INTERRUPT)) = (uint32_t)segmentData.segInterrupt->ARMcode;
+
+	segmentData.dbgCurrentSegment = segmentData.StaticSegments;
 
 	return &segmentData;
 

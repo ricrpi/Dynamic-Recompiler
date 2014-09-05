@@ -12,63 +12,64 @@
 
 //-------------------------------------------------------------------
 
-#define OPS_JUMP 	(0x01000)
-#define OPS_LINK 	(0x02000)
-#define OPS_BRANCH 	(0x04000)
+#define OPS_JUMP 			(0x01000)
+#define OPS_LINK 			(0x02000)
+#define OPS_BRANCH 			(0x04000)
 
-#define OPS_LIKELY	(0x10000)
-#define OPS_STR  	(0x20000)
-#define OPS_LDR  	(0x40000)
+#define OPS_LIKELY			(0x10000)
+#define OPS_STR  			(0x20000)
+#define OPS_LDR  			(0x40000)
 
-#define STRIP(x) (x & 0xfff)
+#define STRIP(x) 			(x & 0xfff)
 
 //Register IDs
-#define REG_NOT_USED (0xffff)
-#define REG_FP		 (0x0020)
-#define REG_WIDE	 (0x0040)			// 64-32 bit part of (register&0x3F).
-#define REG_CO		 (0x0080)
-#define REG_SPECIAL	 (REG_CO) + 32
+#define REG_NOT_USED 		(0xffff)
+#define REG_FP		 		(0x0020)
+#define REG_WIDE	 		(0x0040)			// 64-32 bit part of (register&0x3F).
+#define REG_CO		 		(0x0080)
+#define REG_SPECIAL	 		(REG_CO) + 32
 
-#define REG_TEMP	 (0x0100)
-#define REG_HOST	 (0x0200)
+#define REG_TEMP			(0x0100)
+#define REG_HOST		 	(0x0200)
 
 
-#define REG_CONTEXT  	(REG_CO + 4)
-#define REG_BADVADDR 	(REG_CO + 8)
-#define REG_COUNT    	(REG_CO + 9)
-#define REG_ENTRYHI  	(REG_CO + 10)
-#define REG_COMPARE  	(REG_CO + 11)
-#define REG_STATUS   	(REG_CO + 12)
-#define REG_CAUSE    	(REG_CO + 13)
-#define REG_EPC		 	(REG_CO + 14)
+#define REG_CONTEXT  		(REG_CO + 4)
+#define REG_BADVADDR 		(REG_CO + 8)
+#define REG_COUNT    		(REG_CO + 9)
+#define REG_ENTRYHI  		(REG_CO + 10)
+#define REG_COMPARE  		(REG_CO + 11)
+#define REG_STATUS   		(REG_CO + 12)
+#define REG_CAUSE    		(REG_CO + 13)
+#define REG_EPC		 		(REG_CO + 14)
 
 // MIPS R4300 Special CPU Registers			// Value also forms the offset from FP when its at 0x8000 0000
-#define REG_PC       	(REG_SPECIAL + 1)
-#define REG_FCR0	 	(REG_SPECIAL + 2)
-#define REG_FCR31    	(REG_SPECIAL + 3)
-#define REG_MULTHI  	(REG_SPECIAL + 4)
-#define REG_MULTLO   	(REG_SPECIAL + 5)
-#define REG_LLBIT    	(REG_SPECIAL + 6)
+#define REG_PC       		(REG_SPECIAL + 1)
+#define REG_FCR0	 		(REG_SPECIAL + 2)
+#define REG_FCR31    		(REG_SPECIAL + 3)
+#define REG_MULTHI  		(REG_SPECIAL + 4)
+#define REG_MULTLO   		(REG_SPECIAL + 5)
+#define REG_LLBIT    		(REG_SPECIAL + 6)
 
 //Temorary Registers
-#define REG_TEMP_MEM1 	(REG_TEMP | 0x00)
-#define REG_TEMP_MEM2 	(REG_TEMP | 0x01)
-#define REG_TEMP_GEN1 	(REG_TEMP | 0x02)
-#define REG_TEMP_GEN2 	(REG_TEMP | 0x03)
-#define REG_TEMP_GEN3 	(REG_TEMP | 0x04)
-#define REG_TEMP_GEN4 	(REG_TEMP | 0x05)
+#define REG_TEMP_MEM1 		(REG_TEMP | 0x00)
+#define REG_TEMP_MEM2 		(REG_TEMP | 0x01)
+#define REG_TEMP_GEN1 		(REG_TEMP | 0x02)
+#define REG_TEMP_GEN2 		(REG_TEMP | 0x03)
+#define REG_TEMP_GEN3 		(REG_TEMP | 0x04)
+#define REG_TEMP_GEN4 		(REG_TEMP | 0x05)
+#define REG_TEMP_STR_CONST 	(REG_TEMP | 0x06)
 
 
 //These are the HOST registers. Translation MUST not change them
-#define REG_HOST_FP	 (REG_HOST | 0x0b)
-#define REG_HOST_SP	 (REG_HOST | 0x0d)
-#define REG_HOST_LR	 (REG_HOST | 0x0e)
-#define REG_HOST_PC	 (REG_HOST | 0x0f)
+#define REG_HOST_FP			(REG_HOST | 0x0b)
+#define REG_HOST_SP	 		(REG_HOST | 0x0d)
+#define REG_HOST_LR	 		(REG_HOST | 0x0e)
+#define REG_HOST_PC	 		(REG_HOST | 0x0f)
 
-#define REG_HOST_R0	 (REG_HOST | 0x00)
-#define REG_HOST_R1	 (REG_HOST | 0x01)
-#define REG_HOST_R2	 (REG_HOST | 0x02)
-#define REG_HOST_R3	 (REG_HOST | 0x03)
+#define REG_HOST_R0	 		(REG_HOST | 0x00)
+#define REG_HOST_R1	 		(REG_HOST | 0x01)
+#define REG_HOST_R2			(REG_HOST | 0x02)
+#define REG_HOST_R3			(REG_HOST | 0x03)
 
 //The following is for Register Mask operations
 #define REG_HOST_STM_FP 		(0x0800)
@@ -100,18 +101,18 @@ typedef uint16_t regID_t;
 typedef struct reg
 {
 	registerState_e state;
+	regID_t regID;
 
 	union
 	{
-		regID_t regID;
 		uint64_t u8;
 		int64_t i8;
-		uint32_t u4[2];
-		int32_t i4[2];
-		uint16_t u2[4];
-		int16_t i2[4];
-		uint8_t u1[8];
-		int8_t i1[8];
+		uint32_t u4;
+		int32_t i4;
+		uint16_t u2;
+		int16_t i2;
+		uint8_t u1;
+		int8_t i1;
 	};
 } reg_t;
 
@@ -123,6 +124,7 @@ typedef enum _Instruction_e {
 	UNKNOWN,
 	LITERAL,
 	INVALID,
+	NO_OP,
 
 	SLL,	// Rd1 (rd) = R1 (rt) << imm5 				The contents of the low-order 32-bit word of GPR rt are shifted left, inserting zeroes into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
     SRL,	// Rd1 (rd) = R1 (rt) >> imm5				The contents of the low-order 32-bit word of GPR rt are shifted right, inserting zeros into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
@@ -370,8 +372,8 @@ typedef enum _Instruction_e {
 	ARM_AND,		// R1 (Rd) = R2 (Rn) & Op2
 	ARM_BRANCH,
 	ARM_EOR,
-	ARM_SUB,
-	ARM_RSB,
+	ARM_SUB,		// Rd` (Rd) = R1 - Op2
+	ARM_RSB,		// Rd1 (Rd) = Op2 - R1
 	ARM_ADD,		// Rd1 (Rd) = R1 (Rn) + Op2
 	ARM_ADC,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
 	ARM_ASR,		// Rd1 (Rd) = R1 (Rn) >> #<imm>
@@ -390,11 +392,22 @@ typedef enum _Instruction_e {
 	ARM_LDRD,		// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
 	ARM_STRD,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
 	ARM_LDR_LIT,	// Rd1 (Rt) = memory[ R2 (Rn) + imm ]
-	ARM_STD_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
+	ARM_STR_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
 	ARM_LDRD_LIT,	// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
-	ARM_STDD_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
+	ARM_STRD_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
 	ARM_LDM,		// Rmask (<registers>) = memory [ Rn ], if (W) Rn +-= count of registers  (+ if U, - if ~U)
 	ARM_STM,		// memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
+
+	ARM_LDRH,		// Rd1 (Rd
+	ARM_STRH,
+	ARM_LDRSH,
+	ARM_STRSH,
+
+	ARM_LDRB,
+	ARM_STRB,
+	ARM_LDRSB,
+	ARM_STRSB,
+
 	ARM_MRS,
 	ARM_MSR,
 

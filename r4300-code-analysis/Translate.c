@@ -21,12 +21,93 @@
 			(y)->nextInstruction = (x); \
 			(y) = (y)->nextInstruction;
 
+#define ADD_LL(x, y) (x)->nextInstruction = (y)->nextInstruction; \
+			(y)->nextInstruction = (x);
+
 uint32_t bCountSaturates = 0;
 uint32_t uiCountFrequency = 40;	// must be less than 128 else may not be able to encode in imm8
 uint32_t bMemoryInlineLookup = 0;
 uint32_t bMemoryOffsetCheck = 0;
 uint32_t bDoDMAonInterrupt = 1;
 uint8_t uMemoryBase = 0x80;
+
+
+//=============================================================
+
+static Instruction_t* insertCall(Instruction_t* ins, const Condition_e cond, const int32_t offset)
+{
+	Instruction_t* newInstruction;
+
+	//push lr
+	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//set lr
+	newInstruction 	= newInstrI(ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 8);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// load function address from [fp + offset] into PC
+	newInstruction 	= newInstrI(ARM_LDR, cond, REG_HOST_PC, REG_HOST_FP, REG_NOT_USED, offset);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// pop lr
+	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	return ins;
+}
+
+static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_t Reg)
+{
+	const Instruction_t* in = ins;
+	uint32_t x = 0;
+
+	while (in)
+	{
+		if (ins->R1.regID == Reg || ins->R2.regID == Reg || ins->R3.regID == Reg)	return x;
+		if (ins->Rd1.regID == Reg || ins->Rd2.regID == Reg) return -1;
+
+		x++;
+		in = in->nextInstruction;
+	}
+
+	return x;
+}
+
+static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, const regID_t RegTo, uint32_t MaxInstructions)
+{
+	Instruction_t* in = ins;
+	uint32_t x = MaxInstructions;
+
+	if (!x) x = 0xffffffff;
+
+	if (RegFrom >= REG_HOST)
+	{
+		if (RegTo >= REG_HOST) 	printf("Reg host %3d => host %3d\n", RegFrom-REG_HOST, RegTo-REG_HOST);
+		else					printf("Reg host %3d =>      %3d\n", RegFrom-REG_HOST, RegTo);
+	}
+	else
+	{
+		if (RegTo >= REG_HOST) 	printf("Reg      %3d => host %3d\n", RegFrom, RegTo-REG_HOST);
+		else					printf("Reg      %3d =>      %3d\n", RegFrom, RegTo);
+	}
+
+
+	while (x && in)
+	{
+		if (in->Rd1.regID == RegFrom && in->Rd1.state == RS_REGISTER) in->Rd1.regID = RegTo;
+		if (in->Rd2.regID == RegFrom && in->Rd2.state == RS_REGISTER) in->Rd2.regID = RegTo;
+		if (in->R1.regID == RegFrom && in->R1.state == RS_REGISTER) in->R1.regID = RegTo;
+		if (in->R2.regID == RegFrom && in->R2.state == RS_REGISTER) in->R2.regID = RegTo;
+		if (in->R3.regID == RegFrom && in->R3.state == RS_REGISTER) in->R3.regID = RegTo;
+		x--;
+		in = in->nextInstruction;
+	}
+}
+
+//=============================================================
+
+
 
 #if 0
 /*
@@ -63,6 +144,7 @@ Instruction_t* Generate_BranchStubCode()
 
 }
 #endif
+
 
 /*
  * Function to generate Emulation-time code for calculating the Hosts memory address to use.
@@ -158,21 +240,27 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 
 	seg_data->dbgCurrentSegment = code_seg;
 
+	code_seg->Type= SEG_START;
+
 	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI2 );
 	code_seg->Intermcode = ins = newInstruction;
 
+	regID_t base;
+	int32_t offset;
+
+	addLiteral(code_seg, &base, &offset,(uint32_t)MMAP_FP_BASE);
+	newInstruction 		= newInstrI(ARM_LDR_LIT, EQ, REG_HOST_FP, REG_NOT_USED, base, offset);
+
+	assert(base == REG_HOST_PC);
+
 	// Need to get segment for 0x88000040, lookup the ARM address and jump to it.
-	/*code_seg_t* start_seg = seg_data->StaticBounds[0x40/4];
+	code_seg_t* start_seg = seg_data->StaticBounds[0x40/4];
 	uint32_t* arm_address = start_seg->ARMcode;
 
-	assert(arm_address);
-
-	reg_t base;
-	int32_t offset;
-	addLiteral(code_seg, &base, &offset,(uint32_t)arm_address);
-	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_NOT_USED, base, offset);
+	//branch to start of ARM code
+	newInstruction 		= newInstrI(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_FP, FUNC_GEN_START);
 	ADD_LL_NEXT(newInstruction, ins);
-*/
+
 	Translate_Registers(code_seg);
 
 	return code_seg;
@@ -186,93 +274,44 @@ code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data)
 
 	seg_data->dbgCurrentSegment = code_seg;
 
-		newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
+	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
 	code_seg->Intermcode = ins = newInstruction;
 
 	// Return
 	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
-	newInstruction->I = 1;
 	ADD_LL_NEXT(newInstruction, ins);
 
 	Translate_Registers(code_seg);
 
 	return code_seg;
 }
-//=============================================================
 
-static Instruction_t* insertCall(Instruction_t* ins, const Condition_e cond, const int32_t offset)
+code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 {
-	Instruction_t* newInstruction;
+	code_seg_t* 	code_seg 		= newSegment();
+	Instruction_t* 	newInstruction;
+	Instruction_t* 	ins 			= NULL;
 
-	//push lr
-	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_LR);
+	seg_data->dbgCurrentSegment = code_seg;
+
+	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI2 );
+	code_seg->Intermcode = ins = newInstruction;
+
+	// Call interrupt C function
+
+	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
 	ADD_LL_NEXT(newInstruction, ins);
 
-	//set lr
-	newInstruction 	= newInstrI(ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 8);
+	// Return
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
-	// load function address from [fp + offset] into PC
-	newInstruction 	= newInstrI(ARM_LDR, cond, REG_HOST_PC, REG_HOST_FP, REG_NOT_USED, offset);
-	ADD_LL_NEXT(newInstruction, ins);
+	Translate_Registers(code_seg);
 
-	// pop lr
-	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_LR);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	return ins;
-}
-
-static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_t Reg)
-{
-	const Instruction_t* in = ins;
-	uint32_t x = 0;
-
-	while (in)
-	{
-		if (ins->R1.regID == Reg || ins->R2.regID == Reg || ins->R3.regID == Reg)	return x;
-		if (ins->Rd1.regID == Reg || ins->Rd2.regID == Reg) return -1;
-
-		x++;
-		in = in->nextInstruction;
-	}
-
-	return x;
-}
-
-static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, const regID_t RegTo, uint32_t MaxInstructions)
-{
-	Instruction_t* in = ins;
-	uint32_t x = MaxInstructions;
-
-	if (!x) x = 0xffffffff;
-
-	if (RegFrom >= REG_HOST)
-	{
-		if (RegTo >= REG_HOST) 	printf("Reg host %3d => host %3d\n", RegFrom-REG_HOST, RegTo-REG_HOST);
-		else					printf("Reg host %3d =>      %3d\n", RegFrom-REG_HOST, RegTo);
-	}
-	else
-	{
-		if (RegTo >= REG_HOST) 	printf("Reg      %3d => host %3d\n", RegFrom, RegTo-REG_HOST);
-		else					printf("Reg      %3d =>      %3d\n", RegFrom, RegTo);
-	}
-
-
-	while (x && in)
-	{
-		if (in->Rd1.regID == RegFrom && in->Rd1.state == RS_REGISTER) in->Rd1.regID = RegTo;
-		if (in->Rd2.regID == RegFrom && in->Rd2.state == RS_REGISTER) in->Rd2.regID = RegTo;
-		if (in->R1.regID == RegFrom && in->R1.state == RS_REGISTER) in->R1.regID = RegTo;
-		if (in->R2.regID == RegFrom && in->R2.state == RS_REGISTER) in->R2.regID = RegTo;
-		if (in->R3.regID == RegFrom && in->R3.state == RS_REGISTER) in->R3.regID = RegTo;
-		x--;
-		in = in->nextInstruction;
-	}
+	return code_seg;
 }
 
 //=============================================================
-
 
 void Translate_init(code_seg_t* const codeSegment)
 {
@@ -285,20 +324,25 @@ void Translate_init(code_seg_t* const codeSegment)
 	//now build new Intermediate code
 	for (x=0; x < codeSegment->MIPScodeLen; x++)
 	{
-		newInstruction = newEmptyInstr();
-
-		mips_decode(*(codeSegment->MIPScode + x), newInstruction);
-
-		if (x == 0)
+		// Filter out No-ops
+		if (0 != *(codeSegment->MIPScode + x))
 		{
-			codeSegment->Intermcode = newInstruction;
+			newInstruction = newEmptyInstr();
 
+			mips_decode(*(codeSegment->MIPScode + x), newInstruction);
+
+			if (NULL == prevInstruction)
+			{
+				codeSegment->Intermcode = newInstruction;
+
+			}
+			else
+			{
+				prevInstruction->nextInstruction = newInstruction;
+			}
+			prevInstruction = newInstruction;
 		}
-		else
-		{
-			prevInstruction->nextInstruction = newInstruction;
-		}
-		prevInstruction = newInstruction;
+
 	}
 
 	return;
@@ -325,13 +369,13 @@ void Translate_init(code_seg_t* const codeSegment)
  * All segments must clear the Z status flag before jumping to a BLOCK_START_CONT segment.
  *
  */
-void Translate_DelaySlot(code_seg_t* const codeSegment)
+void Translate_DelaySlot(code_seg_t*  codeSegment)
 {
 	Instruction_e ops = ops_type(*(codeSegment->MIPScode + codeSegment->MIPScodeLen -1));
 	Instruction_t* newInstruction;
-	Instruction_t* ins;
 
-	ins 			= codeSegment->Intermcode;
+	Instruction_t* ins = codeSegment->Intermcode;
+	Instruction_t* prev_ins;
 
 	if (ins == NULL)
 		{
@@ -345,13 +389,24 @@ void Translate_DelaySlot(code_seg_t* const codeSegment)
 	{
 		newInstruction 	= newEmptyInstr();
 
-		//goto second last instruction
-		while (ins->nextInstruction->nextInstruction)
-			ins = ins->nextInstruction;
-
 		mips_decode(*(codeSegment->MIPScode + codeSegment->MIPScodeLen), newInstruction);
 
-		ADD_LL_NEXT(newInstruction, ins);
+		//Is this is a one instruction segment?
+		if (NULL == ins->nextInstruction)
+		{
+			newInstruction->nextInstruction = codeSegment->Intermcode;
+			codeSegment->Intermcode = newInstruction;
+
+			// ins will still be pointing at the last instruction
+		}
+		else
+		{
+			while (ins->nextInstruction->nextInstruction)
+			ins = ins->nextInstruction;
+
+			ADD_LL_NEXT(newInstruction, ins);		//ins will be pointing to newInstruction
+			ins = ins->nextInstruction;				// move to the last instruction
+		}
 
 		//Set Status Register setting
 		/*	APSR.N = imm32<31>;
@@ -361,13 +416,11 @@ void Translate_DelaySlot(code_seg_t* const codeSegment)
 			APSR.Q = imm32<27>;
 		 */
 
-		ins = ins->nextInstruction;	// move to the branch instruction
-
-		newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40);
-		newInstruction->rotate = 4;	// To load into bits 24-31
-		newInstruction->I = 1;
-
-		ADD_LL_NEXT(newInstruction, ins);
+		if (ops & OPS_LINK)
+		{
+			newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40000000);
+			ADD_LL_NEXT(newInstruction, ins);
+		}
 	}
 	// if segment before this one can continue, then we must make first instruction conditional
 	else if(codeSegment->Type == SEG_START
@@ -389,7 +442,7 @@ void Translate_DelaySlot(code_seg_t* const codeSegment)
 	else if (codeSegment->Type == SEG_SANDWICH
 			|| codeSegment->Type == SEG_END){
 
-		codeSegment->Intermcode->cond = NE;	//Make first instruction conditional
+	//	codeSegment->Intermcode->cond = NE;	//Make first instruction conditional
 	}
 }
 
@@ -475,10 +528,9 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
  */
 void Translate_Constants(code_seg_t* const codeSegment)
 {
-	//First off r0 is ALWAYS 0 so lets do that first
-
 	Instruction_t*ins = codeSegment->Intermcode;
 
+	//First off r0 is ALWAYS 0 so lets do that first
 	while (ins)
 	{
 		if ((ins->Rd1.regID & ~REG_WIDE) == 0)
@@ -524,7 +576,7 @@ void Translate_Constants(code_seg_t* const codeSegment)
 			ins->Rd1.state = RS_CONSTANT_I8;
 			if (ins->immediate < 0)
 			{
-				ins->Rd1.i8 = 0xffffffff00000000 | (ins->immediate << 16);
+				ins->Rd1.i8 = 0xffffffff00000000ll | (ins->immediate << 16);
 			}else
 			{
 			ins->Rd1.i8 = ins->immediate;
@@ -852,7 +904,6 @@ void Translate_Memory(code_seg_t* const codeSegment)
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
 
-	Instruction_t*prev_ins;
 	//TODO we need to check that memory being modified is not MIPS code!
 
 	regID_t	funcTempReg;
@@ -944,7 +995,6 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		default: break;
 		}
 
-		prev_ins = ins;
 		ins = ins->nextInstruction;
 	}
 }
@@ -963,92 +1013,70 @@ void Translate_LoadStoreWriteBack(code_seg_t* const codeSegment)
 void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins = codeSegment->Intermcode;
+	Instruction_t*prev_ins = NULL;
+
 	Instruction_t*new_ins;
 	uint8_t RegUsed[64];
 
 	memset(RegUsed,0,sizeof(RegUsed));
 
-	while (ins->nextInstruction)
+	while (ins)
 	{
-		//Does the next instruction use a Register
-		if (ins->nextInstruction->Rd1.regID != REG_NOT_USED && ins->nextInstruction->Rd1.state == RS_REGISTER)
+		if (ins->R1.state == RS_REGISTER
+				&& ins->R1.regID < REG_TEMP
+				&& !RegUsed[ins->R1.regID])
 		{
-			//Add to the count for next instructions Register
-			RegUsed[ins->nextInstruction->Rd1.regID]++;
+			RegUsed[ins->R1.regID]++;
+			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R1.regID, REG_NOT_USED, REG_HOST_FP, ins->R1.regID * 4);
+			new_ins->nextInstruction = ins;
 
-			// Is this the first time the next instructions register has been used?
-			if (!RegUsed[ins->nextInstruction->Rd1.regID])
+			if (!prev_ins)
 			{
-				// Create an instruction to load register from cache
-				new_ins = newInstrI(LW, AL, ins->nextInstruction->Rd1.regID, REG_HOST_FP, REG_NOT_USED, ins->nextInstruction->Rd1.regID * 8);
-				ADD_LL_NEXT(new_ins, ins);
+				codeSegment->Intermcode = new_ins;
+			}
+			else
+			{
+				prev_ins->nextInstruction = new_ins;
 			}
 		}
 
-		if (ins->Rd2.regID != REG_NOT_USED && ins->nextInstruction->Rd2.state == RS_REGISTER && !RegUsed[ins->Rd2.regID])
-		{
-			RegUsed[ins->Rd2.regID]++;
-			new_ins = newInstrI(LW, AL, ins->Rd2.regID, REG_HOST_FP, REG_NOT_USED, ins->Rd2.regID * 8);
-			ADD_LL_NEXT(new_ins, ins);
-		}
-		if (ins->R1.regID != REG_NOT_USED && ins->nextInstruction->R1.state == RS_REGISTER && !RegUsed[ins->R1.regID])
-		{
-			RegUsed[ins->R1.regID]++;
-			new_ins = newInstrI(LW, AL, ins->R1.regID, REG_HOST_FP, REG_NOT_USED, ins->R1.regID * 8);
-			ADD_LL_NEXT(new_ins, ins);
-		}
-		if (ins->R2.regID != REG_NOT_USED && ins->nextInstruction->R2.state == RS_REGISTER && !RegUsed[ins->R2.regID])
+		if (ins->R2.state == RS_REGISTER
+				&& ins->R2.regID < REG_TEMP
+				&& !RegUsed[ins->R2.regID])
 		{
 			RegUsed[ins->R2.regID]++;
-			new_ins = newInstrI(LW, AL, ins->R2.regID, REG_HOST_FP, REG_NOT_USED, ins->R2.regID * 8);
-			ADD_LL_NEXT(new_ins, ins);
+			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R2.regID, REG_NOT_USED, REG_HOST_FP, ins->R2.regID * 4);
+			new_ins->nextInstruction = ins;
+
+			if (!prev_ins)
+			{
+				codeSegment->Intermcode = new_ins;
+			}
+			else
+			{
+				prev_ins->nextInstruction = new_ins;
+			}
 		}
-		if (ins->R3.regID != REG_NOT_USED && ins->nextInstruction->R3.state == RS_REGISTER && !RegUsed[ins->R3.regID])
+
+		if (ins->R3.state == RS_REGISTER
+				&& ins->R3.regID < REG_TEMP
+				&& !RegUsed[ins->R3.regID])
 		{
 			RegUsed[ins->R3.regID]++;
-			new_ins = newInstrI(LW, AL, ins->R3.regID, REG_HOST_FP, REG_NOT_USED, ins->R3.regID * 8);
-			ADD_LL_NEXT(new_ins, ins);
+			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R3.regID, REG_NOT_USED, REG_HOST_FP, ins->R3.regID * 4);
+			new_ins->nextInstruction = ins;
+
+			if (!prev_ins)
+			{
+				codeSegment->Intermcode = new_ins;
+			}
+			else
+			{
+				prev_ins->nextInstruction = new_ins;
+			}
 		}
 
-		ins = ins->nextInstruction;
-	}
-
-	//Now look for last references to registers so that we can save them back to cache
-
-	ins = codeSegment->Intermcode;
-
-	while (ins)
-	{
-		if (ins->Rd1.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->Rd1.regID) > 0))
-		{
-			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->Rd1.regID, ins->Rd1.regID* 8);
-			ADD_LL_NEXT(new_ins, ins);
-		}
-
-		if (ins->Rd2.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->Rd2.regID) > 0))
-		{
-			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->Rd2.regID, ins->Rd2.regID * 8);
-			ADD_LL_NEXT(new_ins, ins);
-		}
-
-		if (ins->R1.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->R1.regID) > 0))
-		{
-			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->R1.regID, ins->R1.regID * 8);
-			ADD_LL_NEXT(new_ins, ins);
-		}
-
-		if (ins->R2.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->R2.regID) > 0))
-		{
-			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->R2.regID, ins->R2.regID * 8);
-			ADD_LL_NEXT(new_ins, ins);
-		}
-
-		if (ins->R3.regID != REG_NOT_USED && !(FindRegNextUsedAgain(ins, ins->R3.regID) > 0))
-		{
-			new_ins = newInstrI(SW, AL, REG_NOT_USED, REG_HOST_FP, ins->R3.regID, ins->R3.regID * 8);
-			ADD_LL_NEXT(new_ins, ins);
-		}
-
+		prev_ins = ins;
 		ins = ins->nextInstruction;
 	}
 }
@@ -1228,6 +1256,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		}
 	}
 
+#if 0
 	//Strip HOST flag from register ID leaving ARM register ID ready for writing
 	ins = codeSegment->Intermcode;
 	while (ins)
@@ -1240,7 +1269,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 
 		ins = ins->nextInstruction;
 	}
-
+#endif
 
 	// ------------ sanity check --------------
 
@@ -1249,11 +1278,11 @@ void Translate_Registers(code_seg_t* const codeSegment)
 
 	while (ins)
 	{
-		assert( ins->Rd1.state != RS_REGISTER || ins->Rd1.regID < 16 || ins->Rd1.regID == REG_NOT_USED);
-		assert( ins->Rd2.state != RS_REGISTER || ins->Rd2.regID < 16 || ins->Rd2.regID == REG_NOT_USED);
-		assert( ins->R1.state != RS_REGISTER || ins->R1.regID < 16 || ins->R1.regID == REG_NOT_USED);
-		assert( ins->R2.state != RS_REGISTER || ins->R2.regID < 16 || ins->R2.regID == REG_NOT_USED);
-		assert( ins->R3.state != RS_REGISTER || ins->R3.regID < 16 || ins->R3.regID == REG_NOT_USED);
+		assert( ins->Rd1.state != RS_REGISTER || (ins->Rd1.regID & ~REG_HOST) < 16 || ins->Rd1.regID == REG_NOT_USED);
+		assert( ins->Rd2.state != RS_REGISTER || (ins->Rd2.regID & ~REG_HOST) < 16 || ins->Rd2.regID == REG_NOT_USED);
+		assert( ins->R1.state != RS_REGISTER || (ins->R1.regID & ~REG_HOST) < 16 || ins->R1.regID == REG_NOT_USED);
+		assert( ins->R2.state != RS_REGISTER || (ins->R2.regID & ~REG_HOST) < 16 || ins->R2.regID == REG_NOT_USED);
+		assert( ins->R3.state != RS_REGISTER || (ins->R3.regID & ~REG_HOST) < 16 || ins->R3.regID == REG_NOT_USED);
 		ins = ins->nextInstruction;
 	}
 #endif
@@ -1262,8 +1291,71 @@ void Translate_Registers(code_seg_t* const codeSegment)
 
 void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 {
+		Instruction_t*ins = codeSegment->Intermcode;
 
+		Instruction_t*new_ins;
+
+		while (ins)
+		{
+			if (ins->Rd1.state == RS_REGISTER
+					&& ins->Rd1.regID < REG_TEMP)
+			{
+				int32_t nextUsed = FindRegNextUsedAgain(ins, ins->R1.regID);
+
+				//Register will be over-written before next use so don't bother saving
+				if (nextUsed == -1)
+				{
+
+				}
+				else if (nextUsed == 0)
+				{
+					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd1.regID, REG_HOST_FP, ins->Rd1.regID * 4);
+					new_ins->nextInstruction = ins->nextInstruction;
+					ins->nextInstruction = new_ins;
+				}
+			}
+			else if (ins->Rd1.regID < REG_TEMP)
+			{
+				//TODO depending on literal, we could do a ARM_MOV
+
+				regID_t regBase;
+				int32_t offset;
+
+				addLiteral(codeSegment,&regBase,&offset,ins->Rd1.u4);
+
+				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_TEMP_STR_CONST, REG_NOT_USED, regBase, offset);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, REG_TEMP_STR_CONST, REG_HOST_FP, ins->Rd1.regID * 4);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+
+			if (ins->Rd2.state == RS_REGISTER
+					&& ins->Rd2.regID < REG_TEMP)
+			{
+				int32_t nextUsed = FindRegNextUsedAgain(ins, ins->Rd2.regID);
+
+				//Register will be over-written before next use so don't bother saving
+				if (nextUsed == -1)
+				{
+
+				}
+				else if (nextUsed == 0)
+				{
+					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd2.regID, REG_HOST_FP, ins->Rd2.regID * 4);
+					new_ins->nextInstruction = ins->nextInstruction;
+					ins->nextInstruction = new_ins;
+				}
+			}
+			else if (ins->Rd2.regID < REG_TEMP)
+			{
+				abort();
+			}
+
+			ins = ins->nextInstruction;
+		}
 }
+
 
 #if 0
 void Translate_Generic(code_seg_t* const codeSegment)
@@ -1510,7 +1602,9 @@ void Translate(code_seg_t* const codeSegment)
 
 	Translate_LoadStoreWriteBack(codeSegment);
 
-//	Translate_LoadCachedRegisters(codeSegment);
+	Translate_LoadCachedRegisters(codeSegment);
+
+	Translate_StoreCachedRegisters(codeSegment);
+
 	Translate_Registers(codeSegment);
-//	Translate_StoreCachedRegisters(codeSegment);
 }

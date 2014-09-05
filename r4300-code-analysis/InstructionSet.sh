@@ -1,14 +1,14 @@
 #?/usr/bin/sh
 
 READING=0
-OUTPUT=
+OUTPUT="InstructionSet_ascii.h"
 ENUM_DECL="_Instruction_e"
 
 #set -x
 set -e
 
-echo "#include \"InstructionSet.h\""
-echo "static const char* Instruction_ascii[sizeof_mips_op_t+1] = {" # > $OUTPUT
+echo "#include \"InstructionSet.h\"" > $OUTPUT
+echo "static const char* Instruction_ascii[sizeof_mips_op_t+1] = {" >> $OUTPUT
 
 while read line 
 	do
@@ -41,10 +41,10 @@ while read line
 			fi
 
 			if [ -n "$CMT" ]; then
-				echo "$ENUM // $CMT"
+				echo "$ENUM // $CMT" >> $OUTPUT
 			else
-				echo "$ENUM"
+				echo "$ENUM"		>> $OUTPUT
 			fi			
 		fi
 	done < "InstructionSet.h"
-echo "};" # >> $OUTPUT
+echo "};" >> $OUTPUT
