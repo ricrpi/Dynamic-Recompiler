@@ -78,11 +78,10 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "ERET",
 "MFC1",
 "DMFC1",
-"CFC1",
+"CFC1",	 //  Rd1 (rt) = R1 (fs)				Copy FPU fs into rt
 "MTC1",
 "DMTC1",
-"CTC1",
-"BC1",
+"CTC1",	 //  Rd1 (fs) = R1 (rt)				Copy from GPR rt to a FPU control register fs
 "BC1F",
 "BC1T",
 "BC1FL",

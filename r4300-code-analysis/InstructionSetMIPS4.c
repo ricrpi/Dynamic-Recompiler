@@ -1552,15 +1552,15 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			{
 			case 0x00:
 			ins->instruction =  ADD_S;
-			ins->Rd1 = REG_FP + ((uiMIPSword>>6)&0x1f);
-			ins->R1 = REG_FP + ((uiMIPSword>>11)&0x1f);
-			ins->R2 = REG_FP + ((uiMIPSword>>16)&0x1f);
+			ins->Rd1.regID = REG_FP + ((uiMIPSword>>6)&0x1f);
+			ins->R1.regID = REG_FP + ((uiMIPSword>>11)&0x1f);
+			ins->R2.regID = REG_FP + ((uiMIPSword>>16)&0x1f);
 			return 0;
 			case 0x01:
 			ins->instruction =  SUB_S;
-			ins->Rd1 = REG_FP + ((uiMIPSword>>6)&0x1f);
-			ins->R1 = REG_FP + ((uiMIPSword>>11)&0x1f);
-			ins->R2 = REG_FP + ((uiMIPSword>>16)&0x1f);
+			ins->Rd1.regID = REG_FP + ((uiMIPSword>>6)&0x1f);
+			ins->R1.regID = REG_FP + ((uiMIPSword>>11)&0x1f);
+			ins->R2.regID = REG_FP + ((uiMIPSword>>16)&0x1f);
 			return 0;
 			case 0x02:
 			ins->instruction =  MUL_S;
@@ -1669,15 +1669,15 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			{
 			case 0x00:
 			ins->instruction =  ADD_D;
-			ins->Rd1 = REG_FP + ((uiMIPSword>>6)&0x1f);
-			ins->R1 = REG_FP + ((uiMIPSword>>11)&0x1f);
-			ins->R2 = REG_FP + ((uiMIPSword>>16)&0x1f);
+			ins->Rd1.regID = REG_FP + ((uiMIPSword>>6)&0x1f);
+			ins->R1.regID = REG_FP + ((uiMIPSword>>11)&0x1f);
+			ins->R2.regID = REG_FP + ((uiMIPSword>>16)&0x1f);
 			return 0;
 			case 0x01:
 			ins->instruction =  SUB_D;
-			ins->Rd1 = REG_FP + ((uiMIPSword>>6)&0x1f);
-			ins->R1 = REG_FP + ((uiMIPSword>>11)&0x1f);
-			ins->R2 = REG_FP + ((uiMIPSword>>16)&0x1f);
+			ins->Rd1.regID = REG_FP + ((uiMIPSword>>6)&0x1f);
+			ins->R1.regID = REG_FP + ((uiMIPSword>>11)&0x1f);
+			ins->R2.regID = REG_FP + ((uiMIPSword>>16)&0x1f);
 			return 0;
 			case 0x02:
 			ins->instruction =  MUL_D;

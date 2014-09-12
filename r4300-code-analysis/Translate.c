@@ -746,7 +746,6 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 			case MTC1: break;
 			case DMTC1: break;
 			case CTC1: break;
-			case BC1: break;
 			case BC1F: break;
 			case BC1T: break;
 			case BC1FL: break;
