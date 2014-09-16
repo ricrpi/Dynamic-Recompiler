@@ -489,8 +489,6 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				(uint32_t)CurrentCodeSeg,
 				(uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen,
 				(uint32_t)CurrentCodeSeg->ARMcode, CurrentCodeSeg->ARMcodeLen);
-
-		return 0;
 	}
 	else if (!CMD_CMP(1, "start"))
 	{
@@ -595,46 +593,65 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	else if (!CMD_CMP(1, "init")				|| !CMD_CMP(1, "1"))
 	{
 		Translate_init(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "DelaySlot") 			|| !CMD_CMP(1, "2"))
 	{
 		Translate_DelaySlot(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "Count") 				|| !CMD_CMP(1, "3"))
 	{
 		Translate_CountRegister(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "Constants") 			|| !CMD_CMP(1, "4"))
 	{
 		Translate_Constants(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "32BitRegisters") 		|| !CMD_CMP(1, "5"))
 	{
 		Translate_32BitRegisters(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "memory") 				|| !CMD_CMP(1, "6"))
 	{
 		Translate_Memory(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "loadStoreWriteBack") 	|| !CMD_CMP(1, "7"))
 	{
 		Translate_LoadStoreWriteBack(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "LoadCacheRegisters") 	|| !CMD_CMP(1, "8"))
 	{
 		Translate_LoadCachedRegisters(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "9"))
 	{
 		Translate_StoreCachedRegisters(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "10"))
 	{
 		Translate_Registers(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "11"))
 	{
 		emit_arm_code(CurrentCodeSeg);
+
+		uint32_t count = CurrentCodeSeg->ARMcodeLen;
+		uint32_t* addr = CurrentCodeSeg->ARMcode;
+		int x;
+
+		for (x=0; x< count; x++)
+		{
+			arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+		}
 	}
 	else
 	{

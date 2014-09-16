@@ -64,14 +64,16 @@ static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_
 
 	while (in)
 	{
-		if (ins->R1.regID == Reg || ins->R2.regID == Reg || ins->R3.regID == Reg)	return x;
-		if (ins->Rd1.regID == Reg || ins->Rd2.regID == Reg) return -1;
+		if (in->R1.regID == Reg || in->R2.regID == Reg || in->R3.regID == Reg)
+			return x;
+		if (x && (in->Rd1.regID == Reg || in->Rd2.regID == Reg))
+			return -1;
 
 		x++;
 		in = in->nextInstruction;
 	}
 
-	return x;
+	return 0;
 }
 
 static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, const regID_t RegTo, uint32_t MaxInstructions)
@@ -85,6 +87,21 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 	{
 		if (RegTo >= REG_HOST) 	printf("Reg host %3d => host %3d\n", RegFrom-REG_HOST, RegTo-REG_HOST);
 		else					printf("Reg host %3d =>      %3d\n", RegFrom-REG_HOST, RegTo);
+	}
+	else if (RegFrom >= REG_TEMP)
+	{
+		if (RegTo >= REG_HOST) 	printf("Reg temp %3d => host %3d\n", RegFrom-REG_TEMP, RegTo-REG_HOST);
+		else					printf("Reg temp %3d =>      %3d\n", RegFrom-REG_TEMP, RegTo);
+	}
+	else if (RegFrom >= REG_CO)
+	{
+		if (RegTo >= REG_HOST) 	printf("Reg   co %3d => host %3d\n", RegFrom-REG_CO, RegTo-REG_HOST);
+		else					printf("Reg   co %3d =>      %3d\n", RegFrom-REG_CO, RegTo);
+	}
+	else if (RegFrom >= REG_WIDE)
+	{
+		if (RegTo >= REG_HOST) 	printf("Reg wide %3d => host %3d\n", RegFrom-REG_WIDE, RegTo-REG_HOST);
+		else					printf("Reg wide %3d =>      %3d\n", RegFrom-REG_WIDE, RegTo);
 	}
 	else
 	{
@@ -240,7 +257,7 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 
 	seg_data->dbgCurrentSegment = code_seg;
 
-	code_seg->Type= SEG_START;
+	code_seg->Type = SEG_START;
 
 	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI2 );
 	code_seg->Intermcode = ins = newInstruction;
@@ -255,7 +272,6 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 
 	// Need to get segment for 0x88000040, lookup the ARM address and jump to it.
 	code_seg_t* start_seg = seg_data->StaticBounds[0x40/4];
-	uint32_t* arm_address = start_seg->ARMcode;
 
 	//branch to start of ARM code
 	newInstruction 		= newInstrI(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_FP, FUNC_GEN_START);
@@ -352,97 +368,129 @@ void Translate_init(code_seg_t* const codeSegment)
  * MIPS4300 executes instruction after a branch or jump if it is not LINK_LIKELY
  * Therefore the instruction after the branch may need to be moved into the segment.
  *
- * For ARM we shall use the PSR to signal when to execute the DelaySlot instruction(s)
+ * I wish to try using a different approach as I do not want to have to handle special cases
+ * with delay slot re-shuffling.
+ *
+ * For ARM we can use the PSR and conditional execution for DelaySlot instruction(s)
  *
  * i.e.
  *
+ * Example 1: Loop then continue
+ *
  * ...								...
+ * .L1								.L1
  * ADD 	R1	R2	R3					ADD		R1	R2	R3
  * SUBI	R1	R1	#4					SUMI	R1	R1	#4
- * BNE	R1			#-1		==>	  + ADDI	R2	R2 	#3
- * ====New Segment====				BNE		R1		#-1
- * ADDI	R2	R2	#3				  + msr		s		#1		// TODO lookup what imm is for setting Z
- * ...								====New Segment====		// Will be a BLOCK_START_CONT Segment
- * ...						    +/- ADDIne	R2	R2	#3		// the delaySlot instruction(s)
+ * BNE	R1		.L1
+ * ====New Segment====		==>	  + ADDI	R2	R2 	#3		// the condition on the branch
+ * ADDI	R2	R2	#3				  + bne		.L1
+ * ...							  + msr		Z=0
+ * ...							    ====New Segment====		// Will always be a BLOCK_START_CONT Segment
+ * ...								ADDIeq	R2	R2	#3		// the delaySlot instruction(s)
  * ...								...
  *
- * All segments must clear the Z status flag before jumping to a BLOCK_START_CONT segment.
+ *
+ * Example 2:	Always branch/jump then continue
+ *
+ * ...								...
+ * .L1								.L1
+ * ADD 	R1	R2	R3					ADD		R1	R2	R3
+ * SUBI	R1	R1	#4					SUMI	R1	R1	#4
+ * JAL		.L1					  + ADDI	R2	R2 	#3		// the condition on the branch
+ * 								  + msr		Z=1				// so if jumping to a BLOCK_START_CONT
+ * ====New Segment====		==>	  	JAL				.L1
+ * ADDI	R2	R2	#3				  + msr		Z=0
+ * ...							  	====New Segment====		// Will always be a BLOCK_START_CONT Segment
+ * ...							  + ADDIeq	R2	R2	#3		// the delaySlot instruction(s)
+ * ...								...
+ *
+ *
+ * Requirements:
+ *
+ * 1. Segments that have code preceeding it must set the first instruction to be conditional
+ *
+ * 2. All segments must set the Z status flag before jumping to a BLOCK_START_CONT segment.
+ *
+ * 3. All segments that 'continue' after a branch must clear Z status flag.
+ *    i.e. only segments that don't jump
+ *
+ * 4. Segments must include the MIPS instruction immediately after the end of the segment MIPS code if they branch.
+ *    This could be a no-op in which case we can ignore it.
+ *
+ *    		//Set Status Register setting
+ * 			APSR.N = imm32<31>;
+ *  		APSR.Z = imm32<30>;
+ *  		APSR.C = imm32<29>;
+ *  		APSR.V = imm32<28>;
+ *  		APSR.Q = imm32<27>;
  *
  */
 void Translate_DelaySlot(code_seg_t*  codeSegment)
 {
 	Instruction_e ops = ops_type(*(codeSegment->MIPScode + codeSegment->MIPScodeLen -1));
-	Instruction_t* newInstruction;
 
-	Instruction_t* ins = codeSegment->Intermcode;
-	Instruction_t* prev_ins;
+	Instruction_t* delayInstruction 	= NULL;
+	Instruction_t* newInstruction 		= NULL;
+
+	Instruction_t* ins 					= codeSegment->Intermcode;
 
 	if (ins == NULL)
 		{
-			printf("Not initialized this code segment. Please run 'optimize intermediate'\n");
+			printf("Not initialized this code segment. Please run 'translate intermediate'\n");
 			return;
 		}
 
-	//if the last instruction is a branch or jump and is not Likely
-	if ((ops & (OPS_BRANCH | OPS_JUMP))
-			&& !(ops & OPS_LIKELY))
+	// if this is a SEG_SANDWICH or SEG_END then we need to be conditional on the first instruction (1)
+	if ( (codeSegment->Type == SEG_SANDWICH || codeSegment->Type == SEG_END)
+			&& (ops_type(*(codeSegment->MIPScode -1)) & (OPS_BRANCH | OPS_LINK)))
 	{
-		newInstruction 	= newEmptyInstr();
+		ins->cond = EQ;
+	}
 
-		mips_decode(*(codeSegment->MIPScode + codeSegment->MIPScodeLen), newInstruction);
+	// set the Z status flag before branch / jump (2)
+	if (codeSegment->pBranchNext
+			&& (codeSegment->pBranchNext->Type == SEG_SANDWICH
+					|| codeSegment->pBranchNext->Type == SEG_END))
+	{
+		while (ins->nextInstruction->nextInstruction) ins = ins->nextInstruction;
+
+		newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40000000);
+		ADD_LL_NEXT(newInstruction, ins);
+	}
+
+	Instruction_e following_op = ops_type(*(codeSegment->MIPScode + codeSegment->MIPScodeLen));
+
+	// if the last instruction is not likely and the following instruction is not a NO OP (4)
+	if ((ops & (OPS_BRANCH | OPS_JUMP))
+			&& !(ops & OPS_LIKELY)
+			&& following_op > NO_OP)
+	{
+		delayInstruction = newEmptyInstr();
+
+		//generate the instruction to add.
+		mips_decode(*(codeSegment->MIPScode + codeSegment->MIPScodeLen), delayInstruction);
 
 		//Is this is a one instruction segment?
-		if (NULL == ins->nextInstruction)
+		if (NULL == codeSegment->Intermcode->nextInstruction)
 		{
-			newInstruction->nextInstruction = codeSegment->Intermcode;
-			codeSegment->Intermcode = newInstruction;
-
-			// ins will still be pointing at the last instruction
+			delayInstruction->nextInstruction = codeSegment->Intermcode;
+			codeSegment->Intermcode = delayInstruction;
 		}
 		else
 		{
-			while (ins->nextInstruction->nextInstruction)
-			ins = ins->nextInstruction;
-
-			ADD_LL_NEXT(newInstruction, ins);		//ins will be pointing to newInstruction
-			ins = ins->nextInstruction;				// move to the last instruction
-		}
-
-		//Set Status Register setting
-		/*	APSR.N = imm32<31>;
-			APSR.Z = imm32<30>;
-			APSR.C = imm32<29>;
-			APSR.V = imm32<28>;
-			APSR.Q = imm32<27>;
-		 */
-
-		if (ops & OPS_LINK)
-		{
-			newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40000000);
-			ADD_LL_NEXT(newInstruction, ins);
+			while (ins->nextInstruction->nextInstruction) ins = ins->nextInstruction;
+			ADD_LL_NEXT(delayInstruction, ins);		//ins will be pointing to newInstruction
 		}
 	}
-	// if segment before this one can continue, then we must make first instruction conditional
-	else if(codeSegment->Type == SEG_START
-			|| codeSegment->Type == SEG_ALONE)
+
+	// if the instruction continues then clear the Z status flag at end of instructions (3)
+	if (ops & OPS_BRANCH)
 	{
-		//goto second last instruction
-		/*while (ins->nextInstruction->nextInstruction)
-			ins = ins->nextInstruction;
+		//goto last instruction (the branch instruction)
+		while (ins->nextInstruction) ins = ins->nextInstruction;
 
-		//Clear Status Register setting
-		newInstruction 	= newInstr(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0);
-		newInstruction->rotate = 4;	// To load into bits 24-31
-		newInstruction->I = 1;
-
-		ADD_LL_NEXT(newInstruction, ins);*/
-	}
-
-	// if segment before this one can continue, then we must make first instruction conditional
-	else if (codeSegment->Type == SEG_SANDWICH
-			|| codeSegment->Type == SEG_END){
-
-	//	codeSegment->Intermcode->cond = NE;	//Make first instruction conditional
+		newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x00000000);
+		ADD_LL_NEXT(newInstruction, ins);
 	}
 }
 
@@ -1080,6 +1128,22 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 	}
 }
 
+static void getNextRegister(Instruction_t* ins, uint32_t* uiCurrentRegister)
+{
+	uint32_t uiLastRegister = *uiCurrentRegister;
+
+	while ((FindRegNextUsedAgain(ins, REG_HOST + *uiCurrentRegister) > 0))
+	{
+		(*uiCurrentRegister)++;
+		if (*uiCurrentRegister > 10) *uiCurrentRegister = 0;
+
+		// Have we looped round all registers?
+		if (uiLastRegister == *uiCurrentRegister){
+			abort();
+		}
+	}
+}
+
 /*
  * Function to re-number / reduce the number of registers so that they fit the HOST
  *
@@ -1146,116 +1210,41 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		//we should do this in the 'instruction' domain so that non-overlapping register usage can be 'flattened'
 
 		uint32_t uiCurrentRegister = 0;
-		uint32_t uiLastRegister = 0;
 
-		while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister)> 0))
-		{
-			uiCurrentRegister++;
-			if (uiCurrentRegister > 10) uiCurrentRegister = 0;
-
-			// Have we looped round all registers?
-			if (uiLastRegister == uiCurrentRegister){
-				abort();
-			}
-		}
+		getNextRegister(ins, &uiCurrentRegister);
 
 		while (ins)
 		{
-			/*
-			if (ins->instruction == UNKNOWN)
-			{
-				printf("Unknown Instruction in segment 0x%x\n", codeSegment);
-
-				uint32_t x;
-				for (x=0; x < codeSegment->MIPScodeLen; x++)
-				{
-					mips_print((uint32_t)codeSegment->MIPScode + x*4, *(codeSegment->MIPScode + x));
-				}
-				abort();
-			}*/
-
 			if (ins->Rd1.regID != REG_NOT_USED  && ins->Rd1.state == RS_REGISTER && ins->Rd1.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + uiCurrentRegister, 0);
-				uiLastRegister = uiCurrentRegister;
-				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
-				{
-					uiCurrentRegister++;
-					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
-
-					// Have we looped round all registers?
-					if (uiLastRegister == uiCurrentRegister){
-
-						abort();
-					}
-				}
+				getNextRegister(ins, &uiCurrentRegister);
 			}
 
 			if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.state == RS_REGISTER && ins->Rd2.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + uiCurrentRegister, 0);
-				uiLastRegister = uiCurrentRegister;
-				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
-				{
-					uiCurrentRegister++;
-					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
-
-					// Have we looped round all registers?
-					if (uiLastRegister == uiCurrentRegister){
-						abort();
-					}
-				}
+				getNextRegister(ins, &uiCurrentRegister);
 			}
 
 			if (ins->R1.regID != REG_NOT_USED && ins->R1.state == RS_REGISTER && ins->R1.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->R1.regID, REG_HOST + uiCurrentRegister, 0);
-				uiLastRegister = uiCurrentRegister;
-				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
-				{
-					uiLastRegister = uiCurrentRegister;
-					uiCurrentRegister++;
-					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
-
-					// Have we looped round all registers?
-					if (uiLastRegister == uiCurrentRegister){
-						abort();
-					}
-				}
+				getNextRegister(ins, &uiCurrentRegister);
 			}
 
 			if (ins->R2.regID != REG_NOT_USED && ins->R2.state == RS_REGISTER && ins->R2.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->R2.regID, REG_HOST + uiCurrentRegister, 0);
-				uiLastRegister = uiCurrentRegister;
-				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
-				{
-					uiCurrentRegister++;
-					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
-
-					// Have we looped round all registers?
-					if (uiLastRegister == uiCurrentRegister){
-						abort();
-					}
-				}
+				getNextRegister(ins, &uiCurrentRegister);
 			}
 
 			if (ins->R3.regID != REG_NOT_USED && ins->R3.state == RS_REGISTER && ins->R3.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->R3.regID, REG_HOST + uiCurrentRegister, 0);
-				uiLastRegister = uiCurrentRegister;
-				while (!(FindRegNextUsedAgain(ins, REG_HOST + uiCurrentRegister) > 0))
-				{
-					uiCurrentRegister++;
-					if (uiCurrentRegister > 10) uiCurrentRegister = 0;
-
-					// Have we looped round all registers?
-					if (uiLastRegister == uiCurrentRegister){
-						abort();
-					}
-				}
+				getNextRegister(ins, &uiCurrentRegister);
 			}
 
 			ins = ins->nextInstruction;
 		}
 	}
 
-#if 0
+#if 1
 	//Strip HOST flag from register ID leaving ARM register ID ready for writing
 	ins = codeSegment->Intermcode;
 	while (ins)
@@ -1296,10 +1285,11 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 
 		while (ins)
 		{
-			if (ins->Rd1.state == RS_REGISTER
-					&& ins->Rd1.regID < REG_TEMP)
+			if (ins->Rd1.regID < REG_TEMP
+					&& ins->Rd1.state == RS_REGISTER
+				)
 			{
-				int32_t nextUsed = FindRegNextUsedAgain(ins, ins->R1.regID);
+				int32_t nextUsed = FindRegNextUsedAgain(ins, ins->Rd1.regID);
 
 				//Register will be over-written before next use so don't bother saving
 				if (nextUsed == -1)
@@ -1311,6 +1301,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd1.regID, REG_HOST_FP, ins->Rd1.regID * 4);
 					new_ins->nextInstruction = ins->nextInstruction;
 					ins->nextInstruction = new_ins;
+					ins = ins->nextInstruction;
 				}
 			}
 			else if (ins->Rd1.regID < REG_TEMP)
@@ -1344,6 +1335,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd2.regID, REG_HOST_FP, ins->Rd2.regID * 4);
 					new_ins->nextInstruction = ins->nextInstruction;
 					ins->nextInstruction = new_ins;
+					ins = ins->nextInstruction;
 				}
 			}
 			else if (ins->Rd2.regID < REG_TEMP)

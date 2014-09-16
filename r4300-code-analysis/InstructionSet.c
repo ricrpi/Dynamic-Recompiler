@@ -8,10 +8,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "InstructionSet.h"
+#include "InstructionSet_ascii.h"
 #include "InstructionSetARM6hf.h"
 #include "CodeSegments.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
+
 
 static void sprintReg(char* str, reg_t r)
 {

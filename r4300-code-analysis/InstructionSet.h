@@ -428,9 +428,6 @@ typedef enum _Instruction_e {
 	sizeof_mips_op_t
 } Instruction_e;
 
-
-#include "InstructionSet_ascii.h"
-
 typedef enum
 {
 	LOGICAL_LEFT,

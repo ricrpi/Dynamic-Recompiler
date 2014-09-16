@@ -23,6 +23,7 @@ static uint32_t GlobalLiteralCount = 0;
 
 //==================================================================
 
+#if 0
 static uint32_t CountRegisers(uint32_t *bitfields)
 {
 	int x, y;
@@ -37,6 +38,7 @@ static uint32_t CountRegisers(uint32_t *bitfields)
 	}
 	return c;
 }
+#endif
 
 /*
  * Function to overwitre the Branch Statement at the end of ARM code so that it points to
@@ -49,6 +51,7 @@ static void invalidateBranch(code_seg_t* codeSegment)
 
 //================== Searching ========================================
 
+#if 0
 static code_seg_t* Search_MIPS(uint32_t address)
 {
 	code_seg_t* seg;
@@ -78,6 +81,7 @@ static code_seg_t* Search_MIPS(uint32_t address)
 	}
 	return NULL;
 }
+#endif
 
 //================== Literals ========================================
 
@@ -391,8 +395,6 @@ static int32_t UpdateCodeBlockValidity(code_seg_t** const Block, const uint32_t*
 			if ((op & OPS_JUMP) == OPS_JUMP)
 			{
 				uint32_t uiAddress = ops_JumpAddress(&address[y]);
-
-
 
 				if (op & OPS_LINK)
 				{
@@ -713,6 +715,7 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_INTERRUPT)) = (uint32_t)segmentData.segInterrupt->ARMcode;
 
 	segmentData.dbgCurrentSegment = segmentData.StaticSegments;
+
 
 	return &segmentData;
 

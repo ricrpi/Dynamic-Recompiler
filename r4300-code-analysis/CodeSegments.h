@@ -41,8 +41,8 @@ static const char* block_type_s[sizeof_BLOCK_TYPE_E] = {
 
 typedef enum
 {
-	SEG_START,			// segment has no code before - literals go before
 	SEG_SANDWICH,		// segment has code before and after - literals need to be global
+	SEG_START,			// segment has no code before - literals go before
 	SEG_END,			// segment has no code after - literals go after
 	SEG_ALONE,			// segment has no code before or after - literals can go either side
 	sizeof_SEG_TYPE_E

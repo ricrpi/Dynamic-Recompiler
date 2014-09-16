@@ -8,6 +8,8 @@
 #include "CodeSegments.h"
 #include "InstructionSetARM6hf.h"
 #include "InstructionSet.h"
+#include "InstructionSet_ascii.h"
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -148,11 +150,11 @@ uint32_t arm_encode(const Instruction_t ins)
 	case ARM_LDR_LIT:
 			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R1 << 12 | (ins.immediate&0xFFF);
 	case ARM_LDR:
-			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R1 << 12 | (ins.shift&0x1f << 7) | ins.shiftType&3 << 5 | R2&0xf;
+			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R1 << 12 | (ins.shift&0x1f << 7) | (ins.shiftType&3 << 5) | (R2&0xf);
 	case ARM_STR_LIT:
 			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | Rd1 << 16 | R1 << 12 | (ins.immediate&0xFFF);
 	case ARM_STR:
-			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | Rd1 << 16 | R1 << 12 | (ins.shift&0x1f << 7) | ins.shiftType&3 << 5 | R2&0xf;
+			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | Rd1 << 16 | R1 << 12 | (ins.shift&0x1f << 7) | (ins.shiftType&3 << 5) | (R2&0xf);
 
 	case ARM_LDRD_LIT:
 			return ins.cond << 28 | ins.PR << 24 | ins.U << 23 | 1 << 22 | ins.W << 21 | Rd1 << 16 | R1 << 12 | ((ins.immediate>>4)&0xf) | 0xd0 | (ins.immediate&0xf);
@@ -247,11 +249,11 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	}
 	else if((word & 0x0f000000) == 0x0a000000) // Branch
 	{
-		printf("\tb%s\t0x%x\n",arm_cond[word>>28], word&0xffffff);
+		printf("\tb%s\t0x%x\n", arm_cond[word>>28], word&0xffffff);
 	}
 	else if((word & 0x0f000000) == 0x0b000000) // Branch and Link
 	{
-		printf("\tbl%s\t0x%x\n",addr, arm_cond[word>>28], word&0xffffff);
+		printf("\tbl%s\t0x%x\n", arm_cond[word>>28], word&0xffffff);
 	}
 	else if((word & 0x0e400000) == 0x08000000) // LDM/STM
 	{
@@ -308,10 +310,10 @@ void arm_print(const uint32_t addr, const uint32_t word)
 
 		sprintf(imm, "#0x%x", (word&0xff << ((word>>8)&0xf)));
 
-		if (word & 1 << 24) // Pre/post
-			printf("\t%s%s%s\t%s, [%s, %s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, imm, wb);
+		if (word & (1 << 24)) // Pre/post
+			printf("\t%s%s%s\t%s, [%s, %s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], arm_reg_a[(word>>12)&0xf], minus, imm, wb);
 		else
-			printf("\t%s%s%s\t%s, [%s], %s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, imm);
+			printf("\t%s%s%s\t%s, [%s], %s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], arm_reg_a[(word>>12)&0xf], minus, imm);
 	}
 	else if((word & 0x0c000000) == 0x06000000) // LDR Register
 	{

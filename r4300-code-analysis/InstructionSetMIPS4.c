@@ -38,9 +38,9 @@
 
 #define J_OP "0x%08x\t\t// val<<2 = 0x%08x, offset = %d"
 #define OP_J(x, val) \
-		(x&0xf0000000)|((val<<2) & 0x0FFFFFFF), \
+		(((x&0xf0000000)|(val<<2)) & 0x0FFFFFFF), \
 		((val << 2) & 0x0FFFFFFF), \
-		(((x&0xf0000000)|(val<<2) & 0x0FFFFFFF) - x)
+		((((x&0xf0000000)|(val<<2)) & 0x0FFFFFFF) - x)
 
 #define R_OP ""
 #define OP_R(val) (val)
@@ -686,6 +686,8 @@ Instruction_e ops_type(const uint32_t uiMIPSword)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
+
+	if (0 == uiMIPSword) return NO_OP;
 
 	switch(op)
 	{
@@ -1895,6 +1897,9 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 	case 0x2B:
 			ins->instruction =  SW;
+			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
 			return 0; 	// I
 	case 0x2C:
 			ins->instruction =  SDL;
