@@ -15,6 +15,7 @@
 #include "memory.h"
 #include "CodeSegments.h"
 #include "InstructionSetMIPS4.h"
+#include "InstructionSet_ascii.h"
 #include "Debugger.h"
 
 #include <signal.h>
@@ -40,9 +41,6 @@ static void handler(int sig, siginfo_t *si, void *unused)
 
 int main(int argc, char* argv[])
 {
-
-	code_seg_t* nextCodeSeg;
-
 	if (argc <= 1)
 	{
 		printf("Please specify a file\n");
@@ -172,7 +170,8 @@ int main(int argc, char* argv[])
 	printf("%d code segments generated\n", segmentData.count);
 
 // Instruction Counts for input ROM
-#if 0
+#if 1
+	code_seg_t* nextCodeSeg;
 
 	uint32_t ins_count[sizeof_mips_op_t];
 	uint32_t ins_count_total=0;

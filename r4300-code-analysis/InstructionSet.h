@@ -526,6 +526,8 @@ void Intermediate_print(const struct _code_seg * const codeSegment);
 
 void Intermediate_Literals_print(const struct _code_seg * const codeSegment);
 
+void InstrFree(struct _code_seg * const codeSegment, Instruction_t* ins);
+
 #endif
 
 

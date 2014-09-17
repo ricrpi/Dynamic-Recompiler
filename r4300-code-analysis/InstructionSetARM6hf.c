@@ -16,12 +16,6 @@
 #include <string.h>
 #include "memory.h"
 
-static const char* alu_ops[] = {"and", "eor", "sub", "rsb",
-								"add", "adc", "sbc", "rsc",
-								"tst", "teq", "cmp", "cmn",
-								"orr", "mov", "bic", "mvn"};
-
-
 static uint32_t ALU_OP2(Instruction_t ins)
 {
 	if (ins.I)
@@ -148,9 +142,9 @@ uint32_t arm_encode(const Instruction_t ins)
 		return ins.cond << 28 | 1 << 27 | ins.PR << 24 | ins.U << 23 | ins.W << 21 | R1 << 16 | ins.Rmask;
 
 	case ARM_LDR_LIT:
-			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R1 << 12 | (ins.immediate&0xFFF);
+			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R2 << 12 | (ins.immediate&0xFFF);
 	case ARM_LDR:
-			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R1 << 12 | (ins.shift&0x1f << 7) | (ins.shiftType&3 << 5) | (R2&0xf);
+			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R2 << 12 | (ins.shift&0x1f << 7) | (ins.shiftType&3 << 5) | (R2&0xf);
 	case ARM_STR_LIT:
 			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | Rd1 << 16 | R1 << 12 | (ins.immediate&0xFFF);
 	case ARM_STR:
@@ -442,10 +436,14 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	return;
 }
 
-
 void emit_arm_code(code_seg_t* const codeSeg)
 {
 	static uint32_t* out = NULL;
+
+	/* TODO check for (out > MMAP_DR_BASE + 0x02000000)
+	 * eventually we will need to wrap back to MMAP_DR_BASE and
+	 * invalidate code Segments that are overwritten.
+	 */
 
 	if (!out) out = (uint32_t*)MMAP_DR_BASE;
 

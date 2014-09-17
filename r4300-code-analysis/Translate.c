@@ -83,6 +83,7 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 
 	if (!x) x = 0xffffffff;
 
+#if 0
 	if (RegFrom >= REG_HOST)
 	{
 		if (RegTo >= REG_HOST) 	printf("Reg host %3d => host %3d\n", RegFrom-REG_HOST, RegTo-REG_HOST);
@@ -108,7 +109,7 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 		if (RegTo >= REG_HOST) 	printf("Reg      %3d => host %3d\n", RegFrom, RegTo-REG_HOST);
 		else					printf("Reg      %3d =>      %3d\n", RegFrom, RegTo);
 	}
-
+#endif
 
 	while (x && in)
 	{
@@ -266,18 +267,27 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	int32_t offset;
 
 	addLiteral(code_seg, &base, &offset,(uint32_t)MMAP_FP_BASE);
-	newInstruction 		= newInstrI(ARM_LDR_LIT, EQ, REG_HOST_FP, REG_NOT_USED, base, offset);
-
 	assert(base == REG_HOST_PC);
 
-	// Need to get segment for 0x88000040, lookup the ARM address and jump to it.
-	code_seg_t* start_seg = seg_data->StaticBounds[0x40/4];
-
-	//branch to start of ARM code
-	newInstruction 		= newInstrI(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_FP, FUNC_GEN_START);
+#if 1	// Test Literal loading
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
 
+	// return back to debugger
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+#else
+	// setup the HOST_FP
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_FP, REG_NOT_USED, base, offset);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// start executing recompiled code
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_FP, FUNC_GEN_START);
+	ADD_LL_NEXT(newInstruction, ins);
+#endif
+
 	Translate_Registers(code_seg);
+	Translate_Literals(code_seg);
 
 	return code_seg;
 }
@@ -293,8 +303,11 @@ code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
 	code_seg->Intermcode = ins = newInstruction;
 
+	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
+	ADD_LL_NEXT(newInstruction, ins);
+
 	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	Translate_Registers(code_seg);
@@ -372,6 +385,8 @@ void Translate_init(code_seg_t* const codeSegment)
  * with delay slot re-shuffling.
  *
  * For ARM we can use the PSR and conditional execution for DelaySlot instruction(s)
+ *
+ * TODO I think this needs to use a register as we will need the status register for conditional branching
  *
  * i.e.
  *
@@ -452,7 +467,7 @@ void Translate_DelaySlot(code_seg_t*  codeSegment)
 			&& (codeSegment->pBranchNext->Type == SEG_SANDWICH
 					|| codeSegment->pBranchNext->Type == SEG_END))
 	{
-		while (ins->nextInstruction->nextInstruction) ins = ins->nextInstruction;
+		while (ins->nextInstruction) ins = ins->nextInstruction;
 
 		newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40000000);
 		ADD_LL_NEXT(newInstruction, ins);
@@ -955,6 +970,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 	regID_t	funcTempReg;
 	int32_t	funcTempImm;
+	Instruction_t* new_ins;
 
 	while (ins)
 	{
@@ -1002,7 +1018,33 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		case SB: break;
 		case SH: break;
 		case SWL: break;
-		case SW: break;
+		case SW:
+			//TODO optimize for constants
+			funcTempReg = ins->R1.regID;
+			funcTempImm = ins->immediate;
+
+			//test if raw address or virtual
+			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R2.regID, REG_NOT_USED, 0x08 << 24);
+
+			// if address is raw (NE) then add base offset to get to host address
+			new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, ins->R2.regID, REG_NOT_USED, uMemoryBase << 24);
+			ADD_LL_NEXT(new_ins, ins);
+
+			//check immediate is not too large for ARM and if it is then add additional imm
+			if (funcTempImm > 0xFFF || funcTempImm < -0xFFF)
+			{
+				new_ins = newInstrI(ARM_ORR, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, funcTempImm&0xf000);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+
+			// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
+			new_ins = newInstrI(ARM_STR_LIT, NE, REG_NOT_USED, funcTempReg, REG_TEMP_MEM1, funcTempImm&0xfff);
+			// TODO do we need to set ins->U ?
+			ADD_LL_NEXT(new_ins, ins);
+
+			// now lookup virtual address
+			ins = insertCall(ins, EQ, FUNC_GEN_LOOKUP);
+			break;
 		case SDL: break;
 		case SDR: break;
 		case SWR: break;
@@ -1014,13 +1056,12 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		case LWL: break;
 		case LW:
 
-			//TODO test for cache/non-cache or virtual
 			funcTempReg = ins->Rd1.regID;
 			funcTempImm = ins->immediate;
 
 			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0x08 << 24);
 
-			Instruction_t* new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, uMemoryBase << 24);
+			new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, uMemoryBase << 24);
 			ADD_LL_NEXT(new_ins, ins);
 
 			if (funcTempImm > 0xFFF || funcTempImm < -0xFFF)
@@ -1183,7 +1224,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		if (counts[x]) NumberRegUsed++;
 	}
 
-	printf("Segment 0x%x uses %d registers\n",(uint32_t)codeSegment, NumberRegUsed);
+	//printf("Segment 0x%x uses %d registers\n",(uint32_t)codeSegment, NumberRegUsed);
 	
 	if (NumberRegUsed <= 11)
 	{
@@ -1580,6 +1621,49 @@ void Translate_Generic(code_seg_t* const codeSegment)
 }
 #endif
 
+/*
+ * Function to correct the offset to be applied for literal store/loading
+ */
+void Translate_Literals(const code_seg_t* const codeSegment)
+{
+	Instruction_t*ins;
+	ins = codeSegment->Intermcode;
+	uint32_t x = 4;
+
+	uint32_t InterimCodeLen = 0;
+
+	while (ins)
+	{
+		ins = ins->nextInstruction;
+		InterimCodeLen++;
+	}
+
+	ins = codeSegment->Intermcode;
+
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+		case ARM_STR_LIT:
+		case ARM_LDR_LIT:
+			if (codeSegment->Type == SEG_START)
+			{
+				ins->offset = ins->offset - x;
+			}
+			else if (codeSegment->Type == SEG_END)
+			{
+				ins->offset = InterimCodeLen * 4 - x + ins->offset;
+			}
+
+			break;
+		default:
+			break;
+		}
+		ins = ins->nextInstruction;
+		x+=4;
+	}
+}
+
 void Translate(code_seg_t* const codeSegment)
 {
 	Translate_init(codeSegment);
@@ -1598,4 +1682,6 @@ void Translate(code_seg_t* const codeSegment)
 	Translate_StoreCachedRegisters(codeSegment);
 
 	Translate_Registers(codeSegment);
+
+	Translate_Literals(codeSegment);
 }

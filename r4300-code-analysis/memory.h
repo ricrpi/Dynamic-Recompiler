@@ -33,7 +33,7 @@ extern uint8_t uMemoryBase;
 #define MMAP_CODE_SEG_BASE  (MMAP_BASE - (sizeof(void*) * 8 * 1024 * 1024 / 4))
 #define MMAP_STATIC_REGION  (MMAP_BASE + (0x08000000))
 #define MMAP_DR_BASE		(MMAP_BASE + (0x01000000))	//Base address where Dynamic compiled code is written to.
-#define MMAP_FP_BASE		(MMAP_BASE + (0x03F01028))	// must be > 0x83F00027 + 4096 (4096 being for global literals)
+#define MMAP_FP_BASE		(MMAP_BASE + (0x03F01028))	// must be > 0x03F00027 + 4096 (4096 being for global literals)
 
 //#define MMAP_FUNC			(MMAP_FP_BASE + 676)
 #define MMAP_FUNC			(676)

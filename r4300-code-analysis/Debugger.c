@@ -640,7 +640,12 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 		Translate_Registers(CurrentCodeSeg);
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "11"))
+	else if (!CMD_CMP(1, "Literals") 			|| !CMD_CMP(1, "11"))
+	{
+		Translate_Literals(CurrentCodeSeg);
+		Intermediate_print(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "12"))
 	{
 		emit_arm_code(CurrentCodeSeg);
 
@@ -687,13 +692,13 @@ int Debugger_start(const code_segment_data_t* const segmentData)
 	}
 	else if (!CMD_CMP(0, "start"))
 	{
-		pfvv run = (pfvv)segmentData->segStart->ARMcode;
+		pfvru1 run = (pfvru1)segmentData->segStart->ARMcode;
 
 		printf("Starting ...\n");
 
-		run();
+		uint32_t ret = run();
 
-		printf("End run\n");
+		printf("End run: %u (0x%x)\n", ret, ret);
 	}
 	else if (!CMD_CMP(0, "help"))
 	{

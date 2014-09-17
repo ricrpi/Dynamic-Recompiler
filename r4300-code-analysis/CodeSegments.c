@@ -118,7 +118,7 @@ static void freeLiterals(code_seg_t* codeSegment)
 // TODO what if segment length means offset > 4096?
 uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t* const offset, const uint32_t value)
 {
-	int index = 1;
+	int index = 4;
 
 	if (SEG_SANDWICH == codeSegment->Type)
 	{
@@ -127,7 +127,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 		{
 			if (*((uint32_t*)MMAP_FP_BASE - x) == value)
 			{
-				*offset = x;
+				*offset = x * 4;
 				*base = REG_HOST_FP;
 				return 0;
 			}
@@ -136,6 +136,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 		if (GlobalLiteralCount >= 1024)
 		{
 			printf("CodeSegments.c:%d Run out of Global Literal positions\n", __LINE__);
+			abort();
 		}
 
 		*offset = -(GlobalLiteralCount+1)*4;
@@ -147,10 +148,12 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 
 	if (codeSegment->literals)
 	{
+		//TODO if the value is already added then could re-use it
+
 		literal_t* nxt = codeSegment->literals;
 		while (nxt->next)
 		{
-			index++;
+			index+=4;
 			nxt = nxt->next;
 		}
 		nxt->next = newLiteral(value);
@@ -174,7 +177,7 @@ static caller_t* newCaller(const code_seg_t* const caller)
 	caller_t *newCaller;
 	newCaller = malloc(sizeof(caller_t));
 
-	newCaller->codeSeg = caller;
+	newCaller->codeSeg = (code_seg_t*)caller;
 
 	return newCaller;
 }
@@ -272,7 +275,7 @@ static void AddSegmentToLinkedList(code_seg_t* const newSeg)
 
 	newSeg->next = NULL;
 
-	//TODO dynamic
+	//TODO dynamic once DMA is sorted
 	seg = segmentData.StaticSegments;
 	pseg = &segmentData.StaticSegments;
 
@@ -318,7 +321,6 @@ static void AddSegmentToLinkedList(code_seg_t* const newSeg)
 
 static void RemoveSegmentFromLinkedList(code_seg_t* const codeSegment)
 {
-	//TODO RemoveSegmentFromLinkedList()
 	if (codeSegment->prev) codeSegment->prev->next = codeSegment->next;
 	if (codeSegment->next) codeSegment->next->prev = codeSegment->prev;
 }
@@ -632,7 +634,7 @@ static void LinkStaticSegments()
  */
 int32_t ScanForCode(const uint32_t* const address, const uint32_t length)
 {
-	uint32_t* addr = address;
+	uint32_t* addr = (uint32_t*)address;
 	uint32_t upperAddress;
 	code_seg_t** Bounds;
 

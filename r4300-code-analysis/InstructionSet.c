@@ -397,3 +397,21 @@ void Intermediate_Literals_print(const code_seg_t* const codeSegment)
 		literal = literal->next;
 	}
 }
+
+void InstrFree(code_seg_t* const codeSegment, Instruction_t* ins)
+{
+	Instruction_t* in = codeSegment->Intermcode;
+
+	if (in == ins)
+	{
+		codeSegment->Intermcode = codeSegment->Intermcode->nextInstruction;
+		free(in);
+	}
+	else
+	{
+		while (in->nextInstruction != ins) in = in->nextInstruction;
+
+		in->nextInstruction = ins->nextInstruction;
+		free(ins);
+	}
+}

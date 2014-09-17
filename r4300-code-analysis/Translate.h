@@ -22,7 +22,7 @@ typedef int (*pf4r1)(int, int, int, int);
 typedef unsigned int (*pfu1ru1)(unsigned int);
 typedef int (*pf1r1)(int);
 
-typedef unsigned int (*pfuvr1)();
+typedef unsigned int (*pfvru1)();
 typedef int (*pfvr1)();
 
 typedef void (*pfvv)(void);
@@ -97,5 +97,7 @@ void Translate_Registers(code_seg_t* const codeSegment);
 void Translate_StoreCachedRegisters(code_seg_t* const codeSegment);
 
 void Translate(code_seg_t* const codeSegment);
+
+void Translate_Literals(const code_seg_t* const codeSegment);
 
 #endif /* TRANSLATE_H_ */
