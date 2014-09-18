@@ -159,7 +159,7 @@ Instruction_t* newEmptyInstr()
 	newInstr->B=0;			// Byte/Word bit, 1 = byte
 	newInstr->I=0;			// Immediate
 	newInstr->Ln=0;			// Link bit for branch
-	newInstr->PR=0;			// Pre/Post increment, 1 for pre
+	newInstr->PR=1;			// Pre/Post increment, 1 for pre
 	newInstr->S=0;			// Set condition flags
 	newInstr->U=1;			// Up/Down, set for inc, clear for decrement
 	newInstr->W=0;			// Writeback bit set to write to base register
@@ -238,6 +238,14 @@ Instruction_t* newInstrI(const Instruction_e ins, const Condition_e cond, const 
 	case ARM_MOV:
 	case ARM_MVN:
 		assert(R1 == REG_NOT_USED); break;
+	case ARM_LDR_LIT:
+	case ARM_STR_LIT:
+		if (imm < 0)
+		{
+			newInstr->immediate = -newInstr->immediate;
+			newInstr->U = 0;
+		}
+		break;
 	default: break;
 	}
 
@@ -275,6 +283,14 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 	case ARM_MOV:
 	case ARM_MVN:
 		assert(R1 == REG_NOT_USED); break;
+	case ARM_LDR_LIT:
+	case ARM_STR_LIT:
+		if (imm < 0)
+		{
+			ins->immediate = -ins->immediate;
+			ins->U = 0;
+		}
+		break;
 	default: break;
 	}
 

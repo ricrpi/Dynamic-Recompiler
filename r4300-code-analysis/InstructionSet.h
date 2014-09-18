@@ -78,7 +78,7 @@
 #define REG_HOST_STM_PC 		(0x8000)
 #define REG_HOST_STM_GENERAL 	(0x17FF)
 #define REG_HOST_STM_EABI 		(0x000F)
-#define REG_HOST_STM_EABI2      (0x7FF0)
+#define REG_HOST_STM_EABI2      (0x5FF0)
 #define REG_HOST_STM_ALL        (0x7FFF)
 
 #define REG_T_SIZE	 (REG_HOST + 0x10)
@@ -196,19 +196,19 @@ typedef enum _Instruction_e {
 	TLBWI,
 	TLBWR,
 	TLBP,
-	ERET,
+	ERET,		// Return from Exception
 	MFC1,
 	DMFC1,
-	CFC1,	// Rd1 (rt) = R1 (fs)				Copy FPU fs into rt
+	CFC1,		// Rd1 (rt) = R1 (fs)				Copy FPU fs into rt
 	MTC1,
 	DMTC1,
-	CTC1,	// Rd1 (fs) = R1 (rt)				Copy from GPR rt to a FPU control register fs
-	BC1F,
+	CTC1,		// Rd1 (fs) = R1 (rt)				Copy from GPR rt to a FPU control register fs
+	BC1F,		// Branch on FP false
 	BC1T,
 	BC1FL,
 	BC1TL,
-	ADD_S,
-	SUB_S,
+	ADD_S,		// Rd1 (fd) = R1 (fs) + R2 (ft)
+	SUB_S,		// Rd1 (fd) = R1 (fs) - R2 (ft)
 	MUL_S,
 	DIV_S,
 	SQRT_S,
@@ -226,24 +226,24 @@ typedef enum _Instruction_e {
 	CVT_D_S,		// Rd1 (fd) = convert( R1 (fs) )		The value in FPR fs in format fmt is converted to a value in double floating-point format rounded according to the current rounding mode in FCSR. The result is placed in FPR fd.
 	CVT_W_S,
 	CVT_L_S,
-	C_F_S,
-	C_UN_S,
-	C_EQ_S,
-	C_UEQ_S,
-	C_OLT_S,
-	C_ULT_S,
-	C_OLE_S,
-	C_ULE_S,
-	C_SF_S,
-	C_NGLE_S,
-	C_SEQ_S,
-	C_NGL_S,
-	C_LT_S,
-	C_NGE_S,
-	C_LE_S,
-	C_NGT_S,
-	ADD_D,
-	SUB_D,
+	C_F_S,		// FP Compare	False
+	C_UN_S,		// FP Compare	Unordered
+	C_EQ_S,		// FP Compare	Equal
+	C_UEQ_S,	// FP Compare	Unordered or Equal
+	C_OLT_S,	// FP Compare	Ordered or Less Than
+	C_ULT_S,	// FP Compare	Unordered or Less Than
+	C_OLE_S,	// FP Compare	Ordered or Less Than or Equal
+	C_ULE_S,	// FP Compare	Unordered or Less Than or Equal
+	C_SF_S,		// FP Compare	Signaling False
+	C_NGLE_S,	// FP Compare	Not Greater than or Less Than or Equal
+	C_SEQ_S,	// FP Compare	Signaling Equal
+	C_NGL_S,	// FP Compare	Not Greater Than or Less Than
+	C_LT_S,		// FP Compare	Less Than
+	C_NGE_S,	// FP Compare	Not Greater Than or Equal
+	C_LE_S,		// FP Compare	Less Than or Equal
+	C_NGT_S,	// FP Compare	Not Greater Than
+	ADD_D,		// Rd1 (fd) = R1 (fs) + R2 (ft)
+	SUB_D,		// Rd1 (fd) = R1 (fs) - R2 (ft)
 	MUL_D,
 	DIV_D,
 	SQRT_D,

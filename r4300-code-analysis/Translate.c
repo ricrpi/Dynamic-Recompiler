@@ -480,6 +480,7 @@ void Translate_DelaySlot(code_seg_t*  codeSegment)
 			&& !(ops & OPS_LIKELY)
 			&& following_op > NO_OP)
 	{
+		ins = codeSegment->Intermcode;
 		delayInstruction = newEmptyInstr();
 
 		//generate the instruction to add.
@@ -1628,7 +1629,7 @@ void Translate_Literals(const code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
-	uint32_t x = 4;
+	uint32_t x = 0;
 
 	uint32_t InterimCodeLen = 0;
 
@@ -1648,11 +1649,11 @@ void Translate_Literals(const code_seg_t* const codeSegment)
 		case ARM_LDR_LIT:
 			if (codeSegment->Type == SEG_START)
 			{
-				ins->offset = ins->offset - x;
+				ins->offset = ins->offset - x - 12;
 			}
 			else if (codeSegment->Type == SEG_END)
 			{
-				ins->offset = InterimCodeLen * 4 - x + ins->offset;
+				ins->offset = InterimCodeLen * 4 - x + ins->offset - 4;
 			}
 
 			break;

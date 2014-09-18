@@ -142,13 +142,18 @@ uint32_t arm_encode(const Instruction_t ins)
 		return ins.cond << 28 | 1 << 27 | ins.PR << 24 | ins.U << 23 | ins.W << 21 | R1 << 16 | ins.Rmask;
 
 	case ARM_LDR_LIT:
-			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R2 << 12 | (ins.immediate&0xFFF);
+		if (ins.immediate < 0)
+		{
+			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | 0 << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | ((-ins.immediate)&0xFFF);
+		}else{
+			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | 1 << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins.immediate&0xFFF);
+		}
 	case ARM_LDR:
-			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | Rd1 << 16 | R2 << 12 | (ins.shift&0x1f << 7) | (ins.shiftType&3 << 5) | (R2&0xf);
+			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins.shift&0x1f << 7) | (ins.shiftType&3 << 5) | (R3&0xf);
 	case ARM_STR_LIT:
-			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | Rd1 << 16 | R1 << 12 | (ins.immediate&0xFFF);
+			return ins.cond << 28 | 0x1 << 26 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins.immediate&0xFFF);
 	case ARM_STR:
-			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | Rd1 << 16 | R1 << 12 | (ins.shift&0x1f << 7) | (ins.shiftType&3 << 5) | (R2&0xf);
+			return ins.cond << 28 | 0x3 << 25 | ins.PR << 24 | ins.U << 23 | ins.B << 22 | ins.W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins.shift&0x1f << 7) | (ins.shiftType&3 << 5) | (R3&0xf);
 
 	case ARM_LDRD_LIT:
 			return ins.cond << 28 | ins.PR << 24 | ins.U << 23 | 1 << 22 | ins.W << 21 | Rd1 << 16 | R1 << 12 | ((ins.immediate>>4)&0xf) | 0xd0 | (ins.immediate&0xf);
@@ -302,7 +307,7 @@ void arm_print(const uint32_t addr, const uint32_t word)
 		if (word & 1<<22) byt[0] = 'b';
 		if (!(word & 1<<23)) minus[0] = '-';
 
-		sprintf(imm, "#0x%x", (word&0xff << ((word>>8)&0xf)));
+		sprintf(imm, "#0x%x", word&0xfff);
 
 		if (word & (1 << 24)) // Pre/post
 			printf("\t%s%s%s\t%s, [%s, %s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], arm_reg_a[(word>>12)&0xf], minus, imm, wb);
@@ -461,15 +466,6 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	{
 		if (codeSeg->Type == SEG_START
 				|| codeSeg->Type == SEG_ALONE)
-		{
-			while (lits)
-			{
-				*out = lits->value;
-				out++;
-				lits = lits->next;
-			}
-		}
-		else if (codeSeg->Type == SEG_END)
 		{
 			while (lits)
 			{
