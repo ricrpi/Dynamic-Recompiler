@@ -130,6 +130,83 @@ static void sprintInstr(char* str, Instruction_t*ins)
 
 //------------------------------------------------------------------
 
+Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
+{
+	ins->instruction = ins_e;
+	ins->cond        = cond;
+	ins->Rd1.regID   = Rd1;
+	ins->R1.regID    = R1;
+	ins->R2.regID    = R2;
+
+	ins->I = 0;
+
+	switch (ins_e)
+	{
+	case SLL:
+	case SLLV:
+		ins-> shiftType = LOGICAL_LEFT; break;
+	case SRL:
+	case SRLV:
+		ins-> shiftType = LOGICAL_RIGHT; break;
+	case SRA:
+	case SRAV:
+		ins-> shiftType = ARITHMETIC_RIGHT; break;
+	case ARM_TST:
+	case ARM_TEQ:
+	case ARM_CMP:
+	case ARM_CMN:
+		assert(Rd1 == REG_NOT_USED); break;
+
+	case ARM_MOV:
+	case ARM_MVN:
+		assert(R1 == REG_NOT_USED); break;
+	case ARM_LDR_LIT:
+	case ARM_STR_LIT:
+
+		break;
+	default: break;
+	}
+
+	return ins;
+}
+
+Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
+{
+	ins->instruction = ins_e;
+	ins->cond        = cond;
+	ins->immediate   = imm;
+	ins->Rd1.regID   = Rd1;
+	ins->R1.regID    = R1;
+	ins->R2.regID    = R2;
+
+	ins->I = 1;
+
+	switch (ins_e)
+	{
+	case SLL:
+	case SLLV:
+		ins-> shiftType = LOGICAL_LEFT; break;
+	case SRL:
+	case SRLV:
+		ins-> shiftType = LOGICAL_RIGHT; break;
+
+	case ARM_MOV:
+	case ARM_MVN:
+		assert(R1 == REG_NOT_USED); break;
+	case ARM_LDR_LIT:
+	case ARM_STR_LIT:
+		if (imm < 0)
+		{
+			ins->immediate = -ins->immediate;
+			ins->U = 0;
+		}
+		break;
+	default: break;
+	}
+
+	return ins;
+}
+
 Instruction_t* newEmptyInstr()
 {
 	Instruction_t* newInstr;
@@ -170,145 +247,32 @@ Instruction_t* newEmptyInstr()
 
 Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
 {
-	Instruction_t* newInstr = newEmptyInstr(0);
+	Instruction_t* newInstr = newEmptyInstr();
 
-	newInstr->instruction = ins;
-	newInstr->cond        = cond;
-	newInstr->Rd1.regID   = Rd1;
-	newInstr->R1.regID    = R1;
-	newInstr->R2.regID    = R2;
-
-	switch (ins)
-	{
-	case SLL:
-	case SLLV:
-		newInstr-> shiftType = LOGICAL_LEFT; break;
-	case SRL:
-	case SRLV:
-		newInstr-> shiftType = LOGICAL_RIGHT; break;
-	case SRA:
-	case SRAV:
-		newInstr-> shiftType = ARITHMETIC_RIGHT; break;
-	case ARM_TST:
-	case ARM_TEQ:
-	case ARM_CMP:
-	case ARM_CMN:
-		assert(Rd1 == REG_NOT_USED); break;
-
-	case ARM_MOV:
-	case ARM_MVN:
-		assert(R1 == REG_NOT_USED); break;
-
-	default: break;
-	}
-
-	return newInstr;
+	return Instr(newInstr, ins, cond, Rd1, R1, R2);
 }
 
 Instruction_t* newInstrI(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
 {
-	Instruction_t* newInstr = newEmptyInstr(0);
+	Instruction_t* newInstr = newEmptyInstr();
 
-	newInstr->instruction = ins;
-	newInstr->cond        = cond;
-	newInstr->immediate   = imm;
-	newInstr->Rd1.regID   = Rd1;
-	newInstr->R1.regID    = R1;
-	newInstr->R2.regID    = R2;
-
-	newInstr->I = 1;
-
-	switch (ins)
-	{
-	case SLL:
-	case SLLV:
-		newInstr-> shiftType = LOGICAL_LEFT; break;
-	case SRL:
-	case SRLV:
-		newInstr-> shiftType = LOGICAL_RIGHT; break;
-	case SRA:
-	case SRAV:
-		newInstr-> shiftType = ARITHMETIC_RIGHT; break;
-	case ARM_TST:
-	case ARM_TEQ:
-	case ARM_CMP:
-	case ARM_CMN:
-		assert(Rd1 == REG_NOT_USED); break;
-
-	case ARM_MOV:
-	case ARM_MVN:
-		assert(R1 == REG_NOT_USED); break;
-	case ARM_LDR_LIT:
-	case ARM_STR_LIT:
-		if (imm < 0)
-		{
-			newInstr->immediate = -newInstr->immediate;
-			newInstr->U = 0;
-		}
-		break;
-	default: break;
-	}
-
-	return newInstr;
-}
-
-Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
-{
-	ins->instruction = ins_e;
-	ins->cond        = cond;
-	ins->immediate   = imm;
-	ins->Rd1.regID   = Rd1;
-	ins->R1.regID    = R1;
-	ins->R2.regID    = R2;
-
-	ins->I = 1;
-
-	switch (ins_e)
-	{
-	case SLL:
-	case SLLV:
-		ins-> shiftType = LOGICAL_LEFT; break;
-	case SRL:
-	case SRLV:
-		ins-> shiftType = LOGICAL_RIGHT; break;
-	case SRA:
-	case SRAV:
-		ins-> shiftType = ARITHMETIC_RIGHT; break;
-	case ARM_TST:
-	case ARM_TEQ:
-	case ARM_CMP:
-	case ARM_CMN:
-		assert(Rd1 == REG_NOT_USED); break;
-
-	case ARM_MOV:
-	case ARM_MVN:
-		assert(R1 == REG_NOT_USED); break;
-	case ARM_LDR_LIT:
-	case ARM_STR_LIT:
-		if (imm < 0)
-		{
-			ins->immediate = -ins->immediate;
-			ins->U = 0;
-		}
-		break;
-	default: break;
-	}
-
-	return ins;
+	return InstrI(newInstr, ins, cond, Rd1, R1, R2, imm);
 }
 
 Instruction_t* newInstrS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
 {
-	Instruction_t* newIns = newInstr(ins, cond, Rd1, R1, R2);
+	Instruction_t* newIns = newEmptyInstr();
 
+	Instr(newInstr, ins, cond, Rd1, R1, R2);
 	newIns->S = 1;
 
 	return newIns;
 }
+
 Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
 {
-	Instruction_t* newIns = newInstrI(ins, cond, Rd1, R1, R2, imm);
-
+	Instruction_t* newIns = newEmptyInstr();
+	InstrI(newInstr, ins, cond, Rd1, R1, R2, imm);
 	newIns->S = 1;
 
 	return newIns;

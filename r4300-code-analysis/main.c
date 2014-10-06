@@ -26,7 +26,8 @@ static void handler(int sig, siginfo_t *si, void *unused)
 {
 	static int level = 0;
 
-	printf("\nSIG_SEGV detected trying to access %p\n", si->si_addr);
+	if (sig == SIGSEGV)	printf("\nSegmentation detected trying to access %p\n", si->si_addr);
+	if (sig == SIGABRT)	printf("\nAbort detected\n");
 
 	if (level) exit(0);
 
@@ -38,6 +39,12 @@ static void handler(int sig, siginfo_t *si, void *unused)
 
 	exit(0);
 }
+
+void interrupt()
+{
+
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -54,8 +61,9 @@ int main(int argc, char* argv[])
 	sa.sa_sigaction = handler;
 
 	sigaction(SIGSEGV, &sa, NULL);
+	sigaction(SIGABRT, &sa, NULL);
 
-	printf("R4300 Decompiler\n\nOpening %s\n",argv[1]);
+	printf("R4300 Recompiler\n\nOpening %s\n",argv[1]);
 
 	FILE *fPtr = fopen(argv[1], "rb");
 	if (fPtr == NULL) return 2;
@@ -65,16 +73,27 @@ int main(int argc, char* argv[])
 	romlength = ftell(fPtr);
 	fseek(fPtr, 0L, SEEK_SET);
 
-	if (mmap((uint32_t*)(MMAP_CODE_SEG_BASE)
+	if (mmap((uint32_t*)(MMAP_BASE)
 			, MMAP_BASE_SIZE + romlength
 			, PROT_READ|PROT_WRITE|PROT_EXEC
 			, MAP_PRIVATE| MAP_FIXED | MAP_ANONYMOUS
 			, -1
-			, 0 ) != (uint32_t*)(MMAP_CODE_SEG_BASE))
+			, 0 ) != (uint32_t*)(MMAP_BASE))
 	{
 		printf("Could not mmap\n");
 		return 1;
 	}
+
+	if (mmap((uint32_t*)(MMAP_PIF_BOOT_ROM)
+				, 4096
+				, PROT_READ|PROT_WRITE|PROT_EXEC
+				, MAP_PRIVATE| MAP_FIXED | MAP_ANONYMOUS
+				, -1
+				, 0 ) != (uint32_t*)(MMAP_PIF_BOOT_ROM))
+		{
+			printf("Could not mmap PIF area\n");
+			return 1;
+		}
 
 	unsigned char imagetype;
 
@@ -170,7 +189,7 @@ int main(int argc, char* argv[])
 	printf("%d code segments generated\n", segmentData.count);
 
 // Instruction Counts for input ROM
-#if 1
+#if 0
 	code_seg_t* nextCodeSeg;
 
 	uint32_t ins_count[sizeof_mips_op_t];
@@ -205,6 +224,7 @@ int main(int argc, char* argv[])
 
 
 	munmap((uint32_t*)MMAP_BASE, MMAP_BASE_SIZE + romlength);
+	munmap((uint32_t*)MMAP_PIF_BOOT_ROM, 4096);
 
 	printf("\nEND\n");
 	return 0;

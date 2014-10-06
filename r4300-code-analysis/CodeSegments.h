@@ -69,6 +69,7 @@ typedef struct _caller_t
 
 typedef struct _code_seg
 {
+	void* ARMEntryPoint;
 	struct _code_seg* next;		//next code segment in linked list
 	struct _code_seg* prev;		//previous code segment in linked list
 	seg_type_e Type;
@@ -117,6 +118,8 @@ typedef struct _code_segment_data
 	code_seg_t* segStop;
 	code_seg_t* segInterrupt;
 	code_seg_t* segMem;
+	code_seg_t* segBranchUnknown;
+	code_seg_t* segTrap;
 
 	code_seg_t* dbgCurrentSegment;
 } code_segment_data_t;
@@ -143,5 +146,8 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize);
 uint32_t addLiteral(code_seg_t* const codeSegment,  regID_t* const base, int32_t* const offset, const uint32_t value);
 
 int32_t ScanForCode(const uint32_t* const address, const uint32_t length);
+
+code_seg_t* getSegmentAt(void* address);
+
 
 #endif /* CODESEGMENTS_H_ */

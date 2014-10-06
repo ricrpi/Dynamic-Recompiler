@@ -58,7 +58,7 @@
 #define REG_TEMP_GEN3 		(REG_TEMP | 0x04)
 #define REG_TEMP_GEN4 		(REG_TEMP | 0x05)
 #define REG_TEMP_STR_CONST 	(REG_TEMP | 0x06)
-
+#define REG_TEMP_JR1		(REG_TEMP | 0x07)
 
 //These are the HOST registers. Translation MUST not change them
 #define REG_HOST_FP			(REG_HOST | 0x0b)
@@ -190,8 +190,8 @@ typedef enum _Instruction_e {
 	ORI,	// Rd1 (rt) = R1 (rs) | imm16 		To do a bitwise logical OR with a constant.
 	XORI,	// Rd1 (rt) = R1 (rs) ^ imm16 		Combine the contents of GPR rs and the 16-bit zero-extended immediate in a bitwise logical exclusive OR operation and place the result into GPR rt.
 	LUI,	// Rd1 (rt) = imm16 << 16 			The 16-bit immediate is shifted left 16 bits and concatenated with 16 bits of low-order zeros. The 32-bit result is sign-extended and placed into GPR rt.
-	MFC0,
-	MTC0,
+	MFC0,	// Rd1 = R1
+	MTC0,	// Rd1 = R1
 	TLBR,
 	TLBWI,
 	TLBWR,
@@ -369,7 +369,7 @@ typedef enum _Instruction_e {
 	ARM_REV16,
 	ARM_REVSH,
 	ARM_AND,		// R1 (Rd) = R2 (Rn) & Op2
-	ARM_BRANCH,
+	ARM_B,
 	ARM_EOR,
 	ARM_SUB,		// Rd` (Rd) = R1 - Op2
 	ARM_RSB,		// Rd1 (Rd) = Op2 - R1
@@ -493,7 +493,7 @@ typedef struct _Instruction
 
 	uint8_t A:1;			// Accumulate
 	uint8_t B:1;			// Byte/Word bit, 1 = byte
-	uint8_t I:1;			// Immediate
+	uint8_t I:1;			// Immediate, also used by ARM_B for absolute(1) or relative(0) branching
 	uint8_t Ln:1;			// Link bit for branch
 	uint8_t PR:1;			// Pre/Post increment, 1 for pre
 	uint8_t S:1;			// Set condition flags
@@ -519,6 +519,8 @@ Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, cons
 Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask);
 
 Instruction_t* newInstrPOP(const Condition_e cond, const uint32_t Rmask);
+
+Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
 
 Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
 

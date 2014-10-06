@@ -55,6 +55,8 @@ code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru
 code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data);
 code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data);
 code_seg_t* Generate_ISR(code_segment_data_t* seg_data);
+code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data);
+code_seg_t* Generate_MIPS_Trap(code_segment_data_t* seg_data);
 
 
 void Translate_init(code_seg_t* const codeSegment);
@@ -74,6 +76,10 @@ void Translate_Constants(code_seg_t* const codeSegment);
  *
  */
 void Translate_32BitRegisters(code_seg_t* const codeSegment);
+
+void Translate_Trap(code_seg_t* const codeSegment);
+
+void Translate_Branch(code_seg_t* const codeSegment);
 
 void Translate_Memory(code_seg_t* const codeSegment);
 

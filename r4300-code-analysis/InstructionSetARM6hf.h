@@ -33,8 +33,6 @@ const static char* const arm_cond[] = {
 "nv"
 };
 
-uint32_t arm_encode(const Instruction_t ins);
-
 void arm_print(const uint32_t addr, const uint32_t word);
 
 void emit_arm_code(code_seg_t* const codeSeg);

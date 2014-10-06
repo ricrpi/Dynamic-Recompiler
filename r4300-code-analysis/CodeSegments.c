@@ -482,7 +482,7 @@ static int32_t UpdateCodeBlockValidity(code_seg_t** const Block, const uint32_t*
 					newSeg->MIPScodeLen = -offset;
 					newSeg->Type = SEG_SANDWICH;
 
-					for (z = x; z < x - offset; z++)
+					for (z = y + offset + 1; z < y + 1; z++)
 					{
 						Block[z] = newSeg;
 					}
@@ -641,7 +641,7 @@ int32_t ScanForCode(const uint32_t* const address, const uint32_t length)
 	switch ((((uint32_t)address)>>24) & 0xFF)
 	{
 	case 0x88:
-		Bounds = segmentData.StaticBounds;
+		Bounds = &segmentData.StaticBounds[((uint32_t)address-0x88000000)/4];
 		upperAddress = segmentData.StaticLength;
 		addr = (uint32_t*)((uint32_t)address & 0x88FFFFFF);
 		break;
@@ -652,13 +652,26 @@ int32_t ScanForCode(const uint32_t* const address, const uint32_t length)
 	case 0x80:
 	case 0xA0:
 	default:
-		Bounds = segmentData.DynamicBounds;
+		Bounds = &segmentData.DynamicBounds[((uint32_t)address)/4];
 		upperAddress = segmentData.DynamicLength;
 		addr = (uint32_t*)((uint32_t)address & 0x80FFFFFF);
 		break;
 	}
 
 	return UpdateCodeBlockValidity(Bounds, addr, length, upperAddress);
+}
+
+code_seg_t* getSegmentAt(void* address)
+{
+	if (address >= 0x88000000)
+	{
+		return segmentData.StaticBounds[((uint32_t)address - 0x88000000)/4];
+	}
+	else
+	{
+		return segmentData.DynamicBounds[((uint32_t)address)/4];
+	}
+
 }
 
 /*
@@ -688,6 +701,32 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 
 	LinkStaticSegments();
 
+	// Build the helper functions
+
+	segmentData.segStart = Generate_CodeStart(&segmentData);
+	emit_arm_code(segmentData.segStart);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_START)) = (uint32_t)segmentData.segStart->ARMEntryPoint;
+
+	segmentData.segStop = Generate_CodeStop(&segmentData);
+	emit_arm_code(segmentData.segStop);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_STOP)) = (uint32_t)segmentData.segStop->ARMEntryPoint;
+
+	segmentData.segMem = Generate_MemoryTranslationCode(&segmentData, NULL);
+	emit_arm_code(segmentData.segMem);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS)) = (uint32_t)segmentData.segMem->ARMEntryPoint;
+
+	segmentData.segInterrupt = Generate_ISR(&segmentData);
+	emit_arm_code(segmentData.segInterrupt);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_INTERRUPT)) = (uint32_t)segmentData.segInterrupt->ARMEntryPoint;
+
+	segmentData.segBranchUnknown = Generate_BranchUnknown(&segmentData);
+	emit_arm_code(segmentData.segBranchUnknown);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN)) = (uint32_t)segmentData.segBranchUnknown->ARMEntryPoint;
+
+	segmentData.segTrap = Generate_MIPS_Trap(&segmentData);
+	emit_arm_code(segmentData.segTrap);
+	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_TRAP)) = (uint32_t)segmentData.segTrap->ARMEntryPoint;
+
 	// Compile the First contiguous block of Segments
 	code_seg_t* seg = segmentData.StaticSegments;
 
@@ -695,26 +734,26 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	{
 		segmentData.dbgCurrentSegment = seg;
 		Translate(seg);
+
+		emit_arm_code(seg);
+
 		seg = seg->next;
 	}
 	segmentData.dbgCurrentSegment = seg;
 	Translate(seg);
 
-	segmentData.segStart = Generate_CodeStart(&segmentData);
-	emit_arm_code(segmentData.segStart);
-	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_START)) = (uint32_t)segmentData.segStart->ARMcode;
+	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)segmentData.StaticSegments->ARMEntryPoint;
 
-	segmentData.segStop = Generate_CodeStop(&segmentData);
-	emit_arm_code(segmentData.segStop);
-	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_STOP)) = (uint32_t)segmentData.segStop->ARMcode;
+#if 1
+	printf("FUNC_GEN_START                   0x%x\n", (uint32_t)segmentData.segStart->ARMEntryPoint);
+	printf("FUNC_GEN_STOP                    0x%x\n", (uint32_t)segmentData.segStop->ARMEntryPoint);
+	printf("FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS  0x%x\n", (uint32_t)segmentData.segMem->ARMEntryPoint);
+	printf("FUNC_GEN_INTERRUPT               0x%x\n", (uint32_t)segmentData.segInterrupt->ARMEntryPoint);
+	printf("FUNC_GEN_BRANCH_UNKNOWN          0x%x\n", (uint32_t)segmentData.segBranchUnknown->ARMEntryPoint);
+	printf("FUNC_GEN_TRAP                    0x%x\n", (uint32_t)segmentData.segTrap->ARMEntryPoint);
+	printf("RECOMPILED_CODE_START            0x%x\n", (uint32_t)segmentData.StaticSegments->ARMEntryPoint);
 
-	segmentData.segMem = Generate_MemoryTranslationCode(&segmentData, NULL);
-	emit_arm_code(segmentData.segMem);
-	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_LOOKUP)) = (uint32_t)segmentData.segMem->ARMcode;
-
-	segmentData.segInterrupt = Generate_ISR(&segmentData);
-	emit_arm_code(segmentData.segInterrupt);
-	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_INTERRUPT)) = (uint32_t)segmentData.segInterrupt->ARMcode;
+#endif
 
 	segmentData.dbgCurrentSegment = segmentData.StaticSegments;
 

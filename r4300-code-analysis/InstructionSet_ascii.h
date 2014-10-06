@@ -248,7 +248,7 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "rev16",
 "revsh",
 "and",		 //  R1 (Rd) = R2 (Rn) & Op2
-"branch",
+"b",
 "eor",
 "sub",		 //  Rd` (Rd) = R1 - Op2
 "rsb",		 //  Rd1 (Rd) = Op2 - R1

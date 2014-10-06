@@ -7,6 +7,7 @@
 
 #include "CodeSegments.h"
 #include "InstructionSet.h"
+#include "InstructionSet_ascii.h"
 #include "InstructionSetMIPS4.h"
 #include "InstructionSetARM6hf.h"
 #include <stdio.h>
@@ -16,6 +17,8 @@
 #include <stdlib.h>
 #include "memory.h"
 #include "Translate.h"
+
+#include "Debugger.h"	// RWD
 
 #define ADD_LL_NEXT(x, y) (x)->nextInstruction = (y)->nextInstruction; \
 			(y)->nextInstruction = (x); \
@@ -34,16 +37,17 @@ uint8_t uMemoryBase = 0x80;
 
 //=============================================================
 
-static Instruction_t* insertCall(Instruction_t* ins, const Condition_e cond, const int32_t offset)
+static Instruction_t* insertCallGlobal(Instruction_t* ins, const Condition_e cond, const int32_t offset)
 {
 	Instruction_t* newInstruction;
 
+
 	//push lr
-	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_LR);
+	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_GENERAL);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//set lr
-	newInstruction 	= newInstrI(ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 8);
+	newInstruction 	= newInstrI(ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 4);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// load function address from [fp + offset] into PC
@@ -51,7 +55,7 @@ static Instruction_t* insertCall(Instruction_t* ins, const Condition_e cond, con
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// pop lr
-	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_LR);
+	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_GENERAL);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	return ins;
@@ -269,7 +273,90 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	addLiteral(code_seg, &base, &offset,(uint32_t)MMAP_FP_BASE);
 	assert(base == REG_HOST_PC);
 
-#if 1	// Test Literal loading
+#if defined(TEST_BRANCHING_FORWARD)
+	newInstruction 		= newInstrI(ARM_B, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 3);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x1);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x2);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x4);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x8);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x10);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x20);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x40);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// return back to debugger
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+#elif defined(TEST_BRANCHING_BACKWARD)
+
+// Jump forwards to the Landing Pad
+	newInstruction 		= newInstrI(ARM_B, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 10);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x1);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x2);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x4);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x8);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x10);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x20);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x40);
+	ADD_LL_NEXT(newInstruction, ins);
+
+// return back to debugger
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+// Landing pad
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+// Now jump backwards
+	newInstruction 		= newInstrI(ARM_B, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, -10);
+	ADD_LL_NEXT(newInstruction, ins);
+
+#elif defined(TEST_LITERAL)	// Test Literal loading
 	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
 
@@ -282,7 +369,7 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// start executing recompiled code
-	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_FP, FUNC_GEN_START);
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_FP, RECOMPILED_CODE_START);
 	ADD_LL_NEXT(newInstruction, ins);
 #endif
 
@@ -315,6 +402,10 @@ code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data)
 	return code_seg;
 }
 
+/*
+ * This is equivalent to cc_interupt() in new_dynarec
+ *
+ */
 code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 {
 	code_seg_t* 	code_seg 		= newSegment();
@@ -323,17 +414,54 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 
 	seg_data->dbgCurrentSegment = code_seg;
 
-	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI2 );
+	// need to test if interrupts are enabled (Status Register bit 0)
+	newInstruction 		= newInstrI(ARM_TST, AL, REG_NOT_USED, REG_STATUS, REG_NOT_USED, 0x01);
 	code_seg->Intermcode = ins = newInstruction;
-
-	// Call interrupt C function
-
-	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
-	ADD_LL_NEXT(newInstruction, ins);
 
 	// Return
 	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
+
+	// Call interrupt C function
+	insertCallGlobal(ins, AL, FUNC_GEN_INTERRUPT);
+
+	// Return
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	Translate_Registers(code_seg);
+
+	return code_seg;
+}
+
+code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
+{
+	code_seg_t* 	code_seg 		= newSegment();
+	Instruction_t* 	newInstruction;
+	Instruction_t* 	ins 			= NULL;
+
+	seg_data->dbgCurrentSegment = code_seg;
+
+	// Return
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	code_seg->Intermcode = ins = newInstruction;
+
+	Translate_Registers(code_seg);
+
+	return code_seg;
+}
+
+code_seg_t* Generate_MIPS_Trap(code_segment_data_t* seg_data)
+{
+	code_seg_t* 	code_seg 		= newSegment();
+	Instruction_t* 	newInstruction;
+	Instruction_t* 	ins 			= NULL;
+
+	seg_data->dbgCurrentSegment = code_seg;
+
+	// Return
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	code_seg->Intermcode = ins = newInstruction;
 
 	Translate_Registers(code_seg);
 
@@ -528,10 +656,11 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 
 	if (bCountSaturates)
 	{
-		printf("Optimize_CountRegister failed. Not implemented QSUB \n");
+		printf("Optimize_CountRegister failed. Not implemented QADD \n");
 		abort();
 	}
 
+#if 0
 	//loop through the instructions and update COUNT every countFrequency
 
 	while (ins->nextInstruction->nextInstruction)
@@ -545,16 +674,16 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 
 			if (bCountSaturates)
 			{
-				//TODO QSUB
+				//TODO QADD
 			}
 			else
 			{
-				newInstruction = newInstrIS(ARM_SUB,AL,REG_COUNT,REG_COUNT,REG_NOT_USED,uiCountFrequency);
+				newInstruction = newInstrIS(ARM_ADD,AL,REG_COUNT,REG_COUNT,REG_NOT_USED, uiCountFrequency);
 				ADD_LL_NEXT(newInstruction, ins);
 
 				instrCountRemaining -= uiCountFrequency;
 
-				ins = insertCall(ins, MI, FUNC_GEN_INTERRUPT);
+				ins = insertCallGlobal(ins, PL, FUNC_GEN_INTERRUPT);
 				instrCount = 0;
 			}
 		}
@@ -562,6 +691,7 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 		ins = ins->nextInstruction;
 	}
 	//now add a final update before end of function
+#endif
 
 	if (instrCount && instrCountRemaining)
 	{
@@ -574,13 +704,24 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 		}
 		else
 		{
-			//TODO think this might be add and on, overflow or positive, we branch
-			newInstruction = newInstrIS(ARM_SUB,AL,REG_COUNT,REG_COUNT,REG_NOT_USED,instrCountRemaining);
-
+			newInstruction = newInstrI(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff);
 			newInstruction->nextInstruction = ins->nextInstruction;
 			ADD_LL_NEXT(newInstruction, ins);
 
-			ins = insertCall(ins, MI, FUNC_GEN_INTERRUPT);
+			if (instrCountRemaining > 255)
+			{
+				newInstruction = newInstrI(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff00);
+				ADD_LL_NEXT(newInstruction, ins);
+			}
+
+			newInstruction = newInstrS(ARM_CMP, AL, REG_NOT_USED, REG_COMPARE, REG_COUNT);
+			ADD_LL_NEXT(newInstruction, ins);
+
+			// We need to set IP7 of the Cause Register and call cc_interrupt()
+			newInstruction = newInstrI(ARM_ORR, AL, REG_CAUSE, REG_CAUSE, REG_NOT_USED, 0x8000);
+			ADD_LL_NEXT(newInstruction, ins);
+
+			ins = insertCallGlobal(ins, PL, FUNC_GEN_INTERRUPT);
 
 			return;
 		}
@@ -636,6 +777,13 @@ void Translate_Constants(code_seg_t* const codeSegment)
 	{
 		switch (ins->instruction)
 		{
+		case MTC0: if (ins->R1.regID == 0)
+			{
+				ins->instruction = ARM_MOV;
+				ins->I = 1;
+				ins->R1.regID = REG_NOT_USED;
+				ins->immediate = 0;
+			}break;
 		case LUI:
 			ins->Rd1.state = RS_CONSTANT_I8;
 			if (ins->immediate < 0)
@@ -644,8 +792,7 @@ void Translate_Constants(code_seg_t* const codeSegment)
 			}else
 			{
 			ins->Rd1.i8 = ins->immediate;
-			}
-			break;
+			}			break;
 		default: break;
 		}
 		ins = ins->nextInstruction;
@@ -1044,7 +1191,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ADD_LL_NEXT(new_ins, ins);
 
 			// now lookup virtual address
-			ins = insertCall(ins, EQ, FUNC_GEN_LOOKUP);
+			ins = insertCallGlobal(ins, EQ, FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS);
 			break;
 		case SDL: break;
 		case SDR: break;
@@ -1074,7 +1221,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			new_ins = newInstrI(ARM_LDR_LIT, NE, funcTempReg, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
 
-			ins = insertCall(ins, EQ, FUNC_GEN_LOOKUP);
+			ins = insertCallGlobal(ins, EQ, FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS);
 
 			break;
 		case LBU: break;
@@ -1389,13 +1536,13 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 		}
 }
 
-
-#if 0
-void Translate_Generic(code_seg_t* const codeSegment)
+void Translate_Trap(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	Instruction_t*new_ins;
 	ins = codeSegment->Intermcode;
+
+	// TODO FPU Traps!
 
 	while (ins)
 	{
@@ -1425,9 +1572,9 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case DMULTU: break;
 			case DDIV: break;
 			case DDIVU: break;
-			case ADD: break;
+			case ADD: break;	// TODO TRAP Overflow
 			case ADDU: break;
-			case SUB: break;
+			case SUB: break;	// TODO TRAP Overflow
 			case SUBU: break;
 			case AND: break;
 			case OR: break;
@@ -1435,30 +1582,36 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case NOR: break;
 			case SLT: break;
 			case SLTU: break;
-			case DADD: break;
+			case DADD: break;	// TODO TRAP Overflow
 			case DADDU: break;
-			case DSUB: break;
+			case DSUB: break;	// TODO TRAP Overflow
 			case DSUBU: break;
-			case TGE: break;
-			case TGEU: break;
-			case TLT: break;
-			case TLTU: break;
-			case TEQ: break;
-			case TNE: break;
+			case TGE: break;	// TODO TRAP Conditional
+			case TGEU: break;	// TODO TRAP Conditional
+			case TLT: break;	// TODO TRAP Conditional
+			case TLTU: break;	// TODO TRAP Conditional
+			case TEQ: break; 	// TODO TRAP Conditional
+			case TNE: break;	// TODO TRAP Conditional
 			case DSLL: break;
 			case DSRL: break;
 			case DSRA: break;
 			case DSLL32: break;
 			case DSRL32: break;
 			case DSRA32: break;
-			case TGEI: break;
-			case TGEIU: break;
-			case TLTI: break;
-			case TLTIU: break;
-			case TEQI: break;
-			case TNEI: break;
-			case ADDI: break;
-			case ADDIU: break;
+			case TGEI: break;	// TODO TRAP Conditional
+			case TGEIU: break;	// TODO TRAP Conditional
+			case TLTI: break;	// TODO TRAP Conditional
+			case TLTIU: break;	// TODO TRAP Conditional
+			case TEQI: break;	// TODO TRAP Conditional
+			case TNEI: break;	// TODO TRAP Conditional
+			case ADDI: 			//TODO TRAP Overflow
+				ins->instruction = ARM_ADD;
+				ins->S = 1;
+				insertCallGlobal(ins, VS, MMAP_FP_BASE + FUNC_GEN_TRAP);
+				break;
+			case ADDIU:
+				ins->instruction = ARM_ADD;
+				break;
 			case SLTI: break;
 			case SLTIU: break;
 			case ANDI: break;
@@ -1466,7 +1619,15 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case XORI: break;
 			case LUI: break;
 			case MFC0: break;
-			case MTC0: break;
+				ins->instruction = ARM_MOV;
+				ins->R2 = ins->R1;
+				ins->R1.regID = REG_NOT_USED;
+				break;
+			case MTC0:
+				ins->instruction = ARM_MOV;
+				ins->R2 = ins->R1;
+				ins->R1.regID = REG_NOT_USED;
+				break;
 			case TLBR: break;
 			case TLBWI: break;
 			case TLBWR: break;
@@ -1478,7 +1639,6 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case MTC1: break;
 			case DMTC1: break;
 			case CTC1: break;
-			case BC1: break;
 			case BC1F: break;
 			case BC1T: break;
 			case BC1FL: break;
@@ -1557,7 +1717,7 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case CVT_D_W: break;
 			case CVT_S_L: break;
 			case CVT_D_L: break;
-			case DADDI: break;
+			case DADDI: break;  // TODO TRAP Overflow
 			case DADDIU: break;
 			case CACHE: break;
 			case LL: break;
@@ -1620,8 +1780,206 @@ void Translate_Generic(code_seg_t* const codeSegment)
 		ins = ins->nextInstruction;
 	}
 }
-#endif
 
+void Translate_Branch(code_seg_t* const codeSegment)
+{
+	code_seg_t* 	BranchToSeg;
+	Instruction_t*	ins;
+	Instruction_t*	new_ins;
+	int32_t 		offset;
+	size_t 			tgt_address;
+	uint8_t 		branchAbsolute 		= 1;
+	uint32_t 		instructionCount 	= 0;
+
+	ins = 			codeSegment->Intermcode;
+
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+			case BEQ:
+			case BEQL:
+				offset = ins->offset;
+				if (0 == ins->R2.regID)
+				{
+					InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0);
+				}
+				else
+				{
+					Instr(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID, ins->R2.regID);
+				}
+
+				BranchToSeg = getSegmentAt(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset);
+
+				if (BranchToSeg)
+				{
+					if (BranchToSeg == codeSegment)	//loops to self
+					{
+						tgt_address = -instructionCount -1;
+						branchAbsolute = 0;
+					}
+					else if (BranchToSeg->ARMEntryPoint)
+					{
+						tgt_address = (size_t)BranchToSeg->ARMEntryPoint;
+						branchAbsolute = 1;
+					}
+					else
+					{
+						tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+						branchAbsolute = 1;
+					}
+				}
+				else // No segment Found
+				{
+					tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+					branchAbsolute = 1;
+				}
+
+				new_ins = newInstr(ARM_B, EQ, REG_NOT_USED,REG_NOT_USED,REG_NOT_USED);
+
+				new_ins->offset = tgt_address;
+				new_ins->I = branchAbsolute;
+
+				new_ins->nextInstruction = ins->nextInstruction;
+				ins->nextInstruction = new_ins;
+				ins = ins->nextInstruction;
+
+
+				break;
+			case BNE:
+			case BNEL:
+				offset = ins->offset;
+				if (0 == ins->R2.regID)
+				{
+					InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0);
+				}
+				else
+				{
+					Instr(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID, ins->R2.regID);
+				}
+
+				BranchToSeg = getSegmentAt(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset);
+
+				if (BranchToSeg)
+				{
+					if (BranchToSeg == codeSegment)	//loops to self
+					{
+						tgt_address = -instructionCount -1;
+						branchAbsolute = 0;
+					}
+					else if (BranchToSeg->ARMEntryPoint)
+					{
+						tgt_address = (size_t)BranchToSeg->ARMEntryPoint;
+						branchAbsolute = 1;
+					}
+					else
+					{
+						tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+						branchAbsolute = 1;
+					}
+				}
+				else // No segment Found
+				{
+					tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+					branchAbsolute = 1;
+				}
+
+				new_ins = newInstr(ARM_B, NE, REG_NOT_USED,REG_NOT_USED,REG_NOT_USED);
+
+				new_ins->offset = tgt_address;
+				new_ins->I = branchAbsolute;
+
+				new_ins->nextInstruction = ins->nextInstruction;
+				ins->nextInstruction = new_ins;
+				ins = ins->nextInstruction;
+
+				break;
+			case J:
+			case JAL:
+				offset = ins->offset;
+
+				BranchToSeg = getSegmentAt(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset);
+
+				if (BranchToSeg)
+				{
+					if (BranchToSeg == codeSegment)	//loops to self
+					{
+						tgt_address = -instructionCount -1;
+						branchAbsolute = 0;
+					}
+					else if (BranchToSeg->ARMEntryPoint)
+					{
+						tgt_address = (size_t)BranchToSeg->ARMEntryPoint;
+						branchAbsolute = 1;
+					}
+					else
+					{
+						tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+						branchAbsolute = 1;
+					}
+				}
+				else // No segment Found
+				{
+					tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+					branchAbsolute = 1;
+				}
+
+				new_ins = newInstr(ARM_B, AL, REG_NOT_USED,REG_NOT_USED,REG_NOT_USED);
+
+				new_ins->offset = tgt_address;
+				new_ins->I = branchAbsolute;
+
+				new_ins->nextInstruction = ins->nextInstruction;
+				ins->nextInstruction = new_ins;
+				ins = ins->nextInstruction;
+				break;
+			case JR:
+			case JALR:
+				// we need to lookup the code segment we should be branching to according to the value in the register
+				// work out address in code segment lookup table
+
+				// TODO how do we handle static/dynamic segment lookups?
+
+				//new_ins = newInstrI(ARM_MOV, AL, REG_TEMP_JR1, REG_NOT_USED, MMAP_CODE_SEG_BASE);
+				//ADD_LL_NEXT(new_ins, ins);
+
+				//new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_JR1, REG_TEMP_JR1, MMAP_CODE_SEG_BASE);
+				//ADD_LL_NEXT(new_ins, ins);
+
+
+				break;
+			case BLTZ:
+			case BGEZ:
+			case BLEZ:
+			case BGTZ:
+
+			case BLTZL:
+			case BGEZL:
+
+			case BLEZL:
+			case BGTZL:
+
+			case BLTZAL:
+			case BGEZAL:
+			case BLTZALL:
+			case BGEZALL:
+
+			case BC1F:
+			case BC1T:
+			case BC1FL:
+			case BC1TL:
+				printf("Cannot handle this type of branch '%s' yet in Translate.c:%d\n", Instruction_ascii[STRIP(ins->instruction)], __LINE__);
+
+				break;
+
+		default:
+			break;
+		}
+
+		ins = ins->nextInstruction;
+		instructionCount++;
+	}
+}
 /*
  * Function to correct the offset to be applied for literal store/loading
  */
@@ -1671,18 +2029,17 @@ void Translate(code_seg_t* const codeSegment)
 
 	Translate_DelaySlot(codeSegment);
 	Translate_CountRegister(codeSegment);
-
 	Translate_Constants(codeSegment);
 	Translate_32BitRegisters(codeSegment);
+
+	Translate_Trap(codeSegment);
 	Translate_Memory(codeSegment);
 
 	Translate_LoadStoreWriteBack(codeSegment);
-
 	Translate_LoadCachedRegisters(codeSegment);
-
 	Translate_StoreCachedRegisters(codeSegment);
 
+	Translate_Branch(codeSegment);
 	Translate_Registers(codeSegment);
-
 	Translate_Literals(codeSegment);
 }

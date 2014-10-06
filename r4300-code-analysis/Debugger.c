@@ -23,26 +23,31 @@ static code_seg_t* CurrentCodeSeg = NULL;
 void getCmd() {
 
 	unsigned char line[LINE_LEN];
-	int c,d;
+	int c=0;
+	int d;
 	int argN = 0;
 
 	memset(line, '\0', sizeof(line));
 
-	for(c=0;c<sizeof(userInput[argN])-1;c++) {
+	while (c < sizeof(userInput[argN])-1) {
 		line[c] = fgetc(stdin);
 
 		// TODO strip arrow key input for terminals, eclipse strips this already
-
 		if (line[c] == '\n' || line[c] == '\r')
 		{
 			line[c] = '\0';
 			break;
 		}
-		else if (line[c] == 128 && c > 0)
+		else if (line[c] == 128)
 		{
-			c--;
+			if (c > 0)c--;
+		}
+		else
+		{
+			c++;
 		}
 	}
+
 	c=d=0;
 
 	//pushback history
@@ -160,7 +165,15 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 
 		for (x=0; x< count; x++)
 		{
-			arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			if (addr + x == (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
+			{
+				printf(".EntryPoint:\n");
+				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			}
+			else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
+				printf("\t.word\t%12d (0x%x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			else
+				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}
 
 		printLine();
@@ -464,6 +477,27 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 		}
 		printLine();
 	}
+	else if (!CMD_CMP(1, "lookup"))
+	{
+		uint32_t val = strtoul(userInput[2], &tailPointer, 0);
+		uint32_t len = strtoul(userInput[3], &tailPointer, 0);
+		int x;
+
+		if (val < 0x88000000)
+		{
+			for (x=0; x < len; x++)
+			{
+				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)segmentData->DynamicBounds[(val)/4 + x]);
+			}
+		}
+		else
+		{
+			for (x=0; x < len; x++)
+			{
+				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)segmentData->StaticBounds[(val-0x88000000)/4 + x]);
+			}
+		}
+	}
 	else
 	{
 		printf(HELP_PRINT);
@@ -588,64 +622,88 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	else if (!CMD_CMP(1, "full"))
 	{
 		Translate(CurrentCodeSeg);
+		printf("Translate:\n");
 		emit_arm_code(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "init")				|| !CMD_CMP(1, "1"))
 	{
 		Translate_init(CurrentCodeSeg);
+		printf("Translate_init:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "DelaySlot") 			|| !CMD_CMP(1, "2"))
 	{
 		Translate_DelaySlot(CurrentCodeSeg);
+		printf("Translate_DelaySlot:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "Count") 				|| !CMD_CMP(1, "3"))
 	{
 		Translate_CountRegister(CurrentCodeSeg);
+		printf("Translate_Count:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "Constants") 			|| !CMD_CMP(1, "4"))
 	{
 		Translate_Constants(CurrentCodeSeg);
+		printf("Translate_Constants:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "32BitRegisters") 		|| !CMD_CMP(1, "5"))
 	{
 		Translate_32BitRegisters(CurrentCodeSeg);
+		printf("Translate_32BitRegisters:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "memory") 				|| !CMD_CMP(1, "6"))
+	else if (!CMD_CMP(1, "Generic") 			|| !CMD_CMP(1, "6"))
+	{
+		Translate_Trap(CurrentCodeSeg);
+		printf("Translate_Generic:\n");
+		Intermediate_print(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "memory") 				|| !CMD_CMP(1, "7"))
 	{
 		Translate_Memory(CurrentCodeSeg);
+		printf("Translate_Memory:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "loadStoreWriteBack") 	|| !CMD_CMP(1, "7"))
+	else if (!CMD_CMP(1, "loadStoreWriteBack") 	|| !CMD_CMP(1, "8"))
 	{
 		Translate_LoadStoreWriteBack(CurrentCodeSeg);
+		printf("Translate_LoadStoreWriteBack:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "LoadCacheRegisters") 	|| !CMD_CMP(1, "8"))
+	else if (!CMD_CMP(1, "LoadCacheRegisters") 	|| !CMD_CMP(1, "9"))
 	{
 		Translate_LoadCachedRegisters(CurrentCodeSeg);
+		printf("Translate_LoadCachedRegisters:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "9"))
+	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "10"))
 	{
 		Translate_StoreCachedRegisters(CurrentCodeSeg);
+		printf("Translate_StoreCachedRegisters:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "10"))
+	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "11"))
 	{
 		Translate_Registers(CurrentCodeSeg);
+		printf("Translate_Registers:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "Literals") 			|| !CMD_CMP(1, "11"))
+	else if (!CMD_CMP(1, "Branch")				|| !CMD_CMP(1, "12"))
+	{
+		Translate_Branch(CurrentCodeSeg);
+		printf("Translate_Branch:\n");
+		Intermediate_print(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "Literals") 			|| !CMD_CMP(1, "13"))
 	{
 		Translate_Literals(CurrentCodeSeg);
+		printf("Translate_Literals:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "12"))
+	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "14"))
 	{
 		emit_arm_code(CurrentCodeSeg);
 
@@ -655,7 +713,15 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 
 		for (x=0; x< count; x++)
 		{
-			arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			if (addr + x == (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
+			{
+				printf(".EntryPoint:\n");
+				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			}
+			else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
+				printf("\t.word\t%12d (0x%x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			else
+				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}
 	}
 	else
@@ -673,6 +739,8 @@ int Debugger_start(const code_segment_data_t* const segmentData)
 
 	printf("> "); fflush(stdin);
 	getCmd();
+
+	if (userInput[0][0] == '\0') return 1;
 
 	if (!CMD_CMP(0, "quit"))
 	{
@@ -692,7 +760,7 @@ int Debugger_start(const code_segment_data_t* const segmentData)
 	}
 	else if (!CMD_CMP(0, "start"))
 	{
-		pfvru1 run = (pfvru1)segmentData->segStart->ARMcode;
+		pfvru1 run = (pfvru1)segmentData->segStart->ARMEntryPoint;
 
 		printf("Starting ...\n");
 

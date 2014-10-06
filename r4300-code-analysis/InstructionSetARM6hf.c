@@ -60,7 +60,7 @@ static uint32_t ALU_OP2(Instruction_t ins)
 	}
 }
 
-uint32_t arm_encode(const Instruction_t ins)
+static uint32_t arm_encode(const Instruction_t ins, size_t addr)
 {
 	uint8_t Rd1=0, Rd2=0, R1=0, R2=0, R3=0;
 
@@ -164,10 +164,16 @@ uint32_t arm_encode(const Instruction_t ins)
 	case ARM_STRD:
 			return ins.cond << 28 | ins.PR << 24 | ins.U << 23 | ins.W << 21 | Rd1 << 16 | R1 << 12 | 0xf0 | (R2&0xf);
 
-	case JR:
-		assert(ins.I == 0);
+	case ARM_B:
+		if (ins.I)
+			return ins.cond << 28 | 0xA << 24 | ins.Ln << 24 | (((ins.offset - addr)/4)&0xffffff);
+		else
+			return ins.cond << 28 | 0xA << 24 | ins.Ln << 24 | (ins.offset&0xffffff);
+
+	//case JR:
+		//assert(ins.I == 0);
 		// we just need to move the specified register into the pc on arm
-		return ins.cond << 28 | 0xd << 21 | ins.S << 20 | (REG_HOST_PC&0xf) << 12 | 1 << 4 | R1;
+		//return ins.cond << 28 | 0xd << 21 | ins.S << 20 | (REG_HOST_PC&0xf) << 12 | 1 << 4 | R1;
 
 		//-------------------------------------------
 
@@ -232,7 +238,8 @@ static void opsh(char* str, uint32_t word)
 }
 void arm_print(const uint32_t addr, const uint32_t word)
 {
-	printf("0x%08x 0x%08x", addr, word);
+	printf("0x%08x", addr);
+	//printf(" 0x%08x", word);
 
 	if ((word & 0x0fb00f90) == 0x01000090) // swap
 	{
@@ -248,11 +255,12 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	}
 	else if((word & 0x0f000000) == 0x0a000000) // Branch
 	{
-		printf("\tb%s\t0x%x\n", arm_cond[word>>28], word&0xffffff);
+		// TODO we could lookup the function being branched to ...
+		printf("\tb%s\t%d   // (0x%x)\n", arm_cond[word>>28], ((int32_t)(word&0xffffff) << 8)/(1 << 8), ((word&0xffffff) << 8)/(1 << 8));
 	}
 	else if((word & 0x0f000000) == 0x0b000000) // Branch and Link
 	{
-		printf("\tbl%s\t0x%x\n", arm_cond[word>>28], word&0xffffff);
+		printf("\tbl%s\t%d // (0x%x)\n", arm_cond[word>>28], ((int32_t)(word&0xffffff) << 8)/(1 << 8), ((word&0xffffff) << 8)/(1 << 8));
 	}
 	else if((word & 0x0e400000) == 0x08000000) // LDM/STM
 	{
@@ -310,9 +318,9 @@ void arm_print(const uint32_t addr, const uint32_t word)
 		sprintf(imm, "#0x%x", word&0xfff);
 
 		if (word & (1 << 24)) // Pre/post
-			printf("\t%s%s%s\t%s, [%s, %s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], arm_reg_a[(word>>12)&0xf], minus, imm, wb);
+			printf("\t%s%s%s\t%s, [%s, %s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, imm, wb);
 		else
-			printf("\t%s%s%s\t%s, [%s], %s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], arm_reg_a[(word>>12)&0xf], minus, imm);
+			printf("\t%s%s%s\t%s, [%s], %s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, imm);
 	}
 	else if((word & 0x0c000000) == 0x06000000) // LDR Register
 	{
@@ -334,9 +342,9 @@ void arm_print(const uint32_t addr, const uint32_t word)
 		opsh(str_opsh, word);
 
 		if (word & 1 << 24) // Pre/post
-			printf("\t%s%s%s\t%s, [%s, %s%s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh, wb);
+			printf("\t%s%s%s\t%s, [%s, %s%s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh, wb);
 		else
-			printf("\t%s%s%s\t%s, [%s], %s%s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh);
+			printf("\t%s%s%s\t%s, [%s], %s%s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh);
 
 	}
 	else if((word & 0x0c000000) == 0x00000000) // ALU
@@ -458,8 +466,11 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	if (!ins)
 	{
 		printf("cannot emit arm code as not compiled yet\n");
-		//abort();
+		return;
 	}
+
+	codeSeg->ARMcode = out;
+	codeSeg->ARMcodeLen = 0;
 
 	//write out start literals
 	if (lits)
@@ -470,18 +481,19 @@ void emit_arm_code(code_seg_t* const codeSeg)
 			while (lits)
 			{
 				*out = lits->value;
+				codeSeg->ARMcodeLen++;
 				out++;
 				lits = lits->next;
 			}
 		}
 	}
 
-	codeSeg->ARMcode = out;
+	codeSeg->ARMEntryPoint = out;
 
 	//write out code instructions
 	while (ins)
 	{
-		*out = arm_encode(*ins);
+		*out = arm_encode(*ins, (size_t)out);
 		codeSeg->ARMcodeLen++;
 		out++;
 		ins = ins->nextInstruction;
@@ -495,6 +507,7 @@ void emit_arm_code(code_seg_t* const codeSeg)
 			while (lits)
 			{
 				*out = lits->value;
+				codeSeg->ARMcodeLen++;
 				out++;
 				lits = lits->next;
 			}

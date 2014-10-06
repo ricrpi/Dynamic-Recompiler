@@ -21,6 +21,7 @@ int Debugger_start(const code_segment_data_t* const segmentData);
 					"\ttranslate LoadStoreWriteBack      Perform LoadStoreWriteBack Translation\n"\
 					"\ttranslate LoadCacheRegisters      Load Register from Cache\n"\
 					"\ttranslate Registers               Perform Register renumbering\n"\
+					"\ttranslate Branch                  Perform Branch Translation\n"\
 					"\ttranslate StoreCacheRegisters     Store Registers to Cache\n"\
 					"\ttranslate write                   Generate ARM code from Intermediate code\n"
 
@@ -44,5 +45,20 @@ int Debugger_start(const code_segment_data_t* const segmentData);
 					HELP_PRINT "\n"\
 					HELP_TRANS "\n"\
 					HELP_SEG "\n"
+
+//===============================================================
+
+/*
+ * 'CodeStart' will only generate the first #defined Test below or
+ * will generate the default startup code for emulation.
+ *
+ * Type 'Start' on the debugger command prompt to begin executing
+ * the test/emulation.
+ */
+#define TEST_BRANCHING_FORWARD
+//#define TEST_BRANCHING_BACKWARD
+//#define TEST_LITERAL
+
+
 
 #endif /* DEBUGGER_H_ */
