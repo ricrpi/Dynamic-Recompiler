@@ -166,9 +166,9 @@ static uint32_t arm_encode(const Instruction_t ins, size_t addr)
 
 	case ARM_B:
 		if (ins.I)
-			return ins.cond << 28 | 0xA << 24 | ins.Ln << 24 | (((ins.offset - addr)/4)&0xffffff);
+			return ins.cond << 28 | 0xA << 24 | ins.Ln << 24 | (((ins.offset - addr - ARM_BRANCH_OFFSET)/4)&0xffffff);
 		else
-			return ins.cond << 28 | 0xA << 24 | ins.Ln << 24 | (ins.offset&0xffffff);
+			return ins.cond << 28 | 0xA << 24 | ins.Ln << 24 | ((ins.offset - ARM_BRANCH_OFFSET)&0xffffff);
 
 	//case JR:
 		//assert(ins.I == 0);

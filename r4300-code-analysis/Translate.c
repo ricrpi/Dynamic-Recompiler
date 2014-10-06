@@ -274,10 +274,10 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	assert(base == REG_HOST_PC);
 
 #if defined(TEST_BRANCHING_FORWARD)
-	newInstruction 		= newInstrI(ARM_B, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 3);
+	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
-	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
+	newInstruction 		= newInstrI(ARM_B, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 3);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x1);
@@ -308,10 +308,10 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 #elif defined(TEST_BRANCHING_BACKWARD)
 
 // Jump forwards to the Landing Pad
-	newInstruction 		= newInstrI(ARM_B, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 10);
+	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
-	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
+	newInstruction 		= newInstrI(ARM_B, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 10);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED,0x1);

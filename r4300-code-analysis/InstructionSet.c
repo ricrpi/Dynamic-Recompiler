@@ -201,6 +201,8 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 			ins->U = 0;
 		}
 		break;
+	case ARM_B:
+		ins->I = 0; break;
 	default: break;
 	}
 
