@@ -53,7 +53,7 @@ static Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t*
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//set lr
-	newInstruction 	= newInstrI(ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 4);
+	newInstruction 	= newInstr(ARM_MOV, AL, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// load function address from [fp + offset] into PC
@@ -377,17 +377,13 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_R1, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
 
-	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 8);
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_R1);
 	ADD_LL_NEXT(newInstruction, ins);
 
-	// Landing Pad
-	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED, 0x1);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED, 0x2);
+	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI2 );
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// Return back to Debugger
