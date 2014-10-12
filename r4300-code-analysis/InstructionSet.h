@@ -59,6 +59,7 @@
 #define REG_TEMP_GEN4 		(REG_TEMP | 0x05)
 #define REG_TEMP_STR_CONST 	(REG_TEMP | 0x06)
 #define REG_TEMP_JR1		(REG_TEMP | 0x07)
+#define REG_TEMP_CALL2C		(REG_TEMP | 0x08)
 
 //These are the HOST registers. Translation MUST not change them
 #define REG_HOST_FP			(REG_HOST | 0x0b)
@@ -70,6 +71,25 @@
 #define REG_HOST_R1	 		(REG_HOST | 0x01)
 #define REG_HOST_R2			(REG_HOST | 0x02)
 #define REG_HOST_R3			(REG_HOST | 0x03)
+#define REG_HOST_R4			(REG_HOST | 0x04)
+#define REG_HOST_R5			(REG_HOST | 0x05)
+#define REG_HOST_R6			(REG_HOST | 0x06)
+#define REG_HOST_R7			(REG_HOST | 0x07)
+#define REG_HOST_R8			(REG_HOST | 0x08)
+#define REG_HOST_R9			(REG_HOST | 0x09)
+#define REG_HOST_R10		(REG_HOST | 0x0A)
+#define REG_HOST_R11		(REG_HOST | 0x0B)
+#define REG_HOST_R12		(REG_HOST | 0x0C)
+#define REG_HOST_R13		(REG_HOST | 0x0D)
+#define REG_HOST_R14		(REG_HOST | 0x0E)
+
+// Configurable #defines if you want to change
+// which registers hold the emulation frame data or emulation flags
+#define REG_EMU_FP			REG_HOST_FP
+#define REG_EMU_FLAGS		REG_HOST_R4
+
+// emulation flag bits
+#define REG_EMU_FLAG_DS		(0x00)
 
 //The following is for Register Mask operations
 #define REG_HOST_STM_FP 		(0x0800)

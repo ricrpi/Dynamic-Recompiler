@@ -61,7 +61,7 @@ extern uint8_t uMemoryBase;
 #define FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS	(MMAP_FUNC + 16)
 #define FUNC_GEN_TRAP           		(MMAP_FUNC + 20)
 
-#define RECOMPILED_CODE_START			(MMAP_FUNC + 4)
+#define RECOMPILED_CODE_START			(MMAP_FUNC + 24)
 
 #define ROM_ADDRESS		 				(MMAP_STATIC_REGION)
 

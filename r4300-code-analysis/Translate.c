@@ -37,10 +37,16 @@ uint8_t uMemoryBase = 0x80;
 
 //=============================================================
 
-static Instruction_t* insertCallGlobal(Instruction_t* ins, const Condition_e cond, const int32_t offset)
+static Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress)
 {
 	Instruction_t* newInstruction;
+	regID_t base;
+	int32_t offset;
 
+	addLiteral(code_seg, &base, &offset, functionAddress);
+
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_TEMP_CALL2C, REG_NOT_USED, base, offset);
+	ADD_LL_NEXT(newInstruction, ins);
 
 	//push lr
 	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_GENERAL);
@@ -51,7 +57,7 @@ static Instruction_t* insertCallGlobal(Instruction_t* ins, const Condition_e con
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// load function address from [fp + offset] into PC
-	newInstruction 	= newInstrI(ARM_LDR, cond, REG_HOST_PC, REG_HOST_FP, REG_NOT_USED, offset);
+	newInstruction 	= newInstr(ARM_MOV, cond, REG_HOST_PC, REG_NOT_USED, REG_TEMP_CALL2C);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// pop lr
@@ -251,6 +257,13 @@ code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru
 	return code_seg;
 }
 
+
+#if defined(TEST_BRANCH_TO_C)
+uint32_t test_callCode(uint32_t r0)
+{
+	return r0 + 0x1000;
+}
+#endif
 /*
  * Function Called to Begin Running Dynamic compiled code.
  */
@@ -269,9 +282,6 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 
 	regID_t base;
 	int32_t offset;
-
-	addLiteral(code_seg, &base, &offset,(uint32_t)MMAP_FP_BASE);
-	assert(base == REG_HOST_PC);
 
 #if defined(TEST_BRANCHING_FORWARD)
 	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
@@ -356,7 +366,39 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrI(ARM_B, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, -10);
 	ADD_LL_NEXT(newInstruction, ins);
 
+#elif defined(TEST_BRANCH_TO_C)
+
+	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	addLiteral(code_seg, &base, &offset,(uint32_t)&test_callCode);
+	assert(base == REG_HOST_PC);
+
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_R1, REG_NOT_USED, base, offset);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, 8);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_R1);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// Landing Pad
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED, 0x1);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_HOST_R0, REG_NOT_USED, 0x2);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// Return back to Debugger
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
 #elif defined(TEST_LITERAL)	// Test Literal loading
+
+	addLiteral(code_seg, &base, &offset,(uint32_t)MMAP_FP_BASE);
+	assert(base == REG_HOST_PC);
+
 	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
 
@@ -364,6 +406,9 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 #else
+	addLiteral(code_seg, &base, &offset,(uint32_t)MMAP_FP_BASE);
+	assert(base == REG_HOST_PC);
+
 	// setup the HOST_FP
 	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_FP, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
@@ -423,7 +468,7 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// Call interrupt C function
-	insertCallGlobal(ins, AL, FUNC_GEN_INTERRUPT);
+	//insertCall_To_C(ins, AL, FUNC_GEN_INTERRUPT);
 
 	// Return
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
@@ -512,11 +557,10 @@ void Translate_init(code_seg_t* const codeSegment)
  * I wish to try using a different approach as I do not want to have to handle special cases
  * with delay slot re-shuffling.
  *
- * For ARM we can use the PSR and conditional execution for DelaySlot instruction(s)
+ * The recompiler design frees up host registers by the end of a code segment.
+ * Therefore we can borrow one of these to record the delay slot status.
  *
- * TODO I think this needs to use a register as we will need the status register for conditional branching
- *
- * i.e.
+ * We cannot use the PSR as it may change if we branch+link away from current segment
  *
  * Example 1: Loop then continue
  *
@@ -527,45 +571,40 @@ void Translate_init(code_seg_t* const codeSegment)
  * BNE	R1		.L1
  * ====New Segment====		==>	  + ADDI	R2	R2 	#3		// the condition on the branch
  * ADDI	R2	R2	#3				  + bne		.L1
- * ...							  + msr		Z=0
+ * ...							  + bfi		Rx      #y
  * ...							    ====New Segment====		// Will always be a BLOCK_START_CONT Segment
- * ...								ADDIeq	R2	R2	#3		// the delaySlot instruction(s)
+ * ...								tst     Rx      #1		// if its not then don't even need to test.
+ * ...                              ADDIeq	R2	R2	#3		// the delaySlot instruction(s)
  * ...								...
- *
  *
  * Example 2:	Always branch/jump then continue
  *
  * ...								...
  * .L1								.L1
  * ADD 	R1	R2	R3					ADD		R1	R2	R3
- * SUBI	R1	R1	#4					SUMI	R1	R1	#4
- * JAL		.L1					  + ADDI	R2	R2 	#3		// the condition on the branch
- * 								  + msr		Z=1				// so if jumping to a BLOCK_START_CONT
- * ====New Segment====		==>	  	JAL				.L1
- * ADDI	R2	R2	#3				  + msr		Z=0
+ * SUBI	R1	R1	#4					SUMI	R1	R1	#4		// x = REG_EMU_FP
+ * JAL		.L1					  + ADDI	R2	R2 	#3		// y = REG_EMU_FLAG_DS
+ * 								  + bfc		Rx      #y  	// if jumping to a BLOCK_START_CONT add this instruction
+ * ====New Segment====		==>	  	JAL				.L1		// do the jump and link
+ * ADDI	R2	R2	#3				  + bfi     Rx      #y		// we have already done the next instruction...
  * ...							  	====New Segment====		// Will always be a BLOCK_START_CONT Segment
+ *                                  tst     Rx      #(1<<y)	// now test Rx
  * ...							  + ADDIeq	R2	R2	#3		// the delaySlot instruction(s)
  * ...								...
  *
  *
  * Requirements:
  *
- * 1. Segments that have code preceeding it must set the first instruction to be conditional
+ * 1. Segments that have code preceeding it must set the first instruction to be conditional and include a test
  *
- * 2. All segments must set the Z status flag before jumping to a BLOCK_START_CONT segment.
+ * 2. All segments must set REG_EMU_FLAG_DS flag before jumping to a BLOCK_START_CONT segment.
  *
- * 3. All segments that 'continue' after a branch must clear Z status flag.
+ * 3. All segments that 'continue' after a branch must set REG_EMU_FLAG_DS flag.
  *    i.e. only segments that don't jump
  *
  * 4. Segments must include the MIPS instruction immediately after the end of the segment MIPS code if they branch.
  *    This could be a no-op in which case we can ignore it.
  *
- *    		//Set Status Register setting
- * 			APSR.N = imm32<31>;
- *  		APSR.Z = imm32<30>;
- *  		APSR.C = imm32<29>;
- *  		APSR.V = imm32<28>;
- *  		APSR.Q = imm32<27>;
  *
  */
 void Translate_DelaySlot(code_seg_t*  codeSegment)
@@ -584,24 +623,43 @@ void Translate_DelaySlot(code_seg_t*  codeSegment)
 		}
 
 	// if this is a SEG_SANDWICH or SEG_END then we need to be conditional on the first instruction (1)
+	// unless first instruction is a no op
 	if ( (codeSegment->Type == SEG_SANDWICH || codeSegment->Type == SEG_END)
-			&& (ops_type(*(codeSegment->MIPScode -1)) & (OPS_BRANCH | OPS_LINK)))
+			&& (ops_type(*(codeSegment->MIPScode -1)) & (OPS_BRANCH | OPS_LINK))
+			&& ops_type(*(codeSegment->MIPScode)) > NO_OP)
 	{
+		newInstruction 	= newInstrI(ARM_TST, AL, REG_NOT_USED, REG_EMU_FLAGS, REG_NOT_USED, 1 << REG_EMU_FLAG_DS);
+		newInstruction->nextInstruction = ins;
+		codeSegment->Intermcode = newInstruction;
+
 		ins->cond = EQ;
 	}
 
-	// set the Z status flag before branch / jump (2)
+	Instruction_e following_op = ops_type(*(codeSegment->MIPScode + codeSegment->MIPScodeLen));
+
+	// clear the REG_EMU_FLAG_DS flag before branch / jump so the jumped-to segment
+	// performs the first MIPS instruction (2)
 	if (codeSegment->pBranchNext
 			&& (codeSegment->pBranchNext->Type == SEG_SANDWICH
 					|| codeSegment->pBranchNext->Type == SEG_END))
 	{
-		while (ins->nextInstruction) ins = ins->nextInstruction;
+		if (NULL == ins->nextInstruction)
+		{
+			printf("Don't know what to do in Translate.c:%d\n", __LINE__);
+			// this would imply the branch/jump is the first instruction.
+			// we could change codeSegment->Intermcode but think this
+			// is a bigger problem as a jump will be in a delay slot and pulled
+			// into previous code segment before its final branch.
 
-		newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x40000000);
+			abort();
+		}else
+		{
+			while (ins->nextInstruction->nextInstruction) ins = ins->nextInstruction;
+		}
+		newInstruction 	= newInstrI(ARM_BFC,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, REG_EMU_FLAG_DS);
 		ADD_LL_NEXT(newInstruction, ins);
 	}
 
-	Instruction_e following_op = ops_type(*(codeSegment->MIPScode + codeSegment->MIPScodeLen));
 
 	// if the last instruction is not likely and the following instruction is not a NO OP (4)
 	if ((ops & (OPS_BRANCH | OPS_JUMP))
@@ -627,13 +685,14 @@ void Translate_DelaySlot(code_seg_t*  codeSegment)
 		}
 	}
 
-	// if the instruction continues then clear the Z status flag at end of instructions (3)
-	if (ops & OPS_BRANCH)
+	// if the instruction continues then set the REG_EMU_FLAG_DS flag at end of instructions (3)
+	if ((ops & OPS_BRANCH)
+			&& following_op > NO_OP)
 	{
 		//goto last instruction (the branch instruction)
 		while (ins->nextInstruction) ins = ins->nextInstruction;
 
-		newInstruction 	= newInstrI(ARM_MSR,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, 0x00000000);
+		newInstruction 	= newInstrI(ARM_BFI,AL, REG_EMU_FLAGS, REG_NOT_USED, REG_NOT_USED, REG_EMU_FLAG_DS);
 		ADD_LL_NEXT(newInstruction, ins);
 	}
 }
@@ -683,7 +742,7 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 
 				instrCountRemaining -= uiCountFrequency;
 
-				ins = insertCallGlobal(ins, PL, FUNC_GEN_INTERRUPT);
+				ins = insertCall_To_C(ins, PL, FUNC_GEN_INTERRUPT);
 				instrCount = 0;
 			}
 		}
@@ -721,8 +780,10 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 			newInstruction = newInstrI(ARM_ORR, AL, REG_CAUSE, REG_CAUSE, REG_NOT_USED, 0x8000);
 			ADD_LL_NEXT(newInstruction, ins);
 
-			ins = insertCallGlobal(ins, PL, FUNC_GEN_INTERRUPT);
-
+			newInstruction = newInstrI(ARM_B, PL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, MMAP_FP_BASE + FUNC_GEN_INTERRUPT);
+			newInstruction->Ln = 1;
+			newInstruction->I = 1;
+			ADD_LL_NEXT(newInstruction, ins);
 			return;
 		}
 	}
@@ -777,13 +838,7 @@ void Translate_Constants(code_seg_t* const codeSegment)
 	{
 		switch (ins->instruction)
 		{
-		case MTC0: if (ins->R1.regID == 0)
-			{
-				ins->instruction = ARM_MOV;
-				ins->I = 1;
-				ins->R1.regID = REG_NOT_USED;
-				ins->immediate = 0;
-			}break;
+
 		case LUI:
 			ins->Rd1.state = RS_CONSTANT_I8;
 			if (ins->immediate < 0)
@@ -1099,6 +1154,353 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 	}
 }
 
+void Translate_Generic(code_seg_t* const codeSegment)
+{
+	Instruction_t*ins;
+	Instruction_t*new_ins;
+	ins = codeSegment->Intermcode;
+
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+			case SLL: break;
+			case SRL: break;
+			case SRA: break;
+			case SLLV: break;
+			case SRLV: break;
+			case SRAV: break;
+			case SYSCALL: break;
+			case BREAK: break;
+			case SYNC: break;
+			case MFHI: break;
+			case MTHI: break;
+			case MFLO: break;
+			case MTLO: break;
+			case DSLLV:	break;
+			case DSRLV:	break;
+			case DSRAV: break;
+			case MULT: break;
+			case MULTU: break;
+			case DIV: break;
+			case DIVU: break;
+			case DMULT: break;
+			case DMULTU: break;
+			case DDIV: break;
+			case DDIVU: break;
+			case ADD: break;
+			case ADDU: break;
+			case SUB: break;
+			case SUBU: break;
+			case AND: break;
+			case OR: break;
+			case XOR: break;
+			case NOR: break;
+			case SLT: break;
+			case SLTU: break;
+			case DADD: break;
+			case DADDU: break;
+			case DSUB: break;
+			case DSUBU: break;
+			case TGE: break;
+			case TGEU: break;
+			case TLT: break;
+			case TLTU: break;
+			case TEQ: break;
+			case TNE: break;
+			case DSLL: break;
+			case DSRL: break;
+			case DSRA: break;
+			case DSLL32: break;
+			case DSRL32: break;
+			case DSRA32: break;
+			case TGEI: break;
+			case TGEIU: break;
+			case TLTI: break;
+			case TLTIU: break;
+			case TEQI: break;
+			case TNEI: break;
+			case ADDI: break;
+			case ADDIU: break;
+			case SLTI: break;
+			case SLTIU: break;
+			case ANDI: break;
+			case ORI:
+				if (ins->immediate > 255)
+				{
+					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
+					ins->immediate = ins->immediate & 0xFF;
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
+			case XORI: break;
+			case LUI: break;
+			case MFC0: break;
+			case MTC0:
+				if (ins->R1.regID == 0)
+				{
+					ins->instruction = ARM_MOV;
+					ins->I = 1;
+					ins->R1.regID = REG_NOT_USED;
+					ins->immediate = 0;
+				}
+				break;
+			case TLBR: break;
+			case TLBWI: break;
+			case TLBWR: break;
+			case TLBP: break;
+			case ERET: break;
+			case MFC1: break;
+			case DMFC1: break;
+			case CFC1: break;
+			case MTC1: break;
+			case DMTC1: break;
+			case CTC1: break;
+			case BC1F: break;
+			case BC1T: break;
+			case BC1FL: break;
+			case BC1TL: break;
+			case ADD_S: break;
+			case SUB_S: break;
+			case MUL_S: break;
+			case DIV_S: break;
+			case SQRT_S: break;
+			case ABS_S: break;
+			case MOV_S: break;
+			case NEG_S: break;
+			case ROUND_L_S: break;
+			case TRUNC_L_S: break;
+			case CEIL_L_S: break;
+			case FLOOR_L_S: break;
+			case ROUND_W_S: break;
+			case TRUNC_W_S: break;
+			case CEIL_W_S: break;
+			case FLOOR_W_S: break;
+			case CVT_D_S: break;
+			case CVT_W_S: break;
+			case CVT_L_S: break;
+			case C_F_S: break;
+			case C_UN_S: break;
+			case C_EQ_S: break;
+			case C_UEQ_S: break;
+			case C_OLT_S: break;
+			case C_ULT_S: break;
+			case C_OLE_S: break;
+			case C_ULE_S: break;
+			case C_SF_S: break;
+			case C_NGLE_S: break;
+			case C_SEQ_S: break;
+			case C_NGL_S: break;
+			case C_LT_S: break;
+			case C_NGE_S: break;
+			case C_LE_S: break;
+			case C_NGT_S: break;
+			case ADD_D: break;
+			case SUB_D: break;
+			case MUL_D: break;
+			case DIV_D: break;
+			case SQRT_D: break;
+			case ABS_D: break;
+			case MOV_D: break;
+			case NEG_D: break;
+			case ROUND_L_D: break;
+			case TRUNC_L_D: break;
+			case CEIL_L_D: break;
+			case FLOOR_L_D: break;
+			case ROUND_W_D: break;
+			case TRUNC_W_D: break;
+			case CEIL_W_D: break;
+			case FLOOR_W_D: break;
+			case CVT_S_D: break;
+			case CVT_W_D: break;
+			case CVT_L_D: break;
+			case C_F_D: break;
+			case C_UN_D: break;
+			case C_EQ_D: break;
+			case C_UEQ_D: break;
+			case C_OLT_D: break;
+			case C_ULT_D: break;
+			case C_OLE_D: break;
+			case C_ULE_D: break;
+			case C_SF_D: break;
+			case C_NGLE_D: break;
+			case C_SEQ_D: break;
+			case C_NGL_D: break;
+			case C_LT_D: break;
+			case C_NGE_D: break;
+			case C_LE_D: break;
+			case C_NGT_D: break;
+			case CVT_S_W: break;
+			case CVT_D_W: break;
+			case CVT_S_L: break;
+			case CVT_D_L: break;
+			case DADDI: break;
+			case DADDIU: break;
+			case CACHE: break;
+			case LL: break;
+			case LWC1: break;
+			case LLD: break;
+			case LDC1: break;
+			case LD: break;
+			case SC: break;
+			case SWC1: break;
+			case SCD: break;
+			case SDC1: break;
+			case SD: break;
+
+			case J: break;
+			case JR: break;
+			case JAL: break;
+			case JALR: break;
+
+			case BLTZ: break;
+			case BGEZ: break;
+			case BEQ: break;
+			case BNE: break;
+			case BLEZ: break;
+			case BGTZ: break;
+
+			case BLTZL: break;
+			case BGEZL: break;
+			case BEQL: break;
+			case BNEL: break;
+			case BLEZL: break;
+			case BGTZL: break;
+
+			case BLTZAL: break;
+			case BGEZAL: break;
+			case BLTZALL: break;
+			case BGEZALL: break;
+
+			case SB: break;
+			case SH: break;
+			case SWL: break;
+			case SW: break;
+			case SDL: break;
+			case SDR: break;
+			case SWR: break;
+
+			case LDL: break;
+			case LDR: break;
+			case LB: break;
+			case LH: break;
+			case LWL: break;
+			case LW: break;
+			case LBU: break;
+			case LHU: break;
+			case LWR: break;
+			case LWU: break;
+
+		default: break;
+		}
+
+		ins = ins->nextInstruction;
+	}
+}
+
+void Translate_FPU(code_seg_t* const codeSegment)
+{
+	Instruction_t*ins;
+	Instruction_t*new_ins;
+	ins = codeSegment->Intermcode;
+
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+			case MFC0: break;
+			case MTC0: break;
+			case MFC1: break;
+			case DMFC1: break;
+			case CFC1: break;
+			case MTC1: break;
+			case DMTC1: break;
+			case CTC1: break;
+			case BC1F: break;
+			case BC1T: break;
+			case BC1FL: break;
+			case BC1TL: break;
+			case ADD_S: break;
+			case SUB_S: break;
+			case MUL_S: break;
+			case DIV_S: break;
+			case SQRT_S: break;
+			case ABS_S: break;
+			case MOV_S: break;
+			case NEG_S: break;
+			case ROUND_L_S: break;
+			case TRUNC_L_S: break;
+			case CEIL_L_S: break;
+			case FLOOR_L_S: break;
+			case ROUND_W_S: break;
+			case TRUNC_W_S: break;
+			case CEIL_W_S: break;
+			case FLOOR_W_S: break;
+			case CVT_D_S: break;
+			case CVT_W_S: break;
+			case CVT_L_S: break;
+			case C_F_S: break;
+			case C_UN_S: break;
+			case C_EQ_S: break;
+			case C_UEQ_S: break;
+			case C_OLT_S: break;
+			case C_ULT_S: break;
+			case C_OLE_S: break;
+			case C_ULE_S: break;
+			case C_SF_S: break;
+			case C_NGLE_S: break;
+			case C_SEQ_S: break;
+			case C_NGL_S: break;
+			case C_LT_S: break;
+			case C_NGE_S: break;
+			case C_LE_S: break;
+			case C_NGT_S: break;
+			case ADD_D: break;
+			case SUB_D: break;
+			case MUL_D: break;
+			case DIV_D: break;
+			case SQRT_D: break;
+			case ABS_D: break;
+			case MOV_D: break;
+			case NEG_D: break;
+			case ROUND_L_D: break;
+			case TRUNC_L_D: break;
+			case CEIL_L_D: break;
+			case FLOOR_L_D: break;
+			case ROUND_W_D: break;
+			case TRUNC_W_D: break;
+			case CEIL_W_D: break;
+			case FLOOR_W_D: break;
+			case CVT_S_D: break;
+			case CVT_W_D: break;
+			case CVT_L_D: break;
+			case C_F_D: break;
+			case C_UN_D: break;
+			case C_EQ_D: break;
+			case C_UEQ_D: break;
+			case C_OLT_D: break;
+			case C_ULT_D: break;
+			case C_OLE_D: break;
+			case C_ULE_D: break;
+			case C_SF_D: break;
+			case C_NGLE_D: break;
+			case C_SEQ_D: break;
+			case C_NGL_D: break;
+			case C_LT_D: break;
+			case C_NGE_D: break;
+			case C_LE_D: break;
+			case C_NGT_D: break;
+			case CVT_S_W: break;
+			case CVT_D_W: break;
+			case CVT_S_L: break;
+			case CVT_D_L: break;
+		default: break;
+		}
+
+		ins = ins->nextInstruction;
+	}
+}
+
 /*
  *	Function to Translate memory operations into Emulated equivalent
  *
@@ -1191,7 +1593,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ADD_LL_NEXT(new_ins, ins);
 
 			// now lookup virtual address
-			ins = insertCallGlobal(ins, EQ, FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS);
+			//ins = insertCall_To_C(ins, EQ, FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS);
 			break;
 		case SDL: break;
 		case SDR: break;
@@ -1221,7 +1623,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			new_ins = newInstrI(ARM_LDR_LIT, NE, funcTempReg, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
 
-			ins = insertCallGlobal(ins, EQ, FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS);
+			//ins = insertCall_To_C(ins, EQ, FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS);
 
 			break;
 		case LBU: break;
@@ -1607,7 +2009,7 @@ void Translate_Trap(code_seg_t* const codeSegment)
 			case ADDI: 			//TODO TRAP Overflow
 				ins->instruction = ARM_ADD;
 				ins->S = 1;
-				insertCallGlobal(ins, VS, MMAP_FP_BASE + FUNC_GEN_TRAP);
+				//insertCall_To_C(codeSegment, ins, VS, MMAP_FP_BASE + FUNC_GEN_TRAP);
 				break;
 			case ADDIU:
 				ins->instruction = ARM_ADD;
@@ -2031,6 +2433,9 @@ void Translate(code_seg_t* const codeSegment)
 	Translate_CountRegister(codeSegment);
 	Translate_Constants(codeSegment);
 	Translate_32BitRegisters(codeSegment);
+
+	Translate_Generic(codeSegment);
+	Translate_FPU(codeSegment);
 
 	Translate_Trap(codeSegment);
 	Translate_Memory(codeSegment);

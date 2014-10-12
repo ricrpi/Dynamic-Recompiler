@@ -657,53 +657,65 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	}
 	else if (!CMD_CMP(1, "Generic") 			|| !CMD_CMP(1, "6"))
 	{
+		Translate_Generic(CurrentCodeSeg);
+		printf("Translate_Generic:\n");
+		Intermediate_print(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "FPU") 				|| !CMD_CMP(1, "7"))
+	{
+		Translate_FPU(CurrentCodeSeg);
+		printf("Translate_FPU:\n");
+		Intermediate_print(CurrentCodeSeg);
+	}
+	else if (!CMD_CMP(1, "Generic") 			|| !CMD_CMP(1, "8"))
+	{
 		Translate_Trap(CurrentCodeSeg);
 		printf("Translate_Generic:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "memory") 				|| !CMD_CMP(1, "7"))
+	else if (!CMD_CMP(1, "memory") 				|| !CMD_CMP(1, "9"))
 	{
 		Translate_Memory(CurrentCodeSeg);
 		printf("Translate_Memory:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "loadStoreWriteBack") 	|| !CMD_CMP(1, "8"))
+	else if (!CMD_CMP(1, "loadStoreWriteBack") 	|| !CMD_CMP(1, "10"))
 	{
 		Translate_LoadStoreWriteBack(CurrentCodeSeg);
 		printf("Translate_LoadStoreWriteBack:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "LoadCacheRegisters") 	|| !CMD_CMP(1, "9"))
+	else if (!CMD_CMP(1, "LoadCacheRegisters") 	|| !CMD_CMP(1, "11"))
 	{
 		Translate_LoadCachedRegisters(CurrentCodeSeg);
 		printf("Translate_LoadCachedRegisters:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "10"))
+	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "12"))
 	{
 		Translate_StoreCachedRegisters(CurrentCodeSeg);
 		printf("Translate_StoreCachedRegisters:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "11"))
+	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "13"))
 	{
 		Translate_Registers(CurrentCodeSeg);
 		printf("Translate_Registers:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "Branch")				|| !CMD_CMP(1, "12"))
+	else if (!CMD_CMP(1, "Branch")				|| !CMD_CMP(1, "14"))
 	{
 		Translate_Branch(CurrentCodeSeg);
 		printf("Translate_Branch:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "Literals") 			|| !CMD_CMP(1, "13"))
+	else if (!CMD_CMP(1, "Literals") 			|| !CMD_CMP(1, "15"))
 	{
 		Translate_Literals(CurrentCodeSeg);
 		printf("Translate_Literals:\n");
 		Intermediate_print(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "14"))
+	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "16"))
 	{
 		emit_arm_code(CurrentCodeSeg);
 

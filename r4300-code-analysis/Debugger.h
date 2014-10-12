@@ -56,7 +56,8 @@ int Debugger_start(const code_segment_data_t* const segmentData);
  * the test/emulation.
  */
 //#define TEST_BRANCHING_FORWARD
-#define TEST_BRANCHING_BACKWARD
+//#define TEST_BRANCHING_BACKWARD
+#define TEST_BRANCH_TO_C
 //#define TEST_LITERAL
 
 

@@ -77,6 +77,10 @@ void Translate_Constants(code_seg_t* const codeSegment);
  */
 void Translate_32BitRegisters(code_seg_t* const codeSegment);
 
+void Translate_Generic(code_seg_t* const codeSegment);
+
+void Translate_FPU(code_seg_t* const codeSegment);
+
 void Translate_Trap(code_seg_t* const codeSegment);
 
 void Translate_Branch(code_seg_t* const codeSegment);
