@@ -5,6 +5,8 @@
 #include "InstructionSet.h"
 #include "CodeSegments.h"
 
+#define COUNTOF(x)	(sizeof(x)/sizeof(x[0]))
+
 extern uint32_t bCountSaturates;
 
 
@@ -26,6 +28,8 @@ typedef unsigned int (*pfvru1)();
 typedef int (*pfvr1)();
 
 typedef void (*pfvv)(void);
+
+typedef void (*pfTranslate_t)(code_seg_t*);
 
 // -----------------------------------------------------------------
 
@@ -49,7 +53,13 @@ typedef struct _RegMap
 	uint8_t		bLoaded;
 } regMap_t;
 
+typedef struct
+{
+	pfTranslate_t function;
+	char* name;
+}TranslationsMap;
 
+// -----------------------------------------------------------------
 
 code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru1 f);
 code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data);
@@ -83,13 +93,17 @@ void Translate_FPU(code_seg_t* const codeSegment);
 
 void Translate_Trap(code_seg_t* const codeSegment);
 
-void Translate_Branch(code_seg_t* const codeSegment);
-
 void Translate_Memory(code_seg_t* const codeSegment);
 
 void Translate_LoadStoreWriteBack(code_seg_t* const codeSegment);
 
 void Translate_LoadCachedRegisters(code_seg_t* const codeSegment);
+
+void Translate_StoreCachedRegisters(code_seg_t* const codeSegment);
+
+void Translate_CleanUp(code_seg_t* const codeSegment);
+
+void Translate_Branch(code_seg_t* const codeSegment);
 
 /*
  * Function to re-number / reduce the number of registers so that they fit the HOST
@@ -104,10 +118,31 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment);
  */
 void Translate_Registers(code_seg_t* const codeSegment);
 
-void Translate_StoreCachedRegisters(code_seg_t* const codeSegment);
+void Translate_Literals(code_seg_t* const codeSegment);
+
+void Translate_Write(code_seg_t* const codeSegment);
 
 void Translate(code_seg_t* const codeSegment);
 
-void Translate_Literals(const code_seg_t* const codeSegment);
+static TranslationsMap Translations[] =
+{
+		{Translate_init,					"init"},					//
+		{Translate_DelaySlot,				"DelaySlot"},				//
+		{Translate_CountRegister,			"CountRegister"},			//
+		{Translate_Constants,				"Constants"},				//
+		{Translate_32BitRegisters,			"32BitRegisters"},			//
+		{Translate_Generic,					"Generic"},					//
+		{Translate_FPU,						"FPU"},						//
+		{Translate_Trap,					"Trap"},					//
+		{Translate_Memory,					"Memory"},					//
+		{Translate_LoadStoreWriteBack, 		"LoadStoreWriteBack"},		//
+		{Translate_LoadCachedRegisters, 	"LoadCachedRegisters"},		//
+		{Translate_StoreCachedRegisters, 	"StoreCachedRegisters"},	//
+		{Translate_CleanUp,					"CleanUp"},					// must be after load/storeCachedRegisters
+		{Translate_Branch,					"Branch"},					// translations after must not change segment length
+		{Translate_Registers, 				"Registers"},				//
+		{Translate_Literals, 				"Literals"},				//
+		{Translate_Write, 					"Write"}					//
+};
 
 #endif /* TRANSLATE_H_ */

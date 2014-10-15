@@ -46,20 +46,22 @@ int Debugger_start(const code_segment_data_t* const segmentData);
 					HELP_TRANS "\n"\
 					HELP_SEG "\n"
 
-//===============================================================
 
-/*
- * 'CodeStart' will only generate the first #defined Test below or
- * will generate the default startup code for emulation.
- *
- * Type 'Start' on the debugger command prompt to begin executing
- * the test/emulation.
- */
+// ========= TEST Setups ==============================================
+
 //#define TEST_BRANCHING_FORWARD
 //#define TEST_BRANCHING_BACKWARD
-#define TEST_BRANCH_TO_C
+//#define TEST_BRANCH_TO_C
 //#define TEST_LITERAL
 
+// ========= Extra Debugging Information ==============================
 
+#define SHOW_REG_TRANSLATION_MAP
+
+// ========= Customize Aborts for debugging ===========================
+
+#define ABORT_ARM_DECODE
+#define ABORT_ARM_ENCODE
+#define ABORT_EXCEEDED_GLOBAL_OFFSET
 
 #endif /* DEBUGGER_H_ */

@@ -12,6 +12,11 @@
 #define LINE_LEN 400
 //#define HISTORY_LEN 5
 
+#define MIN(x, y)	(x < y? x : y)
+
+
+
+
 #define CMD_CMP(X, TXT) (strncasecmp(userInput[X], TXT, strlen(userInput[X])))
 
 
@@ -171,7 +176,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			}
 			else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
-				printf("\t.word\t%12d (0x%x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+				printf("\t.word\t%12d (0x08%x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			else
 				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}
@@ -615,130 +620,80 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 
 static int Debugger_translate(const code_segment_data_t* const segmentData)
 {
+
+	uint32_t bounds[2];
+	uint32_t x,y;
+	uint32_t val;
+
+	bounds[0] = 0;
+	bounds[1] = COUNTOF(Translations)-1;
+	char *tailPointer;
+
+	for (x=0; x < COUNTOF(bounds); x++)
+	{
+			if (!strlen(userInput[1+x])) break;
+
+			val = strtoul(userInput[1+x], &tailPointer, 0);
+
+			//test for numbers
+			if (tailPointer != userInput[1+x])
+			{
+				bounds[x] = val;
+			}
+			else
+			{
+				// scan for names
+				for (y = 0; y < COUNTOF(Translations); y++)
+				{
+					if (!CMD_CMP(1+x, Translations[y].name)){
+						bounds[x] = y;
+						break;
+					}
+
+				}
+			}
+	}
+
 	if (!strlen(userInput[1]))
 	{
 		Translate(CurrentCodeSeg);
 	}
-	else if (!CMD_CMP(1, "full"))
-	{
-		Translate(CurrentCodeSeg);
-		printf("Translate:\n");
-		emit_arm_code(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "init")				|| !CMD_CMP(1, "1"))
-	{
-		Translate_init(CurrentCodeSeg);
-		printf("Translate_init:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "DelaySlot") 			|| !CMD_CMP(1, "2"))
-	{
-		Translate_DelaySlot(CurrentCodeSeg);
-		printf("Translate_DelaySlot:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "Count") 				|| !CMD_CMP(1, "3"))
-	{
-		Translate_CountRegister(CurrentCodeSeg);
-		printf("Translate_Count:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "Constants") 			|| !CMD_CMP(1, "4"))
-	{
-		Translate_Constants(CurrentCodeSeg);
-		printf("Translate_Constants:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "32BitRegisters") 		|| !CMD_CMP(1, "5"))
-	{
-		Translate_32BitRegisters(CurrentCodeSeg);
-		printf("Translate_32BitRegisters:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "Generic") 			|| !CMD_CMP(1, "6"))
-	{
-		Translate_Generic(CurrentCodeSeg);
-		printf("Translate_Generic:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "FPU") 				|| !CMD_CMP(1, "7"))
-	{
-		Translate_FPU(CurrentCodeSeg);
-		printf("Translate_FPU:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "Generic") 			|| !CMD_CMP(1, "8"))
-	{
-		Translate_Trap(CurrentCodeSeg);
-		printf("Translate_Generic:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "memory") 				|| !CMD_CMP(1, "9"))
-	{
-		Translate_Memory(CurrentCodeSeg);
-		printf("Translate_Memory:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "loadStoreWriteBack") 	|| !CMD_CMP(1, "10"))
-	{
-		Translate_LoadStoreWriteBack(CurrentCodeSeg);
-		printf("Translate_LoadStoreWriteBack:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "LoadCacheRegisters") 	|| !CMD_CMP(1, "11"))
-	{
-		Translate_LoadCachedRegisters(CurrentCodeSeg);
-		printf("Translate_LoadCachedRegisters:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "StoreCacheRegisters") || !CMD_CMP(1, "12"))
-	{
-		Translate_StoreCachedRegisters(CurrentCodeSeg);
-		printf("Translate_StoreCachedRegisters:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "Registers") 			|| !CMD_CMP(1, "13"))
-	{
-		Translate_Registers(CurrentCodeSeg);
-		printf("Translate_Registers:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "Branch")				|| !CMD_CMP(1, "14"))
-	{
-		Translate_Branch(CurrentCodeSeg);
-		printf("Translate_Branch:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "Literals") 			|| !CMD_CMP(1, "15"))
-	{
-		Translate_Literals(CurrentCodeSeg);
-		printf("Translate_Literals:\n");
-		Intermediate_print(CurrentCodeSeg);
-	}
-	else if (!CMD_CMP(1, "write") 				|| !CMD_CMP(1, "16"))
-	{
-		emit_arm_code(CurrentCodeSeg);
-
-		uint32_t count = CurrentCodeSeg->ARMcodeLen;
-		uint32_t* addr = CurrentCodeSeg->ARMcode;
-		int x;
-
-		for (x=0; x< count; x++)
-		{
-			if (addr + x == (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
-			{
-				printf(".EntryPoint:\n");
-				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
-			}
-			else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
-				printf("\t.word\t%12d (0x%x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
-			else
-				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
-		}
-	}
 	else
 	{
-		printf(HELP_TRANS);
+		if (!strlen(userInput[2]))
+		{
+			bounds[1] = bounds[0];
+		}
+
+		for (x = bounds[0]; x <= bounds[1]; x++)
+		{
+			printf("Translate_%s:\n", Translations[x].name);
+			Translations[x].function(CurrentCodeSeg);
+		}
+
+		if (x < COUNTOF(Translations)-1)
+		{
+			Intermediate_print(CurrentCodeSeg);
+		}
+		else
+		{
+			uint32_t count = CurrentCodeSeg->ARMcodeLen;
+			uint32_t* addr = CurrentCodeSeg->ARMcode;
+			int x;
+
+			for (x=0; x< count; x++)
+			{
+				if (addr + x == (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
+				{
+					printf(".EntryPoint:\n");
+					arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+				}
+				else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
+					printf("\t.word\t%12d (0x%x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+				else
+					arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			}
+		}
 	}
 
 	return 0;

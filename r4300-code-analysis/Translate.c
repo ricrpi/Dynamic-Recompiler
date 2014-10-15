@@ -27,13 +27,12 @@
 #define ADD_LL(x, y) (x)->nextInstruction = (y)->nextInstruction; \
 			(y)->nextInstruction = (x);
 
-uint32_t bCountSaturates = 0;
-uint32_t uiCountFrequency = 40;	// must be less than 128 else may not be able to encode in imm8
-uint32_t bMemoryInlineLookup = 0;
+uint32_t bCountSaturates 	= 0;
+uint32_t uiCountFrequency 	= 40;	// must be less than 128 else may not be able to encode in imm8
+uint32_t bMemoryInlineLookup= 0;
 uint32_t bMemoryOffsetCheck = 0;
-uint32_t bDoDMAonInterrupt = 1;
-uint8_t uMemoryBase = 0x80;
-
+uint32_t bDoDMAonInterrupt 	= 1;
+uint8_t uMemoryBase 		= 0x80;
 
 //=============================================================
 
@@ -49,7 +48,7 @@ static Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t*
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//push lr
-	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_GENERAL);
+	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//set lr
@@ -61,7 +60,7 @@ static Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t*
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// pop lr
-	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_GENERAL);
+	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	return ins;
@@ -93,7 +92,7 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 
 	if (!x) x = 0xffffffff;
 
-#if 0
+#if defined(SHOW_REG_TRANSLATION_MAP)
 	if (RegFrom >= REG_HOST)
 	{
 		if (RegTo >= REG_HOST) 	printf("Reg host %3d => host %3d\n", RegFrom-REG_HOST, RegTo-REG_HOST);
@@ -123,11 +122,11 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 
 	while (x && in)
 	{
-		if (in->Rd1.regID == RegFrom && in->Rd1.state == RS_REGISTER) in->Rd1.regID = RegTo;
-		if (in->Rd2.regID == RegFrom && in->Rd2.state == RS_REGISTER) in->Rd2.regID = RegTo;
-		if (in->R1.regID == RegFrom && in->R1.state == RS_REGISTER) in->R1.regID = RegTo;
-		if (in->R2.regID == RegFrom && in->R2.state == RS_REGISTER) in->R2.regID = RegTo;
-		if (in->R3.regID == RegFrom && in->R3.state == RS_REGISTER) in->R3.regID = RegTo;
+		if (in->Rd1.regID == RegFrom) in->Rd1.regID = RegTo;
+		if (in->Rd2.regID == RegFrom) in->Rd2.regID = RegTo;
+		if (in->R1.regID == RegFrom) in->R1.regID = RegTo;
+		if (in->R2.regID == RegFrom) in->R2.regID = RegTo;
+		if (in->R3.regID == RegFrom) in->R3.regID = RegTo;
 		x--;
 		in = in->nextInstruction;
 	}
@@ -443,6 +442,17 @@ code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data)
 	return code_seg;
 }
 
+void cc_interrupt()
+{
+	printf("cc_interrupt() called\n");
+}
+
+
+void mem_lookup()
+{
+
+}
+
 /*
  * This is equivalent to cc_interupt() in new_dynarec
  *
@@ -459,12 +469,14 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrI(ARM_TST, AL, REG_NOT_USED, REG_STATUS, REG_NOT_USED, 0x01);
 	code_seg->Intermcode = ins = newInstruction;
 
-	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+
+	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
 	ADD_LL_NEXT(newInstruction, ins);
 
-	// Call interrupt C function
-	//insertCall_To_C(ins, AL, FUNC_GEN_INTERRUPT);
+	insertCall_To_C(code_seg, ins, AL, (size_t)&cc_interrupt);
+
+	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+	ADD_LL_NEXT(newInstruction, ins);
 
 	// Return
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
@@ -523,7 +535,7 @@ void Translate_init(code_seg_t* const codeSegment)
 	for (x=0; x < codeSegment->MIPScodeLen; x++)
 	{
 		// Filter out No-ops
-		if (0 != *(codeSegment->MIPScode + x))
+		//if (0 != *(codeSegment->MIPScode + x))
 		{
 			newInstruction = newEmptyInstr();
 
@@ -652,7 +664,7 @@ void Translate_DelaySlot(code_seg_t*  codeSegment)
 		{
 			while (ins->nextInstruction->nextInstruction) ins = ins->nextInstruction;
 		}
-		newInstruction 	= newInstrI(ARM_BFC,AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED, REG_EMU_FLAG_DS);
+		newInstruction 	= newInstrI(ARM_BIC,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, REG_EMU_FLAG_DS);
 		ADD_LL_NEXT(newInstruction, ins);
 	}
 
@@ -688,7 +700,7 @@ void Translate_DelaySlot(code_seg_t*  codeSegment)
 		//goto last instruction (the branch instruction)
 		while (ins->nextInstruction) ins = ins->nextInstruction;
 
-		newInstruction 	= newInstrI(ARM_BFI,AL, REG_EMU_FLAGS, REG_NOT_USED, REG_NOT_USED, REG_EMU_FLAG_DS);
+		newInstruction 	= newInstrI(ARM_BIC,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, REG_EMU_FLAG_DS);
 		ADD_LL_NEXT(newInstruction, ins);
 	}
 }
@@ -1217,7 +1229,14 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case TEQI: break;
 			case TNEI: break;
 			case ADDI: break;
-			case ADDIU: break;
+			case ADDIU:
+				if (ins->immediate > 255)
+				{
+					new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
+					ins->immediate = ins->immediate & 0xFF;
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
 			case SLTI: break;
 			case SLTIU: break;
 			case ANDI: break;
@@ -1230,7 +1249,9 @@ void Translate_Generic(code_seg_t* const codeSegment)
 				}
 				break;
 			case XORI: break;
-			case LUI: break;
+			case LUI:
+				//InstrFree(codeSegment, ins);
+				break;
 			case MFC0: break;
 			case MTC0:
 				if (ins->R1.regID == 0)
@@ -1570,10 +1591,10 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			funcTempImm = ins->immediate;
 
 			//test if raw address or virtual
-			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R2.regID, REG_NOT_USED, 0x08 << 24);
+			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0x08 << 24);
 
 			// if address is raw (NE) then add base offset to get to host address
-			new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, ins->R2.regID, REG_NOT_USED, uMemoryBase << 24);
+			new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, uMemoryBase << 24);
 			ADD_LL_NEXT(new_ins, ins);
 
 			//check immediate is not too large for ARM and if it is then add additional imm
@@ -1588,8 +1609,21 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			// TODO do we need to set ins->U ?
 			ADD_LL_NEXT(new_ins, ins);
 
+			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, ins->R1.regID);
+			ADD_LL_NEXT(new_ins, ins);
+
 			// now lookup virtual address
-			//ins = insertCall_To_C(ins, EQ, FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS);
+			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup);
+
+			new_ins = newInstrI(ARM_STR_LIT, NE, REG_NOT_USED, funcTempReg, REG_HOST_R0, funcTempImm&0xfff);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+			ADD_LL_NEXT(new_ins, ins);
+
 			break;
 		case SDL: break;
 		case SDR: break;
@@ -1619,7 +1653,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			new_ins = newInstrI(ARM_LDR_LIT, NE, funcTempReg, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
 
-			//ins = insertCall_To_C(ins, EQ, FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS);
+			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup);
 
 			break;
 		case LBU: break;
@@ -1770,7 +1804,9 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		if (counts[x]) NumberRegUsed++;
 	}
 
-	//printf("Segment 0x%x uses %d registers\n",(uint32_t)codeSegment, NumberRegUsed);
+#if defined(SHOW_REG_TRANSLATION_MAP)
+	printf("Segment 0x%x uses %d registers\n",(uint32_t)codeSegment, NumberRegUsed);
+#endif
 	
 	if (NumberRegUsed <= 11)
 	{
@@ -1802,27 +1838,27 @@ void Translate_Registers(code_seg_t* const codeSegment)
 
 		while (ins)
 		{
-			if (ins->Rd1.regID != REG_NOT_USED  && ins->Rd1.state == RS_REGISTER && ins->Rd1.regID < REG_HOST){
+			if (ins->Rd1.regID != REG_NOT_USED  && ins->Rd1.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + uiCurrentRegister, 0);
 				getNextRegister(ins, &uiCurrentRegister);
 			}
 
-			if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.state == RS_REGISTER && ins->Rd2.regID < REG_HOST){
+			if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + uiCurrentRegister, 0);
 				getNextRegister(ins, &uiCurrentRegister);
 			}
 
-			if (ins->R1.regID != REG_NOT_USED && ins->R1.state == RS_REGISTER && ins->R1.regID < REG_HOST){
+			if (ins->R1.regID != REG_NOT_USED && ins->R1.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->R1.regID, REG_HOST + uiCurrentRegister, 0);
 				getNextRegister(ins, &uiCurrentRegister);
 			}
 
-			if (ins->R2.regID != REG_NOT_USED && ins->R2.state == RS_REGISTER && ins->R2.regID < REG_HOST){
+			if (ins->R2.regID != REG_NOT_USED && ins->R2.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->R2.regID, REG_HOST + uiCurrentRegister, 0);
 				getNextRegister(ins, &uiCurrentRegister);
 			}
 
-			if (ins->R3.regID != REG_NOT_USED && ins->R3.state == RS_REGISTER && ins->R3.regID < REG_HOST){
+			if (ins->R3.regID != REG_NOT_USED && ins->R3.regID < REG_HOST){
 				UpdateRegWithReg(ins,ins->R3.regID, REG_HOST + uiCurrentRegister, 0);
 				getNextRegister(ins, &uiCurrentRegister);
 			}
@@ -1836,11 +1872,11 @@ void Translate_Registers(code_seg_t* const codeSegment)
 	ins = codeSegment->Intermcode;
 	while (ins)
 	{
-		if (ins->Rd1.regID != REG_NOT_USED && ins->Rd1.state == RS_REGISTER) ins->Rd1.regID &= ~REG_HOST;
-		if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.state == RS_REGISTER) ins->Rd2.regID &= ~REG_HOST;
-		if (ins->R1.regID != REG_NOT_USED && ins->R1.state == RS_REGISTER) ins->R1.regID &= ~REG_HOST;
-		if (ins->R2.regID != REG_NOT_USED && ins->R2.state == RS_REGISTER) ins->R2.regID &= ~REG_HOST;
-		if (ins->R3.regID != REG_NOT_USED && ins->R3.state == RS_REGISTER) ins->R3.regID &= ~REG_HOST;
+		if (ins->Rd1.regID != REG_NOT_USED) ins->Rd1.regID &= ~REG_HOST;
+		if (ins->Rd2.regID != REG_NOT_USED) ins->Rd2.regID &= ~REG_HOST;
+		if (ins->R1.regID != REG_NOT_USED) ins->R1.regID &= ~REG_HOST;
+		if (ins->R2.regID != REG_NOT_USED) ins->R2.regID &= ~REG_HOST;
+		if (ins->R3.regID != REG_NOT_USED) ins->R3.regID &= ~REG_HOST;
 
 		ins = ins->nextInstruction;
 	}
@@ -2016,7 +2052,7 @@ void Translate_Trap(code_seg_t* const codeSegment)
 			case ORI: break;
 			case XORI: break;
 			case LUI: break;
-			case MFC0: break;
+			case MFC0:
 				ins->instruction = ARM_MOV;
 				ins->R2 = ins->R1;
 				ins->R1.regID = REG_NOT_USED;
@@ -2176,6 +2212,32 @@ void Translate_Trap(code_seg_t* const codeSegment)
 		}
 
 		ins = ins->nextInstruction;
+	}
+}
+
+void Translate_CleanUp(code_seg_t* const codeSegment)
+{
+	Instruction_t*ins;
+	ins = codeSegment->Intermcode;
+
+	while (ins)
+	{
+		if (NO_OP == ins->instruction)
+		{
+			ins = InstrFree(codeSegment, ins);
+		}
+		else if (SLL == ins->instruction && ins->Rd1.regID == 0)	// MIPS NO_OP
+		{
+			ins = InstrFree(codeSegment, ins);
+		}
+		else if (LUI == ins->instruction)
+		{
+			ins = InstrFree(codeSegment, ins);
+		}
+		else
+		{
+			ins = ins->nextInstruction;
+		}
 	}
 }
 
@@ -2381,7 +2443,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 /*
  * Function to correct the offset to be applied for literal store/loading
  */
-void Translate_Literals(const code_seg_t* const codeSegment)
+void Translate_Literals(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
@@ -2421,26 +2483,17 @@ void Translate_Literals(const code_seg_t* const codeSegment)
 	}
 }
 
+void Translate_Write(code_seg_t* codeSegment)
+{
+	emit_arm_code(codeSegment);
+}
+
 void Translate(code_seg_t* const codeSegment)
 {
-	Translate_init(codeSegment);
+	int x;
 
-	Translate_DelaySlot(codeSegment);
-	Translate_CountRegister(codeSegment);
-	Translate_Constants(codeSegment);
-	Translate_32BitRegisters(codeSegment);
-
-	Translate_Generic(codeSegment);
-	Translate_FPU(codeSegment);
-
-	Translate_Trap(codeSegment);
-	Translate_Memory(codeSegment);
-
-	Translate_LoadStoreWriteBack(codeSegment);
-	Translate_LoadCachedRegisters(codeSegment);
-	Translate_StoreCachedRegisters(codeSegment);
-
-	Translate_Branch(codeSegment);
-	Translate_Registers(codeSegment);
-	Translate_Literals(codeSegment);
+	for (x=0; x < COUNTOF(Translations); x++)
+	{
+		Translations[x].function(codeSegment);
+	}
 }

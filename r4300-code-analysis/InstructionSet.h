@@ -86,7 +86,7 @@
 // Configurable #defines if you want to change
 // which registers hold the emulation frame data or emulation flags
 #define REG_EMU_FP			REG_HOST_FP
-#define REG_EMU_FLAGS		REG_HOST_R4
+#define REG_EMU_FLAGS		REG_HOST_R12
 
 // emulation flag bits
 #define REG_EMU_FLAG_DS		(0x00)
@@ -548,7 +548,7 @@ void Intermediate_print(const struct _code_seg * const codeSegment);
 
 void Intermediate_Literals_print(const struct _code_seg * const codeSegment);
 
-void InstrFree(struct _code_seg * const codeSegment, Instruction_t* ins);
+Instruction_t* InstrFree(struct _code_seg * const codeSegment, Instruction_t* ins);
 
 #endif
 

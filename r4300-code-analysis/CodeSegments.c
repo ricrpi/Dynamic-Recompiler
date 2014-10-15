@@ -136,7 +136,9 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 		if (GlobalLiteralCount >= 1024)
 		{
 			printf("CodeSegments.c:%d Run out of Global Literal positions\n", __LINE__);
+#if defined(ABORT_EXCEEDED_GLOBAL_OFFSET)
 			abort();
+#endif
 		}
 
 		*offset = -(GlobalLiteralCount+1)*4;
@@ -710,7 +712,7 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	segmentData.segStop = Generate_CodeStop(&segmentData);
 	emit_arm_code(segmentData.segStop);
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_STOP)) = (uint32_t)segmentData.segStop->ARMEntryPoint;
-
+/*
 	segmentData.segMem = Generate_MemoryTranslationCode(&segmentData, NULL);
 	emit_arm_code(segmentData.segMem);
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS)) = (uint32_t)segmentData.segMem->ARMEntryPoint;
@@ -726,7 +728,7 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	segmentData.segTrap = Generate_MIPS_Trap(&segmentData);
 	emit_arm_code(segmentData.segTrap);
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_TRAP)) = (uint32_t)segmentData.segTrap->ARMEntryPoint;
-
+*/
 	// Compile the First contiguous block of Segments
 	code_seg_t* seg = segmentData.StaticSegments;
 
@@ -744,7 +746,7 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 
 	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)segmentData.StaticSegments->ARMEntryPoint;
 
-#if 1
+#if 0
 	printf("FUNC_GEN_START                   0x%x\n", (uint32_t)segmentData.segStart->ARMEntryPoint);
 	printf("FUNC_GEN_STOP                    0x%x\n", (uint32_t)segmentData.segStop->ARMEntryPoint);
 	printf("FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS  0x%x\n", (uint32_t)segmentData.segMem->ARMEntryPoint);

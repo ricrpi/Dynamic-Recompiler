@@ -44,7 +44,7 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 		assert(rotate < 32);
 		assert(ins->shiftType != ROTATE_RIGHT ||  ins->rotate < 16);
 		assert(imm < 256);
-		return rotate << 8 | imm;
+		return (rotate << 8) | (imm&0xFF);
 	}
 	else if (ins->R3.regID != REG_NOT_USED)
 	{
@@ -127,12 +127,14 @@ static uint32_t arm_encode(const Instruction_t* ins, size_t addr)
 	case ARM_MOV:
 		return ins->cond << 28 | ins->I << 25 | 0xD << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_BIC:
-		return ins->cond << 28 | ins->I << 25 | 0xE << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
+		return ins->cond << 28 | ins->I << 25 | 0xE << 21 | ins->S << 20 | R1 << 16  | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_MVN:
 		return ins->cond << 28 | ins->I << 25 | 0xF << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_BFC:
+		abort();
 		return ins->cond << 28 | 0x3E << 21 | 0x1F; // TODO
 	case ARM_BFI:
+		abort();
 		return ins->cond << 28 | 0x3E << 21 | 0x1 << 4 | R1; // TODO
 	case ARM_CLZ:
 		return 0x16F0F10 | ins->S << 20 | Rd1 << 12 | R1;
@@ -171,7 +173,6 @@ static uint32_t arm_encode(const Instruction_t* ins, size_t addr)
 			return ins->cond << 28 | 0xA << 24 | ins->Ln << 24 | (((ins->offset - addr - ARM_BRANCH_OFFSET)/4)&0xffffff);
 		else
 			return ins->cond << 28 | 0xA << 24 | ins->Ln << 24 | ((ins->offset - ARM_BRANCH_OFFSET)&0xffffff);
-
 	//case JR:
 		//assert(ins->I == 0);
 		// we just need to move the specified register into the pc on arm
@@ -196,6 +197,9 @@ static uint32_t arm_encode(const Instruction_t* ins, size_t addr)
 	}
 
 	printf("Could not encode '%s'\n", Instruction_ascii[STRIP(ins->instruction)]);
+#if defined (ABORT_ARM_ENCODE)
+	abort();
+#endif
 	return 0;
 }
 
@@ -251,9 +255,9 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	{
 		printf("\tmul%s\n", arm_cond[word>>28]);
 	}
-	else if((word & 0x0e000010)== 0x06000010) // UNDEFINED
+	else if ((word & 0x0fe0007f) == 0x07e0001f)	// bfc
 	{
-		printf ("Undefined Command\n");
+		printf("\tbfc%s\t%s, #%d, #%d\n", arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], (word>>7)&0x1f, (word>>16)&0x1f - (word>>7)&0x1f);
 	}
 	else if((word & 0x0f000000) == 0x0a000000) // Branch
 	{
@@ -300,7 +304,7 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	{
 
 	}
-	else if((word & 0x0c000000) == 0x04000000) // LDR Immediate
+	else if((word & 0x0c000000) == 0x04000000) // LDR / STR Immediate
 	{
 		char ins[4];
 		char wb[] = {0,0};
@@ -313,16 +317,16 @@ void arm_print(const uint32_t addr, const uint32_t word)
 		else
 			sprintf(ins, "str");
 
-		if (word & 1<<21) wb[0] = '!';
-		if (word & 1<<22) byt[0] = 'b';
-		if (!(word & 1<<23)) minus[0] = '-';
+		if (word & 1 << 21) wb[0] = '!';
+		if (word & 1 << 22) byt[0] = 'b';
+		if (!(word & 1 << 23)) minus[0] = '-';
 
-		sprintf(imm, "#0x%x", word&0xfff);
+		sprintf(imm, "#0x%x", word & 0xfff);
 
 		if (word & (1 << 24)) // Pre/post
-			printf("\t%s%s%s\t%s, [%s, %s%s]%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, imm, wb);
+			printf("\t%s%s%s\t%s, [%s, %s%s]%s \t// %s%d\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, imm, wb, minus, (word & 0xfff)/4);
 		else
-			printf("\t%s%s%s\t%s, [%s], %s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, imm);
+			printf("\t%s%s%s\t%s, [%s], %s%s \t// %s%d\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, imm, minus, (word & 0xfff)/4);
 	}
 	else if((word & 0x0c000000) == 0x06000000) // LDR Register
 	{
@@ -446,7 +450,10 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	//}
 	else
 	{
-		printf ("\tUnknown Command\n");
+		printf ("\tUnknown Command %0x08x %010d\n", word, word);
+#if defined(ABORT_ARM_DECODE)
+		abort();
+#endif
 	}
 	return;
 }

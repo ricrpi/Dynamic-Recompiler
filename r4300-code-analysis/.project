@@ -27,4 +27,11 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>README.md</name>
+			<type>1</type>
+			<location>/home/rjhender/git/R4300-code-analysis/README.md</location>
+		</link>
+	</linkedResources>
 </projectDescription>

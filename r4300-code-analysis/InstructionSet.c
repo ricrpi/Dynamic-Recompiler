@@ -284,6 +284,8 @@ Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask)
 {
 	Instruction_t* newInstr = newEmptyInstr(0);
 
+	assert(Rmask < (1<<16));
+
 	newInstr->instruction = ARM_STM;
 	newInstr->cond = cond;
 	newInstr->R1.regID = REG_HOST_SP;
@@ -299,6 +301,8 @@ Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask)
 Instruction_t* newInstrPOP(const Condition_e cond, const uint32_t Rmask)
 {
 	Instruction_t* newInstr = newEmptyInstr(0);
+
+	assert(Rmask < (1<<16));
 
 	newInstr->instruction = ARM_LDM;
 	newInstr->cond = cond;
@@ -380,7 +384,7 @@ void Intermediate_Literals_print(const code_seg_t* const codeSegment)
 	}
 }
 
-void InstrFree(code_seg_t* const codeSegment, Instruction_t* ins)
+Instruction_t* InstrFree(code_seg_t* const codeSegment, Instruction_t* ins)
 {
 	Instruction_t* in = codeSegment->Intermcode;
 
@@ -388,6 +392,7 @@ void InstrFree(code_seg_t* const codeSegment, Instruction_t* ins)
 	{
 		codeSegment->Intermcode = codeSegment->Intermcode->nextInstruction;
 		free(in);
+		return codeSegment->Intermcode;
 	}
 	else
 	{
@@ -395,5 +400,6 @@ void InstrFree(code_seg_t* const codeSegment, Instruction_t* ins)
 
 		in->nextInstruction = ins->nextInstruction;
 		free(ins);
+		return in->nextInstruction;
 	}
 }

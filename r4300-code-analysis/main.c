@@ -29,7 +29,11 @@ static void handler(int sig, siginfo_t *si, void *unused)
 	if (sig == SIGSEGV)	printf("\nSegmentation detected trying to access %p\n", si->si_addr);
 	if (sig == SIGABRT)	printf("\nAbort detected\n");
 
-	if (level) exit(0);
+	if (level > 10)
+	{
+		printf("Exiting, exceeded signal limit\n");
+		exit(0);
+	}
 
 	level++;
 
