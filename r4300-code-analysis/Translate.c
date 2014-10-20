@@ -405,11 +405,11 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	assert(base == REG_HOST_PC);
 
 	// setup the HOST_FP
-	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_FP, REG_NOT_USED, base, offset);
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_EMU_FP, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// start executing recompiled code
-	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_FP, RECOMPILED_CODE_START);
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_PC, REG_NOT_USED, REG_EMU_FP, RECOMPILED_CODE_START);
 	ADD_LL_NEXT(newInstruction, ins);
 #endif
 
@@ -1870,7 +1870,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 				&& !RegUsed[ins->R1.regID])
 		{
 			RegUsed[ins->R1.regID]++;
-			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R1.regID, REG_NOT_USED, REG_HOST_FP, ins->R1.regID * 4);
+			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R1.regID, REG_NOT_USED, REG_EMU_FP, ins->R1.regID * 4);
 			new_ins->nextInstruction = ins;
 
 			if (!prev_ins)
@@ -1888,7 +1888,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 				&& !RegUsed[ins->R2.regID])
 		{
 			RegUsed[ins->R2.regID]++;
-			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R2.regID, REG_NOT_USED, REG_HOST_FP, ins->R2.regID * 4);
+			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R2.regID, REG_NOT_USED, REG_EMU_FP, ins->R2.regID * 4);
 			new_ins->nextInstruction = ins;
 
 			if (!prev_ins)
@@ -1906,7 +1906,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 				&& !RegUsed[ins->R3.regID])
 		{
 			RegUsed[ins->R3.regID]++;
-			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R3.regID, REG_NOT_USED, REG_HOST_FP, ins->R3.regID * 4);
+			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R3.regID, REG_NOT_USED, REG_EMU_FP, ins->R3.regID * 4);
 			new_ins->nextInstruction = ins;
 
 			if (!prev_ins)
@@ -2096,7 +2096,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 				}
 				else if (nextUsed == 0)
 				{
-					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd1.regID, REG_HOST_FP, ins->Rd1.regID * 4);
+					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd1.regID, REG_EMU_FP, ins->Rd1.regID * 4);
 					new_ins->nextInstruction = ins->nextInstruction;
 					ins->nextInstruction = new_ins;
 					ins = ins->nextInstruction;
@@ -2114,7 +2114,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_TEMP_STR_CONST, REG_NOT_USED, regBase, offset);
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, REG_TEMP_STR_CONST, REG_HOST_FP, ins->Rd1.regID * 4);
+				new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, REG_TEMP_STR_CONST, REG_EMU_FP, ins->Rd1.regID * 4);
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
@@ -2130,7 +2130,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 				}
 				else if (nextUsed == 0)
 				{
-					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd2.regID, REG_HOST_FP, ins->Rd2.regID * 4);
+					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd2.regID, REG_EMU_FP, ins->Rd2.regID * 4);
 					new_ins->nextInstruction = ins->nextInstruction;
 					ins->nextInstruction = new_ins;
 					ins = ins->nextInstruction;

@@ -42,7 +42,7 @@ static void sprintReg(char* str, const reg_t r)
 	}
 
 	if (r.regID == REG_NOT_USED)       sprintf(str, "                        ");
-	else if (r.regID == REG_HOST_FP)   sprintf(str, "fp                      ");
+	else if (r.regID == REG_EMU_FP)   sprintf(str, "fp                      ");
 	else if (r.regID == REG_HOST_SP)   sprintf(str, "sp                      ");
 	else if (r.regID == REG_HOST_LR)   sprintf(str, "lr                      ");
 	else if (r.regID == REG_HOST_PC)   sprintf(str, "pc                      ");
@@ -74,7 +74,7 @@ static void sprintReg(char* str, const reg_t r)
 	else                                 sprintf(str, "                      ");
 #else
 	if (r.regID == REG_NOT_USED)       sprintf(str, "      ");
-		else if (r.regID == REG_HOST_FP)   sprintf(str, "fp    ");
+		else if (r.regID == REG_EMU_FP)   sprintf(str, "fp    ");
 		else if (r.regID == REG_HOST_SP)   sprintf(str, "sp    ");
 		else if (r.regID == REG_HOST_LR)   sprintf(str, "lr    ");
 		else if (r.regID == REG_HOST_PC)   sprintf(str, "pc    ");

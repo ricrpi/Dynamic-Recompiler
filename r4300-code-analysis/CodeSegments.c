@@ -127,7 +127,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 		if (*((uint32_t*)MMAP_FP_BASE - x) == value)
 		{
 			*offset = x * 4;
-			*base = REG_HOST_FP;
+			*base = REG_EMU_FP;
 			return 0;
 		}
 	}
@@ -145,7 +145,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 		}
 
 		*offset = -(GlobalLiteralCount+1)*4;
-		*base = REG_HOST_FP;
+		*base = REG_EMU_FP;
 		*((uint32_t*)MMAP_FP_BASE - GlobalLiteralCount-1) = value;
 		GlobalLiteralCount++;
 		return 0;
