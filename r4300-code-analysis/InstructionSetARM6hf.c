@@ -197,6 +197,9 @@ static uint32_t arm_encode(const Instruction_t* ins, size_t addr)
 	}
 
 	printf("Could not encode '%s'\n", Instruction_ascii[STRIP(ins->instruction)]);
+
+	Instr_print(ins, 1);
+
 #if defined (ABORT_ARM_ENCODE)
 	abort();
 #endif

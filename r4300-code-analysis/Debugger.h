@@ -56,7 +56,8 @@ int Debugger_start(const code_segment_data_t* const segmentData);
 
 // ========= Extra Debugging Information ==============================
 
-#define SHOW_REG_TRANSLATION_MAP
+//#define SHOW_REG_TRANSLATION_MAP
+//#define SHOW_PRINT_INT_CONST
 
 // ========= Customize Aborts for debugging ===========================
 

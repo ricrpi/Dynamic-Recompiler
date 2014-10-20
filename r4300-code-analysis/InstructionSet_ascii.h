@@ -269,10 +269,10 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "str",		 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
 "ldrd",		 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
 "strd",		 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
-"ldr",	 //  Rd1 (Rt) = memory[ R2 (Rn) + imm ]
-"str",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
-"ldrd",	 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
-"strd",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+"ldr_lit",	 //  Rd1 (Rt) = memory[ R2 (Rn) + imm ]
+"str_lit",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+"ldrd_lit",	 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
+"strd_lit",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
 "ldm",		 //  Rmask (<registers>) = memory [ Rn ], if (W) Rn +-= count of registers  (+ if U, - if ~U)
 "stm",		 //  memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
 

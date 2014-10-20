@@ -10,6 +10,10 @@ Tasks to complete:
 
 v Fix Register number translations.
 
+- Build 32-bit translation.
+
+- Fix COUNT translation when COUNT is updated in code. 
+
 - Build 'Branch to Uncompiled' code/DR code.
 
 - Build cc_interrupt() code/DR code.
@@ -34,7 +38,5 @@ v Fix Register number translations.
   be placed in shared object (.so) code region then we could branch to 
   C functions rather than loading a register with address and lr register
   with pc before jumping.
-
-- Utilize r12 register.
 
 - Graft into Mupen64plus.

@@ -11,7 +11,7 @@
 #include "memory.h"
 #include "InstructionSetMIPS4.h"
 
-#define INDEX "%08x"
+#define INDEX "0x%08x"
 
 #define I_OP "s%02u, s%02u, #%02d"
 #define OP_I(val) \

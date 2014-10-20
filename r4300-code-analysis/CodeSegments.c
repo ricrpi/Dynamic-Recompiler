@@ -120,19 +120,22 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 {
 	int index = 4;
 
+	// If the literal is already global then might as well use it
+	int x;
+	for (x=1; x < 1024; x++)		//Scan existing global literals for Value
+	{
+		if (*((uint32_t*)MMAP_FP_BASE - x) == value)
+		{
+			*offset = x * 4;
+			*base = REG_HOST_FP;
+			return 0;
+		}
+	}
+
+	// Now we need to add a new literal
+	//If this is a SEG_SANDWICH then needs to be global
 	if (SEG_SANDWICH == codeSegment->Type)
 	{
-		int x;
-		for (x=1; x < 1024; x++)		//Scan existing global literals for Value
-		{
-			if (*((uint32_t*)MMAP_FP_BASE - x) == value)
-			{
-				*offset = x * 4;
-				*base = REG_HOST_FP;
-				return 0;
-			}
-		}
-
 		if (GlobalLiteralCount >= 1024)
 		{
 			printf("CodeSegments.c:%d Run out of Global Literal positions\n", __LINE__);
@@ -147,8 +150,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 		GlobalLiteralCount++;
 		return 0;
 	}
-
-	if (codeSegment->literals)
+	else if (codeSegment->literals)
 	{
 		//TODO if the value is already added then could re-use it
 
@@ -720,11 +722,11 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	segmentData.segInterrupt = Generate_ISR(&segmentData);
 	emit_arm_code(segmentData.segInterrupt);
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_INTERRUPT)) = (uint32_t)segmentData.segInterrupt->ARMEntryPoint;
-
+*/
 	segmentData.segBranchUnknown = Generate_BranchUnknown(&segmentData);
 	emit_arm_code(segmentData.segBranchUnknown);
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN)) = (uint32_t)segmentData.segBranchUnknown->ARMEntryPoint;
-
+/*
 	segmentData.segTrap = Generate_MIPS_Trap(&segmentData);
 	emit_arm_code(segmentData.segTrap);
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_TRAP)) = (uint32_t)segmentData.segTrap->ARMEntryPoint;

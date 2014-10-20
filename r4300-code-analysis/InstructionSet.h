@@ -391,17 +391,17 @@ typedef enum _Instruction_e {
 	ARM_AND,		// R1 (Rd) = R2 (Rn) & Op2
 	ARM_B,
 	ARM_EOR,
-	ARM_SUB,		// Rd` (Rd) = R1 - Op2
+	ARM_SUB,		// Rd1 (Rd) = R1 - Op2
 	ARM_RSB,		// Rd1 (Rd) = Op2 - R1
 	ARM_ADD,		// Rd1 (Rd) = R1 (Rn) + Op2
 	ARM_ADC,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
 	ARM_ASR,		// Rd1 (Rd) = R1 (Rn) >> #<imm>
 	ARM_SBC,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
 	ARM_RSC,
-	ARM_TST,		// Rn & Op2
-	ARM_TEQ,		// Rn ^ Op2
-	ARM_CMP,		// Rn - Op2
-	ARM_CMN,		// Rn + Op2
+	ARM_TST,		// R1 (Rn) & Op2
+	ARM_TEQ,		// R1 (Rn) ^ Op2
+	ARM_CMP,		// R1 (Rn) - Op2
+	ARM_CMN,		// R1 (Rn) + Op2
 	ARM_ORR,		// Rd1 (Rd) = R1 (Rn) | Op2
 	ARM_MOV,		// Rd1 (Rd) = Op2
 	ARM_BIC,		// Rd1 (Rd) = R1 (Rn) AND ~Op2
@@ -458,22 +458,23 @@ typedef enum
 
 typedef enum
 {
-	EQ, // Z = 1
-	NE, // Z = 0
-	CS, // C = 1
-	CC, // C = 0
-	MI, // N = 1
-	PL, // N = 0
-	VS, // V = 1
-	VC, // V = 0
-	HI, // C = 1 && Z = 0
-	LS,	// C = 0 || Z = 1
-	GE,	// N = V
-	LT,	// N != V
-	GT,	// Z = 0 && N = V
-	LE,	// Z = 1 || N! = V
+	EQ, // Z = 1			Equal
+	NE, // Z = 0			Not Equal
+	CS, // C = 1 			Unsigned Higher or same
+	CC, // C = 0 			Unsigned Lower
+	MI, // N = 1			Negative
+	PL, // N = 0			Positive or Zero
+	VS, // V = 1			Overflow
+	VC, // V = 0			No Overflow
+	HI, // C = 1 && Z = 0 	Unsigned Higher
+	LS,	// C = 0 || Z = 1 	Unsigned Lower or equal
+	GE,	// N = V 			Signed Greater
+	LT,	// N != V 			Signed less than
+	GT,	// Z = 0 && N = V 	Signed greater then
+	LE,	// Z = 1 || N! = V	Signed less than or equal
 	AL,	// Always
 	NV	// Never
+
 } Condition_e;
 
 typedef struct _Instruction
@@ -526,6 +527,13 @@ typedef struct _Instruction
 
 struct _code_seg;
 
+Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
+
+Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
+
+Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t offset, const uint32_t absolute);
+
+
 Instruction_t* newEmptyInstr();
 
 Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
@@ -536,15 +544,16 @@ Instruction_t* newInstrS(const Instruction_e ins, const Condition_e cond, const 
 
 Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
 
+Instruction_t* newInstrB(const Condition_e cond, const int32_t offset, const uint32_t absolute);
+
 Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask);
 
 Instruction_t* newInstrPOP(const Condition_e cond, const uint32_t Rmask);
 
-Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
 
-Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
+void CodeSeg_print(const struct _code_seg * const codeSegment);
 
-void Intermediate_print(const struct _code_seg * const codeSegment);
+void Instr_print(const Instruction_t* const ins, uint8_t heading);
 
 void Intermediate_Literals_print(const struct _code_seg * const codeSegment);
 

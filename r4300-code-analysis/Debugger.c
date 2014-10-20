@@ -176,7 +176,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			}
 			else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
-				printf("\t.word\t%12d (0x08%x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+				printf("\t.word\t%12d (0x%08x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			else
 				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}
@@ -235,7 +235,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 	}
 	else if (!CMD_CMP(1, "intermediate"))
 	{
-		Intermediate_print(CurrentCodeSeg);
+		CodeSeg_print(CurrentCodeSeg);
 	}
 	else if (!CMD_CMP(1, "literals"))
 	{
@@ -673,7 +673,7 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 
 		if (x < COUNTOF(Translations)-1)
 		{
-			Intermediate_print(CurrentCodeSeg);
+			CodeSeg_print(CurrentCodeSeg);
 		}
 		else
 		{
@@ -689,7 +689,7 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 					arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 				}
 				else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
-					printf("\t.word\t%12d (0x%x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+					printf("\t.word\t%12d (0x%08x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
 				else
 					arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			}

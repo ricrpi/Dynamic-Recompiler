@@ -133,7 +133,7 @@ static TranslationsMap Translations[] =
 		{Translate_32BitRegisters,			"32BitRegisters"},			//
 		{Translate_Generic,					"Generic"},					//
 		{Translate_FPU,						"FPU"},						//
-		{Translate_Trap,					"Trap"},					//
+		{Translate_Trap,					"Trap"},					// Not seen in DynaRec
 		{Translate_Memory,					"Memory"},					//
 		{Translate_LoadStoreWriteBack, 		"LoadStoreWriteBack"},		//
 		{Translate_LoadCachedRegisters, 	"LoadCachedRegisters"},		//

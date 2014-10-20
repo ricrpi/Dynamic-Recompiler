@@ -447,9 +447,18 @@ void cc_interrupt()
 	printf("cc_interrupt() called\n");
 }
 
-
 void mem_lookup()
 {
+	printf("mem_lookup() called\n");
+}
+
+void branchUnknown(size_t addr)
+{
+	printf("branchUnknown(0x%08x) called\n", addr);
+
+	// Need to generate the ARM assembler for target code_segment. Use 'addr' and code Seg map.
+	// Then we need to patch the code_segment branch we came from. Do we need it to be a link?
+	// Need to update CodeSegment 'callees' for correct handling of segment invalidation.
 
 }
 
@@ -495,9 +504,14 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 
 	seg_data->dbgCurrentSegment = code_seg;
 
-	// Return
-	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_LR);
 	code_seg->Intermcode = ins = newInstruction;
+
+	insertCall_To_C(code_seg,ins, AL, &branchUnknown);
+
+	// Now Re-execute the branch statement we came from.
+	newInstruction 		= newInstrI(ARM_SUB, AL, REG_HOST_PC, REG_HOST_LR, REG_NOT_USED, 4);
+	ADD_LL_NEXT(newInstruction, ins);
 
 	Translate_Registers(code_seg);
 
@@ -870,18 +884,28 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	Instruction_t*new_ins;
+	regID_t Rd1, R1, R2, R3;
 	ins = codeSegment->Intermcode;
 
 	while (ins)
 	{
+		Rd1 = ins->Rd1.regID;
+		R1 = ins->R1.regID;
+		R2 = ins->R2.regID;
+		R3 = ins->R3.regID;
 		switch (ins->instruction)
 		{
-			case SLL: break;
-			case SRL: break;
-			case SRA: break;
-			case SLLV: break;
-			case SRLV: break;
-			case SRAV: break;
+			case SLL:
+			case SRL:
+			case SRA:
+				//InstrI(ins, ARM_MOV, AL, ins->Rd1.regID, REG_NOT_USED, ins->R1.regID,ins->immediate);
+				break;
+			case SLLV:
+			case SRLV:
+			case SRAV:
+				//Instr(ins, ARM_MOV, AL, ins->Rd1.regID, REG_NOT_USED, ins->R1.regID);
+				//ins->R3.regID = ins->R2;
+				break;
 			case SYSCALL: break;
 			case BREAK: break;
 			case SYNC: break;
@@ -898,10 +922,9 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 				 */
 
 				// 1. Work out lower Word
-				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID , REG_NOT_USED, ins->R1.regID);
-				new_ins->shiftType = LOGICAL_LEFT;
-				new_ins->R3.regID = ins->R2.regID;
-				ADD_LL_NEXT(new_ins, ins);
+				Instr(ins, ARM_MOV, AL, ins->Rd1.regID , REG_NOT_USED, ins->R1.regID);
+				ins->shiftType = LOGICAL_LEFT;
+				ins->R3.regID = R2;
 
 				// 2. Work out upper word
 				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID | REG_WIDE, REG_NOT_USED, ins->R1.regID | REG_WIDE);
@@ -935,10 +958,9 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 				 */
 
 				//Work out lower Word
-				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID, REG_NOT_USED, ins->R1.regID);
-				new_ins->shiftType = LOGICAL_RIGHT;
-				new_ins->R3.regID = ins->R2.regID;
-				ADD_LL_NEXT(new_ins, ins);
+				Instr(ins, ARM_MOV, AL, ins->Rd1.regID, REG_NOT_USED, ins->R1.regID);
+				ins->shiftType = LOGICAL_RIGHT;
+				ins->R3.regID = R2;
 
 				//Work out upper word
 				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID| REG_WIDE, REG_NOT_USED, ins->Rd1.regID | REG_WIDE);
@@ -961,7 +983,77 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 			case DSRAV: break;
 			case MULT: break;
 			case MULTU: break;
-			case DIV: break;
+			case DIV:					//TODO DIV uses signed!
+				/*
+				 *  clz  r3, r0                 r3 ← CLZ(r0) Count leading zeroes of N
+					clz  r2, r1                 r2 ← CLZ(r1) Count leading zeroes of D
+					sub  r3, r2, r3             r3 ← r2 - r3.
+												 This is the difference of zeroes
+												 between D and N.
+												 Note that N >= D implies CLZ(N) <= CLZ(D)
+					add r3, r3, #1              Loop below needs an extra iteration count
+
+					mov r2, #0                  r2 ← 0
+					b .Lloop_check4
+					.Lloop4:
+					  cmp r0, r1, lsl r3        Compute r0 - (r1 << r3) and update cpsr
+					  adc r2, r2, r2            r2 ← r2 + r2 + C.
+												  Note that if r0 >= (r1 << r3) then C=1, C=0 otherwise
+					  subcs r0, r0, r1, lsl r3  r0 ← r0 - (r1 << r3) if C = 1 (this is, only if r0 >= (r1 << r3) )
+					.Lloop_check4:
+					  subs r3, r3, #1           r3 ← r3 - 1
+					  bpl .Lloop4               if r3 >= 0 (N=0) then branch to .Lloop1
+
+					mov r0, r2
+				 */
+				{
+					// Count leading Zeros of N
+					Instr(ins, ARM_CLZ, AL, REG_TEMP_GEN3, R1, REG_NOT_USED);
+
+					// Count leading Zeros of D
+					new_ins = newInstr(ARM_CLZ, AL, REG_TEMP_GEN2, R2, REG_NOT_USED);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_MOV, AL, REG_TEMP_GEN4, REG_NOT_USED, R1);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_SUB, AL, REG_TEMP_GEN3, REG_TEMP_GEN2, REG_TEMP_GEN3);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_GEN3, REG_TEMP_GEN3, REG_NOT_USED, 1);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_MOV, AL, REG_TEMP_GEN2, REG_NOT_USED, REG_NOT_USED, 0);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrB(AL, 4, 0);
+					new_ins->I = 0;
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_CMP, AL, REG_NOT_USED, R1, REG_TEMP_GEN4);
+					new_ins->R3.regID = REG_TEMP_GEN3;
+					new_ins->shiftType = LOGICAL_LEFT;
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_ADC, AL, REG_TEMP_GEN2, REG_TEMP_GEN2, REG_TEMP_GEN2, 0);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_SUB, CS, REG_TEMP_GEN4, REG_TEMP_GEN4, R2);
+					new_ins->R3.regID = REG_TEMP_GEN3;
+					new_ins->shiftType = LOGICAL_LEFT;
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_GEN2, REG_NOT_USED, REG_NOT_USED, 1);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrB(PL, -4, 0);
+					new_ins->I = 0;
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_GEN4);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
 			case DIVU: break;
 			case DMULT: break;
 			case DMULTU: break;
@@ -971,7 +1063,9 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 			case ADDU: break;
 			case SUB: break;
 			case SUBU: break;
-			case AND: break;
+			case AND:
+
+				break;
 			case OR: break;
 			case XOR: break;
 			case NOR: break;
@@ -1204,8 +1298,30 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case OR: break;
 			case XOR: break;
 			case NOR: break;
-			case SLT: break;
-			case SLTU: break;
+			case SLT:
+				{
+					regID_t dest = ins->Rd1.regID;
+					ins = Instr(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID, ins->R2.regID);
+
+					new_ins = newInstrI(ARM_MOV, GE, dest, REG_NOT_USED, REG_NOT_USED, 0);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_MOV, LT, dest, REG_NOT_USED, REG_NOT_USED, 1);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
+			case SLTU:
+				{
+					regID_t dest = ins->Rd1.regID;
+					ins = Instr(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID, ins->R2.regID);
+
+					new_ins = newInstrI(ARM_MOV, CS, dest, REG_NOT_USED, REG_NOT_USED, 0);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_MOV, CC, dest, REG_NOT_USED, REG_NOT_USED, 1);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+			break;
 			case DADD: break;
 			case DADDU: break;
 			case DSUB: break;
@@ -1237,8 +1353,53 @@ void Translate_Generic(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
-			case SLTI: break;
-			case SLTIU: break;
+			case SLTI:
+				if (ins->immediate > 255)
+				{
+
+				}
+				else if (ins->immediate > 0)
+				{
+					regID_t dest = ins->Rd1.regID;
+
+					ins = InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, ins->immediate&0xFF);
+
+					new_ins = newInstr(ARM_MOV, LT, dest, REG_NOT_USED, ins->R1.regID);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				else if (ins->immediate > -0xff)
+				{
+					regID_t dest = ins->Rd1.regID;
+
+					ins = InstrI(ins, ARM_CMN, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, -(ins->immediate&0xFF));
+
+					new_ins = newInstr(ARM_MOV, LT, dest, REG_NOT_USED, ins->R1.regID);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				else
+				{
+
+				}
+				break;
+			case SLTIU:	// TODO don't think this is right
+				if (ins->immediate > 255)
+				{
+
+				}
+				else if (ins->immediate > 0)
+				{
+					regID_t dest = ins->Rd1.regID;
+
+					ins = InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, ins->immediate&0xFF);
+
+					new_ins = newInstr(ARM_MOV, CC, dest, REG_NOT_USED, ins->R1.regID);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				else
+				{
+
+				}
+				break;
 			case ANDI: break;
 			case ORI:
 				if (ins->immediate > 255)
@@ -1250,7 +1411,6 @@ void Translate_Generic(code_seg_t* const codeSegment)
 				break;
 			case XORI: break;
 			case LUI:
-				//InstrFree(codeSegment, ins);
 				break;
 			case MFC0: break;
 			case MTC0:
@@ -2234,6 +2394,10 @@ void Translate_CleanUp(code_seg_t* const codeSegment)
 		{
 			ins = InstrFree(codeSegment, ins);
 		}
+		else if (CACHE == ins->instruction)
+		{
+			ins = InstrFree(codeSegment, ins);
+		}
 		else
 		{
 			ins = ins->nextInstruction;
@@ -2295,15 +2459,8 @@ void Translate_Branch(code_seg_t* const codeSegment)
 					branchAbsolute = 1;
 				}
 
-				new_ins = newInstr(ARM_B, EQ, REG_NOT_USED,REG_NOT_USED,REG_NOT_USED);
-
-				new_ins->offset = tgt_address;
-				new_ins->I = branchAbsolute;
-
-				new_ins->nextInstruction = ins->nextInstruction;
-				ins->nextInstruction = new_ins;
-				ins = ins->nextInstruction;
-
+				new_ins = newInstrB(EQ, tgt_address, branchAbsolute);
+				ADD_LL_NEXT(new_ins, ins);
 
 				break;
 			case BNE:
@@ -2344,14 +2501,8 @@ void Translate_Branch(code_seg_t* const codeSegment)
 					branchAbsolute = 1;
 				}
 
-				new_ins = newInstr(ARM_B, NE, REG_NOT_USED,REG_NOT_USED,REG_NOT_USED);
-
-				new_ins->offset = tgt_address;
-				new_ins->I = branchAbsolute;
-
-				new_ins->nextInstruction = ins->nextInstruction;
-				ins->nextInstruction = new_ins;
-				ins = ins->nextInstruction;
+				new_ins = newInstrB(NE, tgt_address, branchAbsolute);
+				ADD_LL_NEXT(new_ins, ins);
 
 				break;
 			case J:
@@ -2384,14 +2535,8 @@ void Translate_Branch(code_seg_t* const codeSegment)
 					branchAbsolute = 1;
 				}
 
-				new_ins = newInstr(ARM_B, AL, REG_NOT_USED,REG_NOT_USED,REG_NOT_USED);
-
-				new_ins->offset = tgt_address;
-				new_ins->I = branchAbsolute;
-
-				new_ins->nextInstruction = ins->nextInstruction;
-				ins->nextInstruction = new_ins;
-				ins = ins->nextInstruction;
+				new_ins = newInstrB(AL, tgt_address, branchAbsolute);
+				ADD_LL_NEXT(new_ins, ins);
 				break;
 			case JR:
 			case JALR:
