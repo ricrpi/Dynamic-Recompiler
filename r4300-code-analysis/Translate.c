@@ -442,6 +442,21 @@ code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data)
 	return code_seg;
 }
 
+void dbg_break()
+{
+	printf("Running Segment 0x%08x\n\n", (uint32_t)segmentData.dbgCurrentSegment);
+
+	printf("\tr0 0x%x\n"
+			"\tr1 0x%x\n"
+			"\tr2 0x%x\n"
+			"\tr3 0x%x\n"
+			, *(uint32_t*)(MMAP_FP_BASE + 0)
+			, *(uint32_t*)(MMAP_FP_BASE + 4)
+			, *(uint32_t*)(MMAP_FP_BASE + 8)
+			, *(uint32_t*)(MMAP_FP_BASE + 12));
+	return;
+}
+
 void cc_interrupt()
 {
 	printf("cc_interrupt() called\n");
@@ -2631,6 +2646,40 @@ void Translate_Literals(code_seg_t* const codeSegment)
 void Translate_Write(code_seg_t* codeSegment)
 {
 	emit_arm_code(codeSegment);
+}
+
+void Translate_Debug(code_seg_t* codeSegment)
+{
+	Instruction_t*ins;
+	Instruction_t*new_ins;
+	ins = codeSegment->Intermcode;
+
+	regID_t base;
+	int32_t offset;
+
+	//TODO Nasty global"
+
+	//load current segment Address
+	addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
+	codeSegment->Intermcode = new_ins = newInstrI(ARM_LDR_LIT, AL, REG_TEMP_DBG1, REG_NOT_USED, base, offset);
+	new_ins->nextInstruction = ins;
+	ins = new_ins;
+
+	//load segmentData->dbgCurrentSegment address
+	addLiteral(codeSegment, &base, &offset, (uint32_t)&segmentData.dbgCurrentSegment);
+	new_ins 		= newInstrI(ARM_LDR_LIT, AL, REG_TEMP_DBG2, REG_NOT_USED, base, offset);
+	ADD_LL_NEXT(new_ins, ins);
+
+	//store
+	new_ins 		= newInstrI(ARM_STR, AL, REG_NOT_USED, REG_TEMP_DBG1, REG_TEMP_DBG2, 0);
+	ADD_LL_NEXT(new_ins, ins);
+
+	insertCall_To_C(codeSegment, ins, AL,(uint32_t)dbg_break);
+
+	while (ins)
+	{
+		ins = ins->nextInstruction;
+	}
 }
 
 void Translate(code_seg_t* const codeSegment)

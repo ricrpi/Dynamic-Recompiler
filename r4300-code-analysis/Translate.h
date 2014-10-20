@@ -122,6 +122,8 @@ void Translate_Literals(code_seg_t* const codeSegment);
 
 void Translate_Write(code_seg_t* const codeSegment);
 
+void Translate_Debug(code_seg_t* const codeSegment);
+
 void Translate(code_seg_t* const codeSegment);
 
 static TranslationsMap Translations[] =
@@ -129,6 +131,7 @@ static TranslationsMap Translations[] =
 		{Translate_init,					"init"},					//
 		{Translate_DelaySlot,				"DelaySlot"},				//
 		{Translate_CountRegister,			"CountRegister"},			//
+		{Translate_Debug,					"Debug"},					// Provides Debug Hooks
 		{Translate_Constants,				"Constants"},				//
 		{Translate_32BitRegisters,			"32BitRegisters"},			//
 		{Translate_Generic,					"Generic"},					//

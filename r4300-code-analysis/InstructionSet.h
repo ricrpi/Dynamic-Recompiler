@@ -60,6 +60,8 @@
 #define REG_TEMP_STR_CONST 	(REG_TEMP | 0x06)
 #define REG_TEMP_JR1		(REG_TEMP | 0x07)
 #define REG_TEMP_CALL2C		(REG_TEMP | 0x08)
+#define REG_TEMP_DBG1		(REG_TEMP | 0x09)
+#define REG_TEMP_DBG2		(REG_TEMP | 0x0A)
 
 //These are the HOST registers. Translation MUST not change them
 #define REG_HOST_FP			(REG_HOST | 0x0b)
