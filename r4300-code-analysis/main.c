@@ -7,6 +7,8 @@
  *      Author: rjhender
  */
 
+#define __USE_GNU
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,18 +17,27 @@
 #include "memory.h"
 #include "CodeSegments.h"
 #include "InstructionSetMIPS4.h"
-#include "InstructionSet_ascii.h"
 #include "Debugger.h"
-
 #include <signal.h>
+#include <sys/ucontext.h>
 
 extern code_segment_data_t segmentData;
 
-static void handler(int sig, siginfo_t *si, void *unused)
+static void handler(int sig, siginfo_t *si, void *ptr)
 {
-	static int level = 0;
+	static int level 		= 0;
+	ucontext_t *ucontext 	= (ucontext_t*)ptr;
 
-	if (sig == SIGSEGV)	printf("\nSegmentation detected trying to access %p\n", si->si_addr);
+	if (sig == SIGSEGV){
+		size_t ins_addr;
+		#if __i386
+			ins_addr = ucontext->uc_mcontext.gregs[14];
+		#else
+			ins_addr = ucontext->uc_mcontext.gregs[15];
+		#endif
+
+		printf("\nSegmentation detected trying to access address 0x%x on instruction 0x%%x\n", si->si_addr, ins_addr);
+	}
 	if (sig == SIGABRT)	printf("\nAbort detected\n");
 
 	if (level > 10)

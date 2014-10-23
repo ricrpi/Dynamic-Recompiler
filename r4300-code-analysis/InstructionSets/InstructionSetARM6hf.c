@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "memory.h"
 
@@ -248,7 +249,9 @@ static void opsh(char* str, uint32_t word)
 void arm_print(const uint32_t addr, const uint32_t word)
 {
 	printf("0x%08x", addr);
-	//printf(" 0x%08x", word);
+#if defined(SHOW_PRINT_ARM_VALUE)
+	printf(" 0x%08x", word);
+#endif
 
 	if ((word & 0x0fb00f90) == 0x01000090) // swap
 	{
@@ -260,7 +263,7 @@ void arm_print(const uint32_t addr, const uint32_t word)
 	}
 	else if ((word & 0x0fe0007f) == 0x07e0001f)	// bfc
 	{
-		printf("\tbfc%s\t%s, #%d, #%d\n", arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], (word>>7)&0x1f, (word>>16)&0x1f - (word>>7)&0x1f);
+		printf("\tbfc%s\t%s, #%d, #%d\n", arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], (word>>7)&0x1f, ((word>>16)&0x1f) - ((word>>7)&0x1f));
 	}
 	else if((word & 0x0f000000) == 0x0a000000) // Branch
 	{

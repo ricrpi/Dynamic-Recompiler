@@ -1317,7 +1317,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		case 0x09:
 			ins->instruction =  TGEIU;
 			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->immediate = IMM(uiMIPSword,16);
+			ins->immediate = IMMU(uiMIPSword,16);
 			ins->I = 1;
 			return 0;
 		case 0x0A:
@@ -1329,7 +1329,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		case 0x0B:
 			ins->instruction =  TLTIU;
 			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->immediate = IMM(uiMIPSword,16);
+			ins->immediate = IMMU(uiMIPSword,16);
 			ins->I = 1;
 			return 0;
 		case 0x0C:
@@ -1413,7 +1413,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		ins->instruction = ADDIU;
 		ins->Rd1.regID = M_Rt(uiMIPSword);
 		ins->R1.regID = M_Rs(uiMIPSword);
-		ins->immediate = IMM(uiMIPSword, 16);
+		ins->immediate = IMMU(uiMIPSword, 16);
 		ins->I = 1;
 		return 0; 	// I
 
@@ -1428,7 +1428,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		ins->instruction =  SLTIU;
 		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->Rd1.regID = M_Rt(uiMIPSword);
-		ins->immediate = IMM(uiMIPSword, 16);
+		ins->immediate = IMMU(uiMIPSword, 16);
 		ins->I = 1;
 		return 0; 	// I
 	case 0x0C:
@@ -1823,9 +1823,17 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 	case 0x18:
 			ins->instruction =  DADDI;
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0;
 	case 0x19:
 			ins->instruction =  DADDIU;
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->immediate = IMMU(uiMIPSword, 16);
+			ins->I = 1;
 			return 0;
 	case 0x1A:
 			ins->instruction =  LDL;

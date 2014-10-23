@@ -9,6 +9,7 @@
 #define CODESEGMENTS_H_
 
 #include <stdint.h>
+#include <stddef.h>
 #include "InstructionSet.h"
 
 //-------------------------------------------------------------------
@@ -147,7 +148,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment,  regID_t* const base, int32_t
 
 int32_t ScanForCode(const uint32_t* const address, const uint32_t length);
 
-code_seg_t* getSegmentAt(void* address);
+code_seg_t* getSegmentAt(size_t address);
 
 //TODO RWD
 extern code_segment_data_t segmentData;

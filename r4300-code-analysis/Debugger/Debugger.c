@@ -8,14 +8,12 @@
 #include "InstructionSetMIPS4.h"
 #include "InstructionSetARM6hf.h"
 #include "Translate.h"
+#include "memory.h"
 
 #define LINE_LEN 400
 //#define HISTORY_LEN 5
 
 #define MIN(x, y)	(x < y? x : y)
-
-
-
 
 #define CMD_CMP(X, TXT) (strncasecmp(userInput[X], TXT, strlen(userInput[X])))
 
@@ -241,245 +239,10 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 	{
 		Intermediate_Literals_print(CurrentCodeSeg);
 	}
-	//TODO I do not like this!
 	else if (!CMD_CMP(1, "reg"))
 	{
-		uint32_t cpureg_i, fpureg_i,specialreg_i, cpureg_o, fpureg_o,specialreg_o;
-		int y;
+		DebugRuntimePrintMIPS();
 
-		printf("00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31\n");
-
-		for (x=0; x< CurrentCodeSeg->MIPScodeLen; x++)
-		{
-			cpureg_i = fpureg_i = specialreg_i = cpureg_o = fpureg_o = specialreg_o = 0;
-
-			switch (ops_type(*(CurrentCodeSeg->MIPScode + x)))
-			{
-			case DSRLV:
-			case DSRAV:
-				//	    MULT:
-				//	    MULTU:
-				//	    DIV:
-				//	    DIVU:
-			case	    DMULT:
-			case	    DMULTU:
-			case	    DDIV:
-			case	    DDIVU:
-				//	    ADD:
-				//	    ADDU:
-				//	    SUB:
-				//	    SUBU:
-				//	    AND:
-				//	    OR:
-				//	    XOR:
-				//	    NOR:
-				//	    SLT:
-				//	    SLTU:
-			case	    DADD:
-			case	    DADDU:
-			case	    DSUB:
-			case	    DSUBU:
-				//	    TGE:
-				//	    TGEU:
-				//	    TLT:
-				//	    TLTU:
-				//	    TEQ:
-				//	    TNE:
-			case	    DSLL:
-			case	    DSRL:
-			case	    DSRA:
-			case	    DSLL32:
-			case	    DSRL32:
-			case	    DSRA32:
-				//		INVALID:
-				//		TGEI:
-				//		TGEIU:
-				//		TLTI:
-				//		TLTIU:
-				//		TEQI:
-				//		TNEI:
-				//		ADDI:
-				//		ADDIU:
-				//		SLTI:
-				//		SLTIU:
-				//		ANDI:
-				//		ORI:
-				//		XORI:
-				//		LUI:
-				//		cop0:
-				//		MFC0:
-				//		MTC0:
-				//		tlb:
-				//		TLBR:
-				//		TLBWI:
-				//		TLBWR:
-				//		TLBP:
-				//		ERET:
-				//		MFC1:
-			case		DMFC1:
-				//		CFC1:
-				//		MTC1:
-			case		DMTC1:
-				//		CTC1:
-				//		BC1:
-				//		BC1F:
-				//		BC1T:
-				//		BC1FL:
-				//		BC1TL:
-				//		ADD_S:
-				//		SUB_S:
-				//		MUL_S:
-				//		DIV_S:
-				//		SQRT_S:
-				//		ABS_S:
-				//		MOV_S:
-				//		NEG_S:
-				//		ROUND_L_S:
-				//		TRUNC_L_S:
-				//		CEIL_L_S:
-				//		FLOOR_L_S:
-				//		ROUND_W_S:
-				//		TRUNC_W_S:
-				//		CEIL_W_S:
-				//		FLOOR_W_S:
-
-				//		CVT_W_S:
-				//		CVT_L_S:
-				//		C_F_S:
-				//		C_UN_S:
-				//		C_EQ_S:
-				//		C_UEQ_S:
-				//		C_OLT_S:
-				//		C_ULT_S:
-				//		C_OLE_S:
-				//		C_ULE_S:
-				//		C_SF_S:
-				//		C_NGLE_S:
-				//		C_SEQ_S:
-				//		C_NGL_S:
-				//		C_LT_S:
-				//		C_NGE_S:
-				//		C_LE_S:
-				//		C_NGT_S:
-			case		ADD_D:
-			case		SUB_D:
-			case		MUL_D:
-			case		DIV_D:
-			case		SQRT_D:
-			case		ABS_D:
-			case		MOV_D:
-			case		NEG_D:
-			case		ROUND_L_D:
-			case		TRUNC_L_D:
-			case		CEIL_L_D:
-			case		FLOOR_L_D:
-
-			case		CVT_L_D:
-			case		C_F_D:	//TODO not sure
-			case		C_UN_D:
-			case		C_EQ_D:
-			case		C_UEQ_D:
-			case		C_OLT_D:
-			case		C_ULT_D:
-			case		C_OLE_D:
-			case		C_ULE_D:
-			case		C_SF_D:	//TODO not sure
-			case		C_NGLE_D:
-			case		C_SEQ_D:
-			case		C_NGL_D:
-			case		C_LT_D:
-			case		C_NGE_D:
-			case		C_LE_D:
-			case		C_NGT_D:
-				//		CVT_S_W:
-			case		CVT_D_L:
-			case		DADDI:
-			case		DADDIU:
-				//		CACHE:
-				//		LL:
-				//		LWC1:
-			case		LLD:
-			case		LDC1:
-			case		LD:
-				//		SC:
-				//		SWC1:
-			case		SCD:
-			case		SDC1:
-			case		SD:
-
-				//		SWL:
-				//		SW:
-			case		SDL:
-			case		SDR:
-				//		SWR:
-
-			case		LDL:	//only 32 bits are loaded but implies register is 64 bit
-			case		LDR:
-
-				ops_regs_input(*(CurrentCodeSeg->MIPScode + x), &cpureg_i, &fpureg_i, &specialreg_i);
-				ops_regs_output(*(CurrentCodeSeg->MIPScode + x), &cpureg_o, &fpureg_o, &specialreg_o);
-
-				for (y=0; y < 32; y++)
-				{
-
-					if (((cpureg_i >> y)&1) && ((cpureg_o >> y)&1)) printf("I0 ");
-					else if ((cpureg_i >> y)&1) printf("I  ");
-					else if ((cpureg_o >> y)&1) printf(" 0 ");
-					else printf("   ");
-				}
-				printf("\n");
-				break;
-
-			case	ROUND_W_D: //double in, single out
-			case	CVT_S_L:
-			case	TRUNC_W_D:
-			case	CEIL_W_D:
-			case	FLOOR_W_D:
-			case	CVT_S_D:
-			case	CVT_W_D:
-
-				ops_regs_input(*(CurrentCodeSeg->MIPScode + x), &cpureg_i, &fpureg_i, &specialreg_i);
-				ops_regs_output(*(CurrentCodeSeg->MIPScode + x), &cpureg_o, &fpureg_o, &specialreg_o);
-
-				for (y=0; y < 32; y++)
-				{
-					if (((cpureg_i >> y)&1) && ((cpureg_o >> y)&1)) printf ("Io ");
-					else if ((cpureg_i >> y)&1) printf("I  ");
-					else if ((cpureg_o >> y)&1) printf(" o ");
-					else printf("   ");
-				}
-				printf("\n");
-				break;
-
-			case	CVT_D_S: //single in, double out
-			case	CVT_D_W:
-
-				ops_regs_input(*(CurrentCodeSeg->MIPScode + x), &cpureg_i, &fpureg_i, &specialreg_i);
-				ops_regs_output(*(CurrentCodeSeg->MIPScode + x), &cpureg_o, &fpureg_o, &specialreg_o);
-
-				for (y=0; y < 32; y++)
-				{
-					if (((cpureg_i >> y)&1) && ((cpureg_o >> y)&1)) printf ("i0 ");
-					else if ((cpureg_i >> y)&1) printf(" i ");
-					else if ((cpureg_o >> y)&1) printf(" 0 ");
-					else printf("   ");
-				}
-				printf("\n");
-				break;
-
-			default:
-				ops_regs_input(*(CurrentCodeSeg->MIPScode + x), &cpureg_i, &fpureg_i, &specialreg_i);
-				ops_regs_output(*(CurrentCodeSeg->MIPScode + x), &cpureg_o, &fpureg_o, &specialreg_o);
-				for (y=0; y < 32; y++)
-				{
-					if (((cpureg_i >> y)&1) && ((cpureg_o >> y)&1)) printf ("io ");
-					else if ((cpureg_i >> y)&1) printf(" i ");
-					else if ((cpureg_o >> y)&1) printf(" o ");
-					else printf("   ");
-				}
-				printf("\n");
-			}
-		}
 		printLine();
 	}
 	else if (!CMD_CMP(1, "lookup"))
@@ -697,6 +460,54 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	}
 
 	return 0;
+}
+
+void DebugRuntimePrintMIPS()
+{
+	printf("Current Segment 0x%08x\n\n", (uint32_t)segmentData.dbgCurrentSegment);
+
+	int x;
+
+	for (x=0; x < 16; x++)
+	{
+		printf( "\tr%-2d 0x%08x%08x\tr%-2d 0x%08x%08x\n"
+				,  0 + x, *(uint32_t*)(MMAP_FP_BASE + (REG_WIDE +  0 + x) * 4), *(uint32_t*)(MMAP_FP_BASE + ( 0 + x) * 4)
+				, 16 + x, *(uint32_t*)(MMAP_FP_BASE + (REG_WIDE + 16 + x) * 4), *(uint32_t*)(MMAP_FP_BASE + (16 + x) * 4));
+	}
+
+	printf("\n");
+
+	for (x=0; x < 16; x++)
+	{
+		printf( "\tf%-2d 0x%08x%08x\tf%-2d 0x%08x%08x\n"
+				,  0 + x, *(uint32_t*)(MMAP_FP_BASE + (REG_FP + REG_WIDE +  0 + x) * 4), *(uint32_t*)(MMAP_FP_BASE + (REG_FP +  0 + x) * 4)
+				, 16 + x, *(uint32_t*)(MMAP_FP_BASE + (REG_FP + REG_WIDE + 16 + x) * 4), *(uint32_t*)(MMAP_FP_BASE + (REG_FP + 16 + x) * 4)
+				);
+	}
+
+	printf("\n\tBadVaddr 0x%08x  PC     0x%08x\n"
+			"\tCount    0x%08x  FCR0   0x%08x\n"
+			"\tEntryHi  0x%08x  FCR31  0x%08x\n"
+			"\tCompare  0x%08x  MultHi 0x%08x\n"
+			"\tStatus   0x%08x  MultLo 0x%08x\n"
+			"\tCause    0x%08x  LLBit  0x%01x\n"
+			"\tContext  0x%08x  EPC    0x%08x\n"
+			,*(uint32_t*)(MMAP_FP_BASE + REG_BADVADDR*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_PC*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_COUNT*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_FCR0*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_ENTRYHI*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_FCR31*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_COMPARE*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_MULTHI*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_STATUS*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_MULTLO*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_CAUSE*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_LLBIT*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_CONTEXT*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_EPC*4));
+
+	return;
 }
 
 int Debugger_start(const code_segment_data_t* const segmentData)

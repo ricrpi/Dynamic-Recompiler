@@ -8,7 +8,6 @@
 #ifndef DEBUGGER_H_
 #define DEBUGGER_H_
 
-int Debugger_start(const code_segment_data_t* const segmentData);
 
 #define HELP_TRANS 	"\ttranslate                         Translate Current Segment\n" \
 					"\ttranslate full                    Translate Current Segment and Generate ARM code\n\n" \
@@ -47,22 +46,6 @@ int Debugger_start(const code_segment_data_t* const segmentData);
 					HELP_SEG "\n"
 
 
-// ========= TEST Setups ==============================================
-
-//#define TEST_BRANCHING_FORWARD
-//#define TEST_BRANCHING_BACKWARD
-//#define TEST_BRANCH_TO_C
-//#define TEST_LITERAL
-
-// ========= Extra Debugging Information ==============================
-
-//#define SHOW_REG_TRANSLATION_MAP
-//#define SHOW_PRINT_INT_CONST
-
-// ========= Customize Aborts for debugging ===========================
-
-#define ABORT_ARM_DECODE
-#define ABORT_ARM_ENCODE
-#define ABORT_EXCEEDED_GLOBAL_OFFSET
+int Debugger_start(const code_segment_data_t* const segmentData);
 
 #endif /* DEBUGGER_H_ */

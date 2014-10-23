@@ -4,8 +4,20 @@
 
 #include "InstructionSet.h"
 #include "CodeSegments.h"
+#include "DebugDefines.h"
+#include "assert.h"
+#include "stdio.h"
+#include "stdlib.h"
+
 
 #define COUNTOF(x)	(sizeof(x)/sizeof(x[0]))
+
+#define ADD_LL_NEXT(x, y) (x)->nextInstruction = (y)->nextInstruction; \
+			(y)->nextInstruction = (x); \
+			(y) = (y)->nextInstruction;
+
+#define ADD_LL(x, y) (x)->nextInstruction = (y)->nextInstruction; \
+			(y)->nextInstruction = (x);
 
 extern uint32_t bCountSaturates;
 
@@ -61,6 +73,10 @@ typedef struct
 
 // -----------------------------------------------------------------
 
+void mem_lookup();
+
+// -----------------------------------------------------------------
+
 code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru1 f);
 code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data);
 code_seg_t* Generate_CodeStop(code_segment_data_t* seg_data);
@@ -68,6 +84,11 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data);
 code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data);
 code_seg_t* Generate_MIPS_Trap(code_segment_data_t* seg_data);
 
+// -----------------------------------------------------------------
+
+void DebugRuntimePrintMIPS();
+
+Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress);
 
 void Translate_init(code_seg_t* const codeSegment);
 

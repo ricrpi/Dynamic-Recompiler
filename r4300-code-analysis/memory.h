@@ -49,7 +49,7 @@ extern uint8_t uMemoryBase;
 #define MMAP_PIF_RAM		(MMAP_BASE + (0x1FC07C0))
 
 //#define MMAP_FUNC			(MMAP_FP_BASE + 676)
-#define MMAP_FUNC			(676)
+#define MMAP_FUNC			(676)			// 0x83F012CC
 #define MMAP_DR_SIZE		(0x02000000)	//Dynamic compiled code space size (32MB).
 #define RD_RAM_SIZE 		(0x00800000)
 #define MMAP_BASE_SIZE 		(0x08000000)	// This is the base size (excluding ROM and PIF areas)

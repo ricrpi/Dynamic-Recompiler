@@ -106,7 +106,7 @@ static void sprintReg(char* str, const reg_t r)
 		else                                 sprintf(str, "    ");
 #endif
 }
-static void sprintRegList(char* str, Instruction_t*ins)
+static void sprintRegList(char* str, const Instruction_t* const ins)
 {
 	int i;
 	char* substr = str;
@@ -127,7 +127,7 @@ static void sprintRegList(char* str, Instruction_t*ins)
 
 }
 
-static void sprintInstr(char* str, Instruction_t*ins)
+static void sprintInstr(char* str, const Instruction_t* const ins)
 {
 	char ln[2];
 	char writeBack[4];
@@ -297,23 +297,23 @@ Instruction_t* newEmptyInstr()
 
 Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
 {
-	Instruction_t* newInstr = newEmptyInstr();
+	Instruction_t* newIns = newEmptyInstr();
 
-	return Instr(newInstr, ins, cond, Rd1, R1, R2);
+	return Instr(newIns, ins, cond, Rd1, R1, R2);
 }
 
 Instruction_t* newInstrI(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
 {
-	Instruction_t* newInstr = newEmptyInstr();
+	Instruction_t* newIns = newEmptyInstr();
 
-	return InstrI(newInstr, ins, cond, Rd1, R1, R2, imm);
+	return InstrI(newIns, ins, cond, Rd1, R1, R2, imm);
 }
 
 Instruction_t* newInstrS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
 {
 	Instruction_t* newIns = newEmptyInstr();
 
-	Instr(newInstr, ins, cond, Rd1, R1, R2);
+	Instr(newIns, ins, cond, Rd1, R1, R2);
 	newIns->S = 1;
 
 	return newIns;
@@ -322,7 +322,7 @@ Instruction_t* newInstrS(const Instruction_e ins, 	const Condition_e cond, const
 Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
 {
 	Instruction_t* newIns = newEmptyInstr();
-	InstrI(newInstr, ins, cond, Rd1, R1, R2, imm);
+	InstrI(newIns, ins, cond, Rd1, R1, R2, imm);
 	newIns->S = 1;
 
 	return newIns;

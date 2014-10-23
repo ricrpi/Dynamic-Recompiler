@@ -665,15 +665,15 @@ int32_t ScanForCode(const uint32_t* const address, const uint32_t length)
 	return UpdateCodeBlockValidity(Bounds, addr, length, upperAddress);
 }
 
-code_seg_t* getSegmentAt(void* address)
+code_seg_t* getSegmentAt(size_t address)
 {
 	if (address >= 0x88000000)
 	{
-		return segmentData.StaticBounds[((uint32_t)address - 0x88000000)/4];
+		return segmentData.StaticBounds[(address - 0x88000000)/4];
 	}
 	else
 	{
-		return segmentData.DynamicBounds[((uint32_t)address)/4];
+		return segmentData.DynamicBounds[(address)/4];
 	}
 
 }
