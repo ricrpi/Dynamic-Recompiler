@@ -274,7 +274,7 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// start executing recompiled code
-	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_PC, REG_NOT_USED, REG_EMU_FP, RECOMPILED_CODE_START);
+	newInstruction 		= newInstrI(ARM_LDR, AL, REG_HOST_PC, REG_NOT_USED, REG_EMU_FP, RECOMPILED_CODE_START);
 	ADD_LL_NEXT(newInstruction, ins);
 #endif
 

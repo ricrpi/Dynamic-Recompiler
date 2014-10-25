@@ -227,6 +227,9 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 	case ARM_MOV:
 	case ARM_MVN:
 		assert(R1 == REG_NOT_USED); break;
+
+	case ARM_LDR:
+	case ARM_STR:
 	case ARM_LDR_LIT:
 	case ARM_STR_LIT:
 		if (imm < 0)

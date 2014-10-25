@@ -141,34 +141,40 @@ static uint32_t arm_encode(const Instruction_t* ins, size_t addr)
 	case ARM_CLZ:
 		return 0x16F0F10 | ins->S << 20 | Rd1 << 12 | R1;
 
-
 	case ARM_LDM:
 		return ins->cond << 28 | 1 << 27 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | 1 << 20 | R1 << 16 | ins->Rmask;
 	case ARM_STM:
 		return ins->cond << 28 | 1 << 27 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | R1 << 16 | ins->Rmask;
 
-	case ARM_LDR_LIT:
-		if (ins->immediate < 0)
-		{
-			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | 0 << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | ((-ins->immediate)&0xFFF);
-		}else{
-			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | 1 << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
-		}
 	case ARM_LDR:
+		if (ins->I)
+			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
+		else
 			return ins->cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
+	case ARM_STR:
+		if (ins->I)
+			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->immediate&0xFFF);
+		else
+			return ins->cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
+	case ARM_LDRD:
+		if (ins->I)
+			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate&0xF0) << 4) | 0xd0 | (ins->immediate&0xF);
+		else
+			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xd0 | (R2&0xf);
+	case ARM_STRD:
+		if (ins->I)
+			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate&0xF0) << 4) | 0xf0 | (ins->immediate&0xF);
+		else
+			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xf0 | (R2&0xf);
+
+	case ARM_LDR_LIT:
+			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | 1 << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
 	case ARM_STR_LIT:
 			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->immediate&0xFFF);
-	case ARM_STR:
-			return ins->cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
-
 	case ARM_LDRD_LIT:
 			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate>>4)&0xf) | 0xd0 | (ins->immediate&0xf);
-	case ARM_LDRD:
-			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xd0 | (R2&0xf);
 	case ARM_STRD_LIT:
 			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate>>4)&0xf) | 0xf0 | (ins->immediate&0xf);
-	case ARM_STRD:
-			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xf0 | (R2&0xf);
 
 	case ARM_B:
 		if (ins->I)

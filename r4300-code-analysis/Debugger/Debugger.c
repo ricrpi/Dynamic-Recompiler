@@ -154,6 +154,14 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 		{
 			count = strtoul(userInput[3], &tailPointer, 0);
 			addr = (uint32_t*)((strtoul(userInput[2], &tailPointer, 0))&~0x3);
+
+			for (x=0; x< count; x++)
+			{
+					arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			}
+			printLine();
+			return 1;
+
 		}
 		else if (strlen(userInput[2]))
 		{
@@ -168,6 +176,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 
 		for (x=0; x< count; x++)
 		{
+
 			if (addr + x == (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
 			{
 				printf(".EntryPoint:\n");
