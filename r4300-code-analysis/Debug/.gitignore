@@ -6,3 +6,5 @@
 /main.d
 /mips.d
 /rom.d
+/CodeSegments.d
+/CodeSegments.o
