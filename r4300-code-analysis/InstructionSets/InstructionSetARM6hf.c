@@ -9,6 +9,7 @@
 #include "InstructionSetARM6hf.h"
 #include "InstructionSet.h"
 #include "InstructionSet_ascii.h"
+#include "DebugDefines.h"
 
 #include <assert.h>
 #include <stdint.h>
