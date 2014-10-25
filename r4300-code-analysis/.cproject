@@ -30,10 +30,10 @@
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.exe.debug.option.optimization.level.1899317677" name="Optimization Level" superClass="gnu.c.compiler.exe.debug.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.exe.debug.option.debugging.level.275928337" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.268180838" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/r4300-code-analysis}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/r4300-code-analysis}/InstructionSets&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/r4300-code-analysis}/Translations&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/r4300-code-analysis}/Debugger&quot;"/>
+									<listOptionValue builtIn="false" value=".."/>
+									<listOptionValue builtIn="false" value="&quot;../InstructionSets&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;../Translations&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;../Debugger&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1887000638" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
