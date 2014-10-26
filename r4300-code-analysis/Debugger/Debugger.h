@@ -8,6 +8,7 @@
 #ifndef DEBUGGER_H_
 #define DEBUGGER_H_
 
+#include <sys/ucontext.h>
 
 #define HELP_TRANS 	"\ttranslate                         Translate Current Segment\n" \
 					"\ttranslate full                    Translate Current Segment and Generate ARM code\n\n" \
@@ -46,6 +47,6 @@
 					HELP_SEG "\n"
 
 
-int Debugger_start(const code_segment_data_t* const segmentData);
+int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context);
 
 #endif /* DEBUGGER_H_ */

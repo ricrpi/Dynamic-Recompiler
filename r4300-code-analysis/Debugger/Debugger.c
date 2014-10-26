@@ -139,9 +139,8 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 	}
 }
 
-static int Debugger_print(const code_segment_data_t* const segmentData)
+static int Debugger_print(const code_segment_data_t* const segmentData, mcontext_t* context)
 {
-	//int val;
 	int x=0;
 	char *tailPointer;
 
@@ -210,7 +209,6 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 				{
 					count = strtoul(userInput[2], &tailPointer, 0);
 				}
-
 		}
 
 		if (NULL == addr)
@@ -252,6 +250,18 @@ static int Debugger_print(const code_segment_data_t* const segmentData)
 	{
 		DebugRuntimePrintMIPS();
 
+#ifndef __i386
+		printf("\n\tr0 0x%08x\t r8  0x%08x\n", context->arm_r0, context->arm_r8);
+		printf("\tr1 0x%08x\t r9  0x%08x\n", context->arm_r1, context->arm_r9);
+		printf("\tr2 0x%08x\t r10 0x%08x\n", context->arm_r2, context->arm_r10);
+		printf("\tr3 0x%08x\t fp  0x%08x\n", context->arm_r3, context->arm_fp);
+		printf("\tr4 0x%08x\t ip  0x%08x\n", context->arm_r4, context->arm_ip);
+		printf("\tr5 0x%08x\t sp  0x%08x\n", context->arm_r5, context->arm_sp);
+		printf("\tr6 0x%08x\t lr  0x%08x\n", context->arm_r6, context->arm_lr);
+		printf("\tr7 0x%08x\t pc  0x%08x\n", context->arm_r7, context->arm_pc);
+		printf("\tcpsr 0x%08x\n", context->arm_cpsr);
+
+#endif
 		printLine();
 	}
 	else if (!CMD_CMP(1, "lookup"))
@@ -522,7 +532,7 @@ void DebugRuntimePrintMIPS()
 	return;
 }
 
-int Debugger_start(const code_segment_data_t* const segmentData)
+int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context)
 {
 	//find segment
 	if (!CurrentCodeSeg) CurrentCodeSeg = segmentData->dbgCurrentSegment;
@@ -538,7 +548,7 @@ int Debugger_start(const code_segment_data_t* const segmentData)
 	}
 	else if (!CMD_CMP(0, "print"))
 	{
-		Debugger_print(segmentData);
+		Debugger_print(segmentData, context);
 	}
 	else if (!CMD_CMP(0, "segment"))
 	{
