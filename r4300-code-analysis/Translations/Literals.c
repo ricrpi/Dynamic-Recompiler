@@ -38,6 +38,13 @@ void Translate_Literals(code_seg_t* const codeSegment)
 			if (codeSegment->Type == SEG_START)
 			{
 				ins->offset = ins->offset - x -CountLiterals*4 - 8;
+
+				if (ins->offset < 0)
+				{
+					ins->U = 0;
+					ins->offset = -ins->offset;
+				}
+
 			}
 			else if (codeSegment->Type == SEG_END)
 			{

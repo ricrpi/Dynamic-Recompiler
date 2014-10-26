@@ -168,7 +168,7 @@ static uint32_t arm_encode(const Instruction_t* ins, size_t addr)
 			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xf0 | (R2&0xf);
 
 	case ARM_LDR_LIT:
-			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | 1 << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
+			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
 	case ARM_STR_LIT:
 			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->immediate&0xFFF);
 	case ARM_LDRD_LIT:
@@ -330,9 +330,9 @@ void arm_print(const uint32_t addr, const uint32_t word)
 		else
 			sprintf(ins, "str");
 
-		if (word & 1 << 21) wb[0] = '!';
-		if (word & 1 << 22) byt[0] = 'b';
-		if (!(word & 1 << 23)) minus[0] = '-';
+		if (word & (1 << 21)) wb[0] = '!';
+		if (word & (1 << 22)) byt[0] = 'b';
+		if (!(word & (1 << 23))) minus[0] = '-';
 
 		sprintf(imm, "#0x%x", word & 0xfff);
 

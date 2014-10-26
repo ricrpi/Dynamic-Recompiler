@@ -321,10 +321,28 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 	else
 	{
 		val = strtoul(userInput[1], &tailPointer, 0);
+		int ok = 0;
 
-		if (!CurrentCodeSeg->MIPSReturnRegister)
+		if (val > 2)
 		{
-			int ok = 0;
+			tempCodeSeg=segmentData->StaticSegments;
+
+			while (tempCodeSeg != NULL)
+			{
+				if ((uint32_t)tempCodeSeg == val
+						|| (uint32_t)tempCodeSeg->MIPScode == val
+						|| (uint32_t)tempCodeSeg->ARMcode == val
+						|| (uint32_t)tempCodeSeg->ARMEntryPoint == val)
+				{
+					CurrentCodeSeg = tempCodeSeg;
+					ok = 1;
+					break;
+				}
+
+				tempCodeSeg = tempCodeSeg->next;
+			}
+		}else if (!CurrentCodeSeg->MIPSReturnRegister)
+		{
 			if (0 == val)
 			{
 				CurrentCodeSeg = segmentData->StaticSegments;
@@ -340,24 +358,6 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				CurrentCodeSeg = CurrentCodeSeg->pBranchNext;
 				ok = 1;
 			}
-			else
-			{
-				tempCodeSeg=segmentData->StaticSegments;
-
-				while (tempCodeSeg != NULL)
-				{
-					if ((uint32_t)tempCodeSeg == val || (uint32_t)tempCodeSeg->MIPScode == val)
-					{
-						CurrentCodeSeg = tempCodeSeg;
-						ok = 1;
-						break;
-					}
-
-					tempCodeSeg = tempCodeSeg->next;
-				}
-			}
-
-			if (!ok) printf("Invalid entry\n");
 		}
 		else
 		{
@@ -368,6 +368,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				if (tempCodeSeg == (code_seg_t*)val)
 				{
 					CurrentCodeSeg = (code_seg_t*)val;
+					ok = 1;
 					break;
 				}
 				else if (tempCodeSeg->pBranchNext == CurrentCodeSeg)
@@ -375,6 +376,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 					if (x == val)
 					{
 						CurrentCodeSeg = tempCodeSeg->pBranchNext;
+						ok = 1;
 						break;
 					}
 					x++;
@@ -383,6 +385,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				tempCodeSeg = tempCodeSeg->next;
 			}
 		}
+		if (!ok) printf("Invalid entry\n");
 	}
 	Debugger_seg_returnAddr(segmentData, val, CurrentCodeSeg);
 

@@ -396,9 +396,9 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 	if (heading)
 	{
 		#if defined(SHOW_PRINT_INT_CONST)
-		printf("command   Rd1                     Rd2                     R1                      R2                      R3                      immediate                 shift\n");
+		printf("command   Rd1                     Rd2                     R1                      R2                      R3                       A B I Ln PR S U W immediate                 shift\n");
 		#else
-		printf("command   Rd1   Rd2   R1    R2    R3    immediate                 shift\n");
+		printf("command   Rd1   Rd2   R1    R2    R3     A B I Ln PR S U W immediate                 shift\n");
 		#endif
 	}
 
@@ -431,9 +431,31 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 	else
 	{
 #if defined(SHOW_PRINT_INT_CONST)
-		printf("%-9s %-24s%-24s%-24s%-24s%-24s%-25s %-9s\n", instruction, rd1, rd2, r1, r2, r3, offset, shift);
+		printf("%-9s %-24s%-24s%-24s%-24s%-24s %d %d %d %d  %d  %d %d %d %-25s %-9s\n"
+				, instruction
+				, rd1, rd2, r1, r2, r3
+				, ins->A
+				, ins->B
+				, ins->I
+				, ins->Ln
+				, ins->PR
+				, ins->S
+				, ins->U
+				, ins->W
+				, offset, shift);
 #else
-		printf("%-9s %-6s%-6s%-6s%-6s%-6s%-25s %-9s\n", instruction, rd1, rd2, r1, r2, r3, offset, shift);
+		printf("%-9s %-6s%-6s%-6s%-6s%-6s %d %d %d %d  %d  %d %d %d %-25s %-9s\n"
+				, instruction
+				, rd1, rd2, r1, r2, r3
+				, ins->A
+				, ins->B
+				, ins->I
+				, ins->Ln
+				, ins->PR
+				, ins->S
+				, ins->U
+				, ins->W
+				, offset, shift);
 #endif
 	}
 }

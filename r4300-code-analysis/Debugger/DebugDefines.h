@@ -25,7 +25,7 @@
 // ========= Customize Aborts for debugging ===========================
 
 #define ABORT_ARM_DECODE
-#define ABORT_ARM_ENCODE
+//#define ABORT_ARM_ENCODE
 #define ABORT_EXCEEDED_GLOBAL_OFFSET
 
 
