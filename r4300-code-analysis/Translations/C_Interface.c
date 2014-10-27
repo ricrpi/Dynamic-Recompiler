@@ -35,20 +35,20 @@ void mem_lookup(unsigned int addr)
  */
 size_t branchUnknown(size_t address)
 {
-
 	code_seg_t* code_seg 	= segmentData.dbgCurrentSegment;
 	uint32_t* 	out 		= code_seg->ARMcode + code_seg->ARMcodeLen -1;
 
 	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", address, (uint32_t)code_seg);
 
 	code_seg_t* tgtSeg = getSegmentAt(address);
-	if (NULL != tgtSeg) return (size_t)tgtSeg->ARMEntryPoint;
-
+	if (NULL != tgtSeg)
+	{
+		if (NULL == tgtSeg->ARMEntryPoint) Translate(tgtSeg);
+ 		return (size_t)tgtSeg->ARMEntryPoint;
+	}
 	// 1. Need to generate the ARM assembler for target code_segment. Use 'addr' and code Seg map.
 	// 2. Then we need to patch the code_segment branch we came from. Do we need it to be a link?
 	// 3. return the address to branch to.
-
-
 
 	// 1.
 	CompileCodeAt((uint32_t*)address);

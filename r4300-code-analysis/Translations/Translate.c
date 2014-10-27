@@ -476,8 +476,13 @@ void Translate_Debug(code_seg_t* codeSegment)
 
 	insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS);
 
-	while (ins->nextInstruction)
+	int x=0;
+	while (ins->nextInstruction->nextInstruction)
 	{
+		new_ins = newInstrI(ARM_MOV, AL, REG_HOST_R4, REG_NOT_USED, REG_NOT_USED, x);
+		ADD_LL_NEXT(new_ins, ins);
+
+		x++;		
 		ins = ins->nextInstruction;
 	}
 	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS);
