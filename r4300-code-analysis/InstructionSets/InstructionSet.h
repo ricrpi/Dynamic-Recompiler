@@ -535,6 +535,7 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 
 Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t offset, const uint32_t absolute);
 
+Instruction_t* InstrBL(Instruction_t* ins, const Condition_e cond, const int32_t offset, const uint32_t absolute);
 
 Instruction_t* newEmptyInstr();
 
@@ -547,6 +548,8 @@ Instruction_t* newInstrS(const Instruction_e ins, const Condition_e cond, const 
 Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
 
 Instruction_t* newInstrB(const Condition_e cond, const int32_t offset, const uint32_t absolute);
+
+Instruction_t* newInstrBL(const Condition_e cond, const int32_t offset, const uint32_t absolute);
 
 Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask);
 

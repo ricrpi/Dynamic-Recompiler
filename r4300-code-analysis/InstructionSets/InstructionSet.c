@@ -73,37 +73,32 @@ static void sprintReg(char* str, const reg_t r)
 	else if (r.regID >= 0)               sprintf(str, "r%-3d %-18s", r.regID, 						cnst);
 	else                                 sprintf(str, "                      ");
 #else
-	if (r.regID == REG_NOT_USED)       sprintf(str, "      ");
-		else if (r.regID == REG_EMU_FP)   sprintf(str, "fp    ");
-		else if (r.regID == REG_HOST_SP)   sprintf(str, "sp    ");
-		else if (r.regID == REG_HOST_LR)   sprintf(str, "lr    ");
-		else if (r.regID == REG_HOST_PC)   sprintf(str, "pc    ");
-		else if (r.regID == REG_COUNT)
-			sprintf(str, "COUNT ");
-		else if (r.regID == REG_CAUSE)
-			sprintf(str, "CAUSE ");
-		else if (r.regID == REG_CONTEXT)
-			sprintf(str, "CNTXT ");
-		else if (r.regID == REG_COMPARE)
-			sprintf(str, "CMPRE ");
-		else if (r.regID == REG_STATUS)
-			sprintf(str, "STATS ");
+	if (r.regID == REG_NOT_USED)       	sprintf(str, "      ");
+	else if (r.regID == REG_EMU_FP)    	sprintf(str, "fp    ");
+	else if (r.regID == REG_HOST_SP)	sprintf(str, "sp    ");
+	else if (r.regID == REG_HOST_LR)	sprintf(str, "lr    ");
+	else if (r.regID == REG_HOST_PC)	sprintf(str, "pc    ");
+	else if (r.regID == REG_COUNT)		sprintf(str, "COUNT ");
+	else if (r.regID == REG_CAUSE)		sprintf(str, "CAUSE ");
+	else if (r.regID == REG_CONTEXT)	sprintf(str, "CNTXT ");
+	else if (r.regID == REG_COMPARE)	sprintf(str, "CMPRE ");
+	else if (r.regID == REG_STATUS)		sprintf(str, "STATS ");
 
-		else if (r.regID == REG_PC)        sprintf(str, "M_PC  ");
-		else if (r.regID == REG_FCR0)      sprintf(str, "FCR0  ");
-		else if (r.regID == REG_FCR31)     sprintf(str, "FCR31 ");
-		else if (r.regID == REG_MULTHI)    sprintf(str, "M_HI  ");
-		else if (r.regID == REG_MULTLO)    sprintf(str, "M_LO  ");
-		else if (r.regID == REG_LLBIT)     sprintf(str, "LLBIT ");
+	else if (r.regID == REG_PC)        sprintf(str, "M_PC  ");
+	else if (r.regID == REG_FCR0)      sprintf(str, "FCR0  ");
+	else if (r.regID == REG_FCR31)     sprintf(str, "FCR31 ");
+	else if (r.regID == REG_MULTHI)    sprintf(str, "M_HI  ");
+	else if (r.regID == REG_MULTLO)    sprintf(str, "M_LO  ");
+	else if (r.regID == REG_LLBIT)     sprintf(str, "LLBIT ");
 
-		else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d ", r.regID - REG_HOST);
-		else if (r.regID >= REG_TEMP)		 sprintf(str, "t%-3d ", r.regID - REG_TEMP);
-		else if (r.regID >= REG_CO)          sprintf(str, "c%-3d ", r.regID - REG_CO);
-		else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str,"f%-3d ", r.regID - (REG_WIDE|REG_FP));
-		else if (r.regID >= REG_WIDE)        sprintf(str, "r%-3dw", r.regID - REG_WIDE);
-		else if (r.regID >= REG_FP)          sprintf(str, "f%-3d ", r.regID - REG_FP);
-		else if (r.regID >= 0)               sprintf(str, "r%-3d ", r.regID);
-		else                                 sprintf(str, "    ");
+	else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d ", r.regID - REG_HOST);
+	else if (r.regID >= REG_TEMP)		 sprintf(str, "t%-3d ", r.regID - REG_TEMP);
+	else if (r.regID >= REG_CO)          sprintf(str, "c%-3d ", r.regID - REG_CO);
+	else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str,"f%-3d ", r.regID - (REG_WIDE|REG_FP));
+	else if (r.regID >= REG_WIDE)        sprintf(str, "r%-3dw", r.regID - REG_WIDE);
+	else if (r.regID >= REG_FP)          sprintf(str, "f%-3d ", r.regID - REG_FP);
+	else if (r.regID >= 0)               sprintf(str, "r%-3d ", r.regID);
+	else                                 sprintf(str, "    ");
 #endif
 }
 static void sprintRegList(char* str, const Instruction_t* const ins)
@@ -130,7 +125,7 @@ static void sprintRegList(char* str, const Instruction_t* const ins)
 static void sprintInstr(char* str, const Instruction_t* const ins)
 {
 	char ln[2];
-	char writeBack[4];
+	char writeBack[] = {0,0,0,0};
 	char s[2];
 	char wb = '\0';
 
@@ -140,20 +135,30 @@ static void sprintInstr(char* str, const Instruction_t* const ins)
 	if (ins->S) sprintf(s,"s");
 		else s[0] = '\0';
 
-	if (ins->instruction == ARM_LDR
-			|| ins->instruction == ARM_LDM
-			|| ins->instruction == ARM_STR
+	if (ins->instruction == ARM_LDM
 			|| ins->instruction == ARM_STM )
 	{
 		if (ins->W) wb = '!';
 		if (ins->PR == 1 && ins->U == 1) sprintf(writeBack, "ib%c", wb);
-		if (ins->PR == 1 && ins->U == 0) sprintf(writeBack, "db%c", wb);
-		if (ins->PR == 0 && ins->U == 1) sprintf(writeBack, "%c", wb);	//ia [default]
-		if (ins->PR == 0 && ins->U == 0) sprintf(writeBack, "da%c", wb);
-		if (ins->PR == 1
-				&& ins->U == 0
+		else if (ins->PR == 1 && ins->U == 0) sprintf(writeBack, "db%c", wb);
+		else if (ins->PR == 0 && ins->U == 1) sprintf(writeBack, "%c", wb);	//ia [default]
+		else if (ins->PR == 0 && ins->U == 0) sprintf(writeBack, "da%c", wb);
+		else if (ins->PR == 1 && ins->U == 0
 				&& ins->instruction == ARM_STM
 				&& ins->R1.regID == REG_HOST_SP) sprintf(writeBack, "fd%c", wb);
+	}
+	else if (ins->instruction == ARM_LDR
+			|| ins->instruction == ARM_STR)
+	{
+		if (ins->W) wb = '!';
+		if (ins->PR == 1 && ins->U == 1
+				&& ins->immediate > 0) sprintf(writeBack, "ib%c", wb);
+		else if (ins->PR == 1 && ins->U == 0
+				&& ins->immediate > 0) sprintf(writeBack, "db%c", wb);
+		else if (ins->PR == 0 && ins->U == 1
+				&& ins->immediate > 0) sprintf(writeBack, "%c", wb);	//ia [default]
+		else if (ins->PR == 0 && ins->U == 0
+				&& ins->immediate > 0) sprintf(writeBack, "da%c", wb);
 	}
 	else
 	{
@@ -259,6 +264,19 @@ Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t 
 	return ins;
 }
 
+Instruction_t* InstrBL(Instruction_t* ins, const Condition_e cond, const int32_t offset, const uint32_t absolute)
+{
+	ins->instruction = ARM_B;
+	ins->cond        = cond;
+	ins->Rd1.regID   = REG_NOT_USED;;
+	ins->R1.regID    = REG_NOT_USED;
+	ins->R2.regID    = REG_NOT_USED;
+	ins->I = absolute;
+	ins->Ln = 1;
+	ins->offset = offset;
+
+	return ins;
+}
 
 Instruction_t* newEmptyInstr()
 {
@@ -336,6 +354,13 @@ Instruction_t* newInstrB(const Condition_e cond, const int32_t offset, const uin
 	Instruction_t* newInstr = newEmptyInstr();
 
 	return InstrB(newInstr, cond, offset, absolute);
+}
+
+Instruction_t* newInstrBL(const Condition_e cond, const int32_t offset, const uint32_t absolute)
+{
+	Instruction_t* newInstr = newEmptyInstr();
+
+	return InstrBL(newInstr, cond, offset, absolute);
 }
 
 Instruction_t* newInstrPUSH(const Condition_e cond, const uint32_t Rmask)

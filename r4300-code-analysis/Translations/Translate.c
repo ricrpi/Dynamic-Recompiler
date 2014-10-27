@@ -94,10 +94,6 @@ void Translate_init(code_seg_t* const codeSegment)
 	return;
 }
 
-
-
-
-
 void Translate_Generic(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
@@ -417,11 +413,6 @@ void Translate_Generic(code_seg_t* const codeSegment)
 	}
 }
 
-
-
-
-
-
 void Translate_CleanUp(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
@@ -452,14 +443,10 @@ void Translate_CleanUp(code_seg_t* const codeSegment)
 	}
 }
 
-
-
-
 void Translate_Write(code_seg_t* codeSegment)
 {
 	emit_arm_code(codeSegment);
 }
-
 
 void Translate_Debug(code_seg_t* codeSegment)
 {
@@ -470,7 +457,7 @@ void Translate_Debug(code_seg_t* codeSegment)
 	regID_t base;
 	int32_t offset;
 
-	//TODO Nasty global"
+	//TODO Nasty global segmentData!
 
 	//load current segment Address
 	addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
@@ -489,10 +476,11 @@ void Translate_Debug(code_seg_t* codeSegment)
 
 	insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS);
 
-	while (ins)
+	while (ins->nextInstruction)
 	{
 		ins = ins->nextInstruction;
 	}
+	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS);
 }
 
 

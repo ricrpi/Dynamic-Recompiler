@@ -7,6 +7,7 @@
 
 #include "Translate.h"
 #include "InstructionSet_ascii.h"
+#include "InstructionSetARM6hf.h"
 #include "memory.h"
 
 void Translate_Branch(code_seg_t* const codeSegment)
@@ -147,12 +148,12 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				// we need to lookup the code segment we should be branching to according to the value in the register
 				// work out address in code segment lookup table
 
-				// TODO how do we handle static/dynamic segment lookups?
 
-				//new_ins = newInstrI(ARM_MOV, AL, REG_TEMP_JR1, REG_NOT_USED, MMAP_CODE_SEG_BASE);
-				//ADD_LL_NEXT(new_ins, ins);
+				Instr(ins, ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, ins->R1.regID);
 
-				//new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_JR1, REG_TEMP_JR1, MMAP_CODE_SEG_BASE);
+				tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+
+				new_ins = newInstrB(AL, tgt_address, 1);
 				//ADD_LL_NEXT(new_ins, ins);
 
 

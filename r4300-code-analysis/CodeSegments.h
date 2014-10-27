@@ -150,6 +150,8 @@ int32_t ScanForCode(const uint32_t* const address, const uint32_t length);
 
 code_seg_t* getSegmentAt(size_t address);
 
+void CompileCodeAt(const uint32_t* const address);
+
 //TODO RWD
 extern code_segment_data_t segmentData;
 

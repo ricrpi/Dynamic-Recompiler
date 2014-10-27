@@ -64,7 +64,7 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 	}
 }
 
-static uint32_t arm_encode(const Instruction_t* ins, size_t addr)
+uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 {
 	uint8_t Rd1=0, Rd2=0, R1=0, R2=0, R3=0;
 

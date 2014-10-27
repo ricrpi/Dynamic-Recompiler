@@ -264,7 +264,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		}
 	}
 
-#if 1
+#if defined(DO_HOSTREG_RENUMBER_IN_TRANSLATIONS)
 	//Strip HOST flag from register ID leaving ARM register ID ready for writing
 	ins = codeSegment->Intermcode;
 	while (ins)
@@ -281,7 +281,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 
 	// ------------ sanity check --------------
 
-#ifndef NDEBUG
+#if !defined (NDEBUG)
 	ins = codeSegment->Intermcode;
 
 	while (ins)

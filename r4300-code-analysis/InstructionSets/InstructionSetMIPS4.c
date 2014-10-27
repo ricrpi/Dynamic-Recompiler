@@ -1288,6 +1288,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			ins->instruction =  BLTZ;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
+			ins->cond = MI;
 			ins->I = 1;
 			return 0; 	// I
 		case 0x01:

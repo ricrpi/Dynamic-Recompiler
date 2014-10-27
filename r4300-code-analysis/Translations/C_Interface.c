@@ -6,6 +6,8 @@
  */
 
 #include "Translate.h"
+#include "CodeSegments.h"
+#include "InstructionSetMIPS4.h"
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -23,19 +25,51 @@ void cc_interrupt()
 	printf("cc_interrupt() called\n");
 }
 
-void mem_lookup()
+void mem_lookup(unsigned int addr)
 {
-	printf("mem_lookup() called\n");
+	printf("mem_lookup(0x%08x) called\n",addr);
 }
 
-void branchUnknown(size_t addr)
+/*
+ * Function to Compile MIPS code at 'address' and then return the ARM_PC counter to jump to
+ */
+size_t branchUnknown(size_t address)
 {
-	printf("branchUnknown(0x%08x) called\n", addr);
 
-	// Need to generate the ARM assembler for target code_segment. Use 'addr' and code Seg map.
-	// Then we need to patch the code_segment branch we came from. Do we need it to be a link?
-	// Need to update CodeSegment 'callees' for correct handling of segment invalidation.
+	code_seg_t* code_seg 	= segmentData.dbgCurrentSegment;
+	uint32_t* 	out 		= code_seg->ARMcode + code_seg->ARMcodeLen -1;
 
+	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", address, (uint32_t)code_seg);
+
+	code_seg_t* tgtSeg = getSegmentAt(address);
+	if (NULL != tgtSeg) return (size_t)tgtSeg->ARMEntryPoint;
+
+	// 1. Need to generate the ARM assembler for target code_segment. Use 'addr' and code Seg map.
+	// 2. Then we need to patch the code_segment branch we came from. Do we need it to be a link?
+	// 3. return the address to branch to.
+
+
+
+	// 1.
+	CompileCodeAt((uint32_t*)address);
+
+	// 2.
+	Instruction_t 	ins;
+
+	//Get MIPS condition code for branch
+	mips_decode(*(code_seg->MIPScode + code_seg->MIPScodeLen -1), &ins);
+
+	//now we can get the target Code Segment ARM Entry Point
+	size_t targetAddress = (size_t)getSegmentAt(address)->ARMEntryPoint;
+
+	//Set instruction to ARM_BRANCH for new target
+	InstrB(&ins, ins.cond, targetAddress, 1);
+
+	//emit the arm code
+	*out = arm_encode(&ins, (size_t)out);
+
+	// 3.
+	return targetAddress;
 }
 
 /*
@@ -350,13 +384,18 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 
 	seg_data->dbgCurrentSegment = code_seg;
 
-	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_LR);
+	/* Don't think we need this instruction as function branchUnknown() can look
+	 * up 'seg_data->dbgCurrentSegment' to:
+	 * 1. find/compile the branch target
+	 * 2. patch the branch instruction that caused us to end up here.
+	 */
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_R0);
 	code_seg->Intermcode = ins = newInstruction;
 
 	insertCall_To_C(code_seg,ins, AL, (uint32_t)&branchUnknown);
 
-	// Now Re-execute the branch statement we came from.
-	newInstruction 		= newInstrI(ARM_SUB, AL, REG_HOST_PC, REG_HOST_LR, REG_NOT_USED, 4);
+	// Now jump to the compiled code
+	newInstruction 		= newInstrI(ARM_SUB, AL, REG_HOST_PC, REG_HOST_R0, REG_NOT_USED, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	Translate_Registers(code_seg);

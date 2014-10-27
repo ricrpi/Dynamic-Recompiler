@@ -21,6 +21,14 @@
 //#define SHOW_REG_TRANSLATION_MAP
 //#define SHOW_PRINT_INT_CONST
 #define SHOW_PRINT_ARM_VALUE
+#define SHOW_PRINT_SEGMENT_DELETE
+
+// ========= Recompiling Checks =======================================
+
+// You can strip the REG_HOST flags when emiting arm code
+// or when registers are translated.
+#undef DO_HOSTREG_RENUMBER_IN_TRANSLATIONS
+
 
 // ========= Customize Aborts for debugging ===========================
 

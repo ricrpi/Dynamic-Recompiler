@@ -23,6 +23,34 @@ static char userInput[20][20];
 
 static code_seg_t* CurrentCodeSeg = NULL;
 
+static unsigned long int Mstrtoul(char* addr, char** tailPointer, int base)
+{
+	int x;
+
+	//TODO  do better error detection here
+	for (x = 0; x < strnlen(addr, LINE_LEN); x++)
+	{
+		switch (addr[x])
+		{
+		case '+':
+			addr[x] = '\0';
+			return strtoul(addr, tailPointer, base) + strtoul(&addr[x+1], tailPointer, base);
+		case '-':
+			addr[x] = '\0';
+			return strtoul(addr, tailPointer, base) - strtoul(&addr[x+1], tailPointer, base);
+		case '*':
+			addr[x] = '\0';
+			return strtoul(addr, tailPointer, base) * strtoul(&addr[x+1], tailPointer, base);
+		case '/':
+			addr[x] = '\0';
+			return strtoul(addr, tailPointer, base) / strtoul(&addr[x+1], tailPointer, base);
+		default:
+			break;
+		}
+	}
+	return strtoul(addr, tailPointer, base);
+}
+
 void getCmd() {
 
 	unsigned char line[LINE_LEN];
@@ -32,7 +60,7 @@ void getCmd() {
 
 	memset(line, '\0', sizeof(line));
 
-	while (c < sizeof(userInput[argN])-1) {
+	while (c < LINE_LEN-1) {
 		line[c] = fgetc(stdin);
 
 		// TODO strip arrow key input for terminals, eclipse strips this already
@@ -75,6 +103,7 @@ void getCmd() {
 
 		c++;
 	}
+
 
 	return;
 }
@@ -151,8 +180,8 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 		if (strlen(userInput[3]))
 		{
-			count = strtoul(userInput[3], &tailPointer, 0);
-			addr = (uint32_t*)((strtoul(userInput[2], &tailPointer, 0))&~0x3);
+			count = Mstrtoul(userInput[3], &tailPointer, 0);
+			addr = (uint32_t*)((Mstrtoul(userInput[2], &tailPointer, 0))&~0x3);
 
 			for (x=0; x< count; x++)
 			{
@@ -164,7 +193,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 		}
 		else if (strlen(userInput[2]))
 		{
-			count = strtoul(userInput[2], &tailPointer, 0);
+			count = Mstrtoul(userInput[2], &tailPointer, 0);
 		}
 
 		if (NULL == addr)
@@ -196,18 +225,18 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 		if (strlen(userInput[3]))
 		{
-			count = strtoul(userInput[3], &tailPointer, 0);
-			addr = (uint32_t*)((strtoul(userInput[2], &tailPointer, 0))&~0x3);
+			count = Mstrtoul(userInput[3], &tailPointer, 0);
+			addr = (uint32_t*)((Mstrtoul(userInput[2], &tailPointer, 0))&~0x3);
 		}
 		else if (strlen(userInput[2]))
 		{
 				if (!strncasecmp(userInput[2], "0x", 2))
 				{
-					addr = (uint32_t*)((strtoul(userInput[2], &tailPointer, 0))&~0x3);
+					addr = (uint32_t*)((Mstrtoul(userInput[2], &tailPointer, 0))&~0x3);
 				}
 				else
 				{
-					count = strtoul(userInput[2], &tailPointer, 0);
+					count = Mstrtoul(userInput[2], &tailPointer, 0);
 				}
 		}
 
@@ -266,8 +295,8 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 	}
 	else if (!CMD_CMP(1, "lookup"))
 	{
-		uint32_t val = strtoul(userInput[2], &tailPointer, 0);
-		uint32_t len = strtoul(userInput[3], &tailPointer, 0);
+		uint32_t val = Mstrtoul(userInput[2], &tailPointer, 0);
+		uint32_t len = Mstrtoul(userInput[3], &tailPointer, 0);
 		int x;
 
 		if (val < 0x88000000)
@@ -330,7 +359,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 	}
 	else
 	{
-		val = strtoul(userInput[1], &tailPointer, 0);
+		val = Mstrtoul(userInput[1], &tailPointer, 0);
 		int ok = 0;
 
 		if (val > 2)
@@ -418,7 +447,7 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	{
 			if (!strlen(userInput[1+x])) break;
 
-			val = strtoul(userInput[1+x], &tailPointer, 0);
+			val = Mstrtoul(userInput[1+x], &tailPointer, 0);
 
 			//test for numbers
 			if (tailPointer != userInput[1+x])
