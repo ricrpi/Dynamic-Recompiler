@@ -289,7 +289,8 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 		else if ((word & 0x01800000) == 0x00800000) pre[0] = '\0'; //sprintf(pre, "");			//~P & U
 		else if ((word & 0x01AD0000) == 0x012D0000) sprintf(pre, "fd");			//P & ~U	//fully descend
 		else if ((word & 0x01800000) == 0x01000000) sprintf(pre, "db");			//P & ~U
-		else if ((word & 0x01800000) == 0x00800000) sprintf(pre, "da");			//~P & ~U
+		else if ((word & 0x01800000) == 0x00800000) sprintf(pre, "da");			//~P & ~U	//TODO check
+		else sprintf(pre, "  ");
 
 		if (word & 1<<21) wb[0] = '!';
 

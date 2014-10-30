@@ -203,6 +203,8 @@ int main(int argc, char* argv[])
 
 	printf("%d code segments generated\n", segmentData.count);
 
+	printf("&segmentData.dbgCurrentSegment = 0x%08x\n", (uint32_t)&segmentData.dbgCurrentSegment);
+
 // Instruction Counts for input ROM
 #if 0
 	code_seg_t* nextCodeSeg;

@@ -162,10 +162,12 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 #endif
 		}
 
-		*offset = -(GlobalLiteralCount+1)*4;
-		*base = REG_EMU_FP;
-		*((uint32_t*)MMAP_FP_BASE - GlobalLiteralCount-1) = value;
 		GlobalLiteralCount++;
+
+		*offset = -(GlobalLiteralCount)*4;
+		*base = REG_EMU_FP;
+		*((uint32_t*)MMAP_FP_BASE - GlobalLiteralCount) = value;
+
 		return 0;
 	}
 	else if (codeSegment->literals)

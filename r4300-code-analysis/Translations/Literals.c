@@ -39,7 +39,8 @@ void Translate_Literals(code_seg_t* const codeSegment)
 		{
 		case ARM_STR_LIT:
 		case ARM_LDR_LIT:
-			if (codeSegment->Type == SEG_START)
+			if (codeSegment->Type == SEG_START
+					&& ((ins->R2.regID&~REG_HOST) == 0xf))
 			{
 				ins->offset = ins->offset - x -CountLiterals*4 - 8;
 
@@ -50,9 +51,10 @@ void Translate_Literals(code_seg_t* const codeSegment)
 				}
 
 			}
-			else if (codeSegment->Type == SEG_END)
+			else if (codeSegment->Type == SEG_END
+					&& ((ins->R2.regID&~REG_HOST) == 0xf))
 			{
-				ins->offset = InterimCodeLen * 4 - x + ins->offset - 8;	//TODO 4 or 8?
+				ins->offset = InterimCodeLen * 4 - x + ins->offset - 8;
 			}
 
 			break;
