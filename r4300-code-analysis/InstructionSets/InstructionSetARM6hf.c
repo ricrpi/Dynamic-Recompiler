@@ -334,9 +334,9 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 
 		sprintf(imm, "#0x%x", word & 0xfff);
 
-		if (0 == word & 0xfff)
+		if (0 == (word & 0xfff))
 		{
-			printf("\t%s%s%s\t%s, [%s] \t\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf]);
+			printf("\t%s%s%s\t%s, [%s]      \t\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf]);
 		}
 		else if (word & (1 << 24)) // Pre/post
 			printf("\t%s%s%s\t%s, [%s, %s%s]%s \t// %s%d\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, imm, wb, minus, (word & 0xfff)/4);

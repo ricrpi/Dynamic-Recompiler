@@ -564,7 +564,7 @@ void Intermediate_Literals_print(const code_seg_t* const codeSegment)
 
 	while (literal)
 	{
-		printf("%d %d\n", x, literal->value);
+		printf("%2d.  %11d 0x%08x\n", x, literal->value, literal->value);
 		x++;
 
 		literal = literal->next;

@@ -39,8 +39,11 @@ void Translate_Literals(code_seg_t* const codeSegment)
 		{
 		case ARM_STR_LIT:
 		case ARM_LDR_LIT:
-			if (codeSegment->Type == SEG_START
-					&& ((ins->R2.regID&~REG_HOST) == 0xf))
+			if ((ins->R2.regID&~REG_HOST) != 0xf)
+			{
+				ins->U = 0;
+			}
+			else if (codeSegment->Type == SEG_START)
 			{
 				ins->offset = ins->offset - x -CountLiterals*4 - 8;
 
