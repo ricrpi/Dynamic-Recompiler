@@ -22,6 +22,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 	ins = 			codeSegment->Intermcode;
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Branching";
+#endif
+
 	while (ins)
 	{
 		switch (ins->instruction)

@@ -80,19 +80,17 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 	Instruction_t*ins = codeSegment->Intermcode;
 	Instruction_t*prev_ins = NULL;
 
-	Instruction_t*new_ins;
-	uint8_t RegUsed[64];
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "LoadCachedRegisters";
+#endif
 
-	memset(RegUsed,0,sizeof(RegUsed));
+	Instruction_t*new_ins;
 
 	while (ins)
 	{
-		if (ins->R1.state == RS_REGISTER
-				&& ins->R1.regID < REG_TEMP
-				&& !RegUsed[ins->R1.regID])
+		if (ins->R1.regID < REG_TEMP)
 		{
-			RegUsed[ins->R1.regID]++;
-			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R1.regID, REG_NOT_USED, REG_EMU_FP, ins->R1.regID * 4);
+			new_ins = newInstrI(ARM_LDR, AL, ins->R1.regID, REG_NOT_USED, REG_EMU_FP, ins->R1.regID * 4);
 			new_ins->nextInstruction = ins;
 
 			if (!prev_ins)
@@ -105,12 +103,9 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			}
 		}
 
-		if (ins->R2.state == RS_REGISTER
-				&& ins->R2.regID < REG_TEMP
-				&& !RegUsed[ins->R2.regID])
+		if (ins->R2.regID < REG_TEMP)
 		{
-			RegUsed[ins->R2.regID]++;
-			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R2.regID, REG_NOT_USED, REG_EMU_FP, ins->R2.regID * 4);
+			new_ins = newInstrI(ARM_LDR, AL, ins->R2.regID, REG_NOT_USED, REG_EMU_FP, ins->R2.regID * 4);
 			new_ins->nextInstruction = ins;
 
 			if (!prev_ins)
@@ -123,12 +118,9 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			}
 		}
 
-		if (ins->R3.state == RS_REGISTER
-				&& ins->R3.regID < REG_TEMP
-				&& !RegUsed[ins->R3.regID])
+		if (ins->R3.regID < REG_TEMP)
 		{
-			RegUsed[ins->R3.regID]++;
-			new_ins = newInstrI(ARM_LDR_LIT, AL, ins->R3.regID, REG_NOT_USED, REG_EMU_FP, ins->R3.regID * 4);
+			new_ins = newInstrI(ARM_LDR, AL, ins->R3.regID, REG_NOT_USED, REG_EMU_FP, ins->R3.regID * 4);
 			new_ins->nextInstruction = ins;
 
 			if (!prev_ins)
@@ -177,6 +169,10 @@ void Translate_Registers(code_seg_t* const codeSegment)
 {
 	Instruction_t* ins;
 	//Instruction_t*insSearch;
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Registers";
+#endif
 
 	uint32_t x;
 	uint32_t NumberRegUsed = 0;
@@ -303,6 +299,9 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 
 		Instruction_t*new_ins;
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "StoreCachedRegisters";
+#endif
 		while (ins)
 		{
 			if (ins->Rd1.regID < REG_TEMP

@@ -13,6 +13,9 @@ void Translate_Trap(code_seg_t* const codeSegment)
 	//Instruction_t*new_ins;
 	ins = codeSegment->Intermcode;
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Trap";
+#endif
 	// TODO FPU Traps!
 
 	while (ins)

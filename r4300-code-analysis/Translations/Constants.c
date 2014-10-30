@@ -6,6 +6,7 @@
  */
 
 #include "Translate.h"
+#include "DebugDefines.h"
 
 /*
  *
@@ -13,7 +14,9 @@
 void Translate_Constants(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins = codeSegment->Intermcode;
-
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Constants";
+#endif
 	//First off r0 is ALWAYS 0 so lets do that first
 	while (ins)
 	{

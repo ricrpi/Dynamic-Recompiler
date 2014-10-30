@@ -10,6 +10,7 @@
 #include <string.h>
 #include "memory.h"
 #include "InstructionSetMIPS4.h"
+#include "DebugDefines.h"
 
 #define INDEX "0x%08x"
 
@@ -18,6 +19,10 @@
 		((val & 0x03E00000) >> 21), \
 		((val & 0x001F0000) >> 16), \
 		(int)(val<<16)/(1<<16)
+#define OP_UI(val) \
+		((val & 0x03E00000) >> 21), \
+		((val & 0x001F0000) >> 16), \
+		(int)(val&0xffff)
 
 // Technically these are I OPs but I want to format the output differently
 #define B_OP "r%02u, s%02u, #%02d\t\t// branch to 0x%08x"
@@ -1288,25 +1293,28 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			ins->instruction =  BLTZ;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
-			ins->cond = MI;
+			ins->cond = LTZ;
 			ins->I = 1;
 			return 0; 	// I
 		case 0x01:
 			ins->instruction =  BGEZ;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
+			ins->cond = GEZ;
 			ins->I = 1;
 			return 0; 	// I
 		case 0x02:
 			ins->instruction =  BLTZL;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
+			ins->cond = LTZ;
 			ins->I = 1;
 			return 0;
 		case 0x03:
 			ins->instruction =  BGEZL;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
+			ins->cond = GEZ;
 			ins->I = 1;
 			return 0;
 		case 0x08:
@@ -1349,24 +1357,32 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			ins->instruction =  BLTZAL;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
+			ins->cond = LTZ;
+			ins->Ln = 1;
 			ins->I = 1;
 			return 0; 	// I and link
 		case 0x11:
 			ins->instruction =  BGEZAL;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
+			ins->cond = GEZ;
+			ins->Ln = 1;
 			ins->I = 1;
 			return 0; 	// I and link
 		case 0x12:
 			ins->instruction =  BLTZALL;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
+			ins->cond = LTZ;
+			ins->Ln = 1;
 			ins->I = 1;
 			return 0; 	// I and link likely
 		case 0x13:
 			ins->instruction =  BGEZALL;
 			ins->R1.regID = M_Rs(uiMIPSword);
 			ins->offset = IMM(uiMIPSword,16);
+			ins->cond - GEZ;
+			ins->Ln = 1;
 			ins->I = 1;
 			return 0; 	// I and link likely
 		} break;
@@ -1377,6 +1393,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		return 0;
 	case 0x03:
 		ins->instruction = JAL;
+		ins->Ln = 1;
 		ins->offset = IMM(uiMIPSword, 24);
 		return 0;
 	case 0x04:
@@ -1384,24 +1401,28 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->R2.regID = M_Rt(uiMIPSword);
 		ins->offset = IMM(uiMIPSword, 16);
+		ins->cond = EQ;
 		return 0; 	// I
 	case 0x05:
 		ins->instruction = BNE;
 		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->R2.regID = M_Rt(uiMIPSword);
 		ins->offset = IMM(uiMIPSword, 16);
+		ins->cond = NE;
 		return 0; 	// I
 	case 0x06:
 		ins->instruction = BLEZ;
 		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->R2.regID = M_Rt(uiMIPSword);
 		ins->offset = IMM(uiMIPSword, 16);
+		ins->cond = LEZ;
 		return 0;
 	case 0x07:
 		ins->instruction = BGTZ;
 		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->R2.regID = M_Rt(uiMIPSword);
 		ins->offset = IMM(uiMIPSword, 16);
+		ins->cond = GTZ;
 		return 0;
 	case 0x08:
 		ins->instruction = ADDI;
@@ -1414,7 +1435,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		ins->instruction = ADDIU;
 		ins->Rd1.regID = M_Rt(uiMIPSword);
 		ins->R1.regID = M_Rs(uiMIPSword);
-		ins->immediate = IMMU(uiMIPSword, 16);
+		ins->immediate = uiMIPSword&0xffff;
 		ins->I = 1;
 		return 0; 	// I
 
@@ -1812,15 +1833,19 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 
 	case 0x14:
 			ins->instruction =  BEQL;
+			ins->cond = EQ;
 			return 0;
 	case 0x15:
 			ins->instruction =  BNEL;
+			ins->cond = NE;
 			return 0;
 	case 0x16:
 			ins->instruction =  BLEZL;
+			ins->cond = LEZ;
 			return 0;
 	case 0x17:
 			ins->instruction =  BGTZL;
+			ins->cond = GTZ;
 			return 0;
 	case 0x18:
 			ins->instruction =  DADDI;
@@ -1833,7 +1858,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			ins->instruction =  DADDIU;
 			ins->Rd1.regID = M_Rt(uiMIPSword);
 			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->immediate = IMMU(uiMIPSword, 16);
+			ins->immediate = uiMIPSword&0xffff;
 			ins->I = 1;
 			return 0;
 	case 0x1A:
@@ -1960,7 +1985,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 	return 1;
 }
 
-void mips_print(const uint32_t x, const uint32_t uiMIPSword)
+void fprintf_mips(FILE* stream, const uint32_t x, const uint32_t uiMIPSword)
 {
 	uint32_t op=uiMIPSword>>26;
 	uint32_t op2;
@@ -1971,61 +1996,61 @@ void mips_print(const uint32_t x, const uint32_t uiMIPSword)
 		op2=uiMIPSword&0x3f;
 		switch(op2)
 		{
-			case 0x00: printf(INDEX "\tSLL   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x02: printf(INDEX "\tSRL   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x03: printf(INDEX "\tSRA   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x04: printf(INDEX "\tSLLV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x07: printf(INDEX "\tSRAV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x08: printf(INDEX "\tJR    \tr%d\n", x, (uiMIPSword>>21)&0x1f); return;	// J
-			case 0x09: printf(INDEX "\tJALR  \tr%d // PC=r%d, r%d=%d \n", x,
+			case 0x00: fprintf(stream, INDEX "\tSLL   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x02: fprintf(stream, INDEX "\tSRL   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x03: fprintf(stream, INDEX "\tSRA   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x04: fprintf(stream, INDEX "\tSLLV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x07: fprintf(stream, INDEX "\tSRAV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x08: fprintf(stream, INDEX "\tJR    \tr%d\n", x, (uiMIPSword>>21)&0x1f); return;	// J
+			case 0x09: fprintf(stream, INDEX "\tJALR  \tr%d // PC=r%d, r%d=%d \n", x,
 					(uiMIPSword>>21)&0x1f,
 					(uiMIPSword>>21)&0x1f,
 					(uiMIPSword>>11)&0x1f,
 					x+8); return;	// J
-			case 0x0C: printf(INDEX "\tSYSCALL\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x0D: printf(INDEX "\tBREAK \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x0F: printf(INDEX "\tSYNC  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x10: printf(INDEX "\tMFHI  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x11: printf(INDEX "\tMTHI  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x12: printf(INDEX "\tMFLO  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x13: printf(INDEX "\tMTLO  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x14: printf(INDEX "\tDSLLV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x16: printf(INDEX "\tDSRLV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x17: printf(INDEX "\tDSRAV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x18: printf(INDEX "\tMULT  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x19: printf(INDEX "\tMULTU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x1A: printf(INDEX "\tDIV   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x1B: printf(INDEX "\tDIVU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x1C: printf(INDEX "\tDMULT \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x1D: printf(INDEX "\tDMULTU\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x1E: printf(INDEX "\tDDIV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x1F: printf(INDEX "\tDDIVU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x20: printf(INDEX "\tADD   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x21: printf(INDEX "\tADDU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x22: printf(INDEX "\tSUB   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x23: printf(INDEX "\tSUBU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x24: printf(INDEX "\tAND   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x25: printf(INDEX "\tOR    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x26: printf(INDEX "\tXOR   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x27: printf(INDEX "\tNOR   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x2A: printf(INDEX "\tSLT   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x2B: printf(INDEX "\tSLTU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x2C: printf(INDEX "\tDADD  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x2D: printf(INDEX "\tDADDU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x2E: printf(INDEX "\tDSUB  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x2F: printf(INDEX "\tDSUBU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x30: printf(INDEX "\tTGE   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x31: printf(INDEX "\tTGEU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x32: printf(INDEX "\tTLT   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x33: printf(INDEX "\tTLTU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x34: printf(INDEX "\tTEQ   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x36: printf(INDEX "\tTNE   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x38: printf(INDEX "\tDSLL  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x3A: printf(INDEX "\tDSRL  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x3B: printf(INDEX "\tDSRA  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x3C: printf(INDEX "\tDSLL32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x3E: printf(INDEX "\tDSRL32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x3F: printf(INDEX "\tDSRA32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x0C: fprintf(stream, INDEX "\tSYSCALL\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x0D: fprintf(stream, INDEX "\tBREAK \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x0F: fprintf(stream, INDEX "\tSYNC  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x10: fprintf(stream, INDEX "\tMFHI  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x11: fprintf(stream, INDEX "\tMTHI  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x12: fprintf(stream, INDEX "\tMFLO  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x13: fprintf(stream, INDEX "\tMTLO  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x14: fprintf(stream, INDEX "\tDSLLV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x16: fprintf(stream, INDEX "\tDSRLV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x17: fprintf(stream, INDEX "\tDSRAV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x18: fprintf(stream, INDEX "\tMULT  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x19: fprintf(stream, INDEX "\tMULTU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1A: fprintf(stream, INDEX "\tDIV   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1B: fprintf(stream, INDEX "\tDIVU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1C: fprintf(stream, INDEX "\tDMULT \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1D: fprintf(stream, INDEX "\tDMULTU\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1E: fprintf(stream, INDEX "\tDDIV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1F: fprintf(stream, INDEX "\tDDIVU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x20: fprintf(stream, INDEX "\tADD   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x21: fprintf(stream, INDEX "\tADDU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x22: fprintf(stream, INDEX "\tSUB   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x23: fprintf(stream, INDEX "\tSUBU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x24: fprintf(stream, INDEX "\tAND   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x25: fprintf(stream, INDEX "\tOR    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x26: fprintf(stream, INDEX "\tXOR   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x27: fprintf(stream, INDEX "\tNOR   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2A: fprintf(stream, INDEX "\tSLT   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2B: fprintf(stream, INDEX "\tSLTU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2C: fprintf(stream, INDEX "\tDADD  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2D: fprintf(stream, INDEX "\tDADDU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2E: fprintf(stream, INDEX "\tDSUB  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2F: fprintf(stream, INDEX "\tDSUBU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x30: fprintf(stream, INDEX "\tTGE   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x31: fprintf(stream, INDEX "\tTGEU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x32: fprintf(stream, INDEX "\tTLT   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x33: fprintf(stream, INDEX "\tTLTU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x34: fprintf(stream, INDEX "\tTEQ   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x36: fprintf(stream, INDEX "\tTNE   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x38: fprintf(stream, INDEX "\tDSLL  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3A: fprintf(stream, INDEX "\tDSRL  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3B: fprintf(stream, INDEX "\tDSRA  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3C: fprintf(stream, INDEX "\tDSLL32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3E: fprintf(stream, INDEX "\tDSRL32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3F: fprintf(stream, INDEX "\tDSRA32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 		}
 		break;
 
@@ -2034,52 +2059,52 @@ void mips_print(const uint32_t x, const uint32_t uiMIPSword)
 
 		switch(op2)
 		{
-		case 0x00: 	printf(INDEX "\tBLTZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
-		case 0x01: 	printf(INDEX "\tBGEZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
-		case 0x02: 	printf(INDEX "\tBLTZL  \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
-		case 0x03: 	printf(INDEX "\tBGEZL  \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
-		case 0x08: 	printf(INDEX "\tTGEI\n",x); 	return;
-		case 0x09: 	printf(INDEX "\tTGEIU\n",x); 	return;
-		case 0x0A: 	printf(INDEX "\tTLTI\n",x); 	return;
-		case 0x0B: 	printf(INDEX "\tTLTIU\n",x); 	return;
-		case 0x0C: 	printf(INDEX "\tTEQI\n",x); 	return;
-		case 0x0E: 	printf(INDEX "\tTNEI\n",x); 	return;
-		case 0x10: 	printf(INDEX "\tBLTZAL \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link
-		case 0x11: 	printf(INDEX "\tBGEZAL \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link
-		case 0x12: 	printf(INDEX "\tBLTZALL\t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link likely
-		case 0x13: 	printf(INDEX "\tBGEZALL\t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link likely
+		case 0x00: 	fprintf(stream, INDEX "\tBLTZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+		case 0x01: 	fprintf(stream, INDEX "\tBGEZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+		case 0x02: 	fprintf(stream, INDEX "\tBLTZL  \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+		case 0x03: 	fprintf(stream, INDEX "\tBGEZL  \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+		case 0x08: 	fprintf(stream, INDEX "\tTGEI\n",x); 	return;
+		case 0x09: 	fprintf(stream, INDEX "\tTGEIU\n",x); 	return;
+		case 0x0A: 	fprintf(stream, INDEX "\tTLTI\n",x); 	return;
+		case 0x0B: 	fprintf(stream, INDEX "\tTLTIU\n",x); 	return;
+		case 0x0C: 	fprintf(stream, INDEX "\tTEQI\n",x); 	return;
+		case 0x0E: 	fprintf(stream, INDEX "\tTNEI\n",x); 	return;
+		case 0x10: 	fprintf(stream, INDEX "\tBLTZAL \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link
+		case 0x11: 	fprintf(stream, INDEX "\tBGEZAL \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link
+		case 0x12: 	fprintf(stream, INDEX "\tBLTZALL\t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link likely
+		case 0x13: 	fprintf(stream, INDEX "\tBGEZALL\t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link likely
 		}
 
 		break;
 
-	case 0x02: 	printf(INDEX "\tJ      \t" J_OP "\n", x, OP_J(x, uiMIPSword)); return;	// J
-	case 0x03: 	printf(INDEX "\tJAL    \t" J_OP "\n", x, OP_J(x, uiMIPSword)); return;	// J
-	case 0x04: 	printf(INDEX "\tBEQ    \t" B_OP "\n", x, OP_B(uiMIPSword)); return;	// I
-	case 0x05: 	printf(INDEX "\tBNE    \t" B_OP "\n", x, OP_B(uiMIPSword)); return;	// I
-	case 0x06: 	printf(INDEX "\tBLEZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
-	case 0x07: 	printf(INDEX "\tBGTZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
-	case 0x08: 	printf(INDEX "\tADDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x09: 	printf(INDEX "\tADDIU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0A: 	printf(INDEX "\tSLTI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0B: 	printf(INDEX "\tSLTIU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0C: 	printf(INDEX "\tANDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0D: 	printf(INDEX "\tORI    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0E: 	printf(INDEX "\tXORI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x0F: 	printf(INDEX "\tLUI    \t s%02u, #%02d\t// Load upper half of word\n", x, ((uiMIPSword & 0x001F0000) >> 16), (int)(uiMIPSword<<16)/(1<<16)); return;	// I
+	case 0x02: 	fprintf(stream, INDEX "\tJ      \t" J_OP "\n", x, OP_J(x, uiMIPSword)); return;	// J
+	case 0x03: 	fprintf(stream, INDEX "\tJAL    \t" J_OP "\n", x, OP_J(x, uiMIPSword)); return;	// J
+	case 0x04: 	fprintf(stream, INDEX "\tBEQ    \t" B_OP "\n", x, OP_B(uiMIPSword)); return;	// I
+	case 0x05: 	fprintf(stream, INDEX "\tBNE    \t" B_OP "\n", x, OP_B(uiMIPSword)); return;	// I
+	case 0x06: 	fprintf(stream, INDEX "\tBLEZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+	case 0x07: 	fprintf(stream, INDEX "\tBGTZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+	case 0x08: 	fprintf(stream, INDEX "\tADDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x09: 	fprintf(stream, INDEX "\tADDIU  \t" I_OP "\n", x, OP_UI(uiMIPSword)); return;	// I
+	case 0x0A: 	fprintf(stream, INDEX "\tSLTI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0B: 	fprintf(stream, INDEX "\tSLTIU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0C: 	fprintf(stream, INDEX "\tANDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0D: 	fprintf(stream, INDEX "\tORI    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0E: 	fprintf(stream, INDEX "\tXORI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0F: 	fprintf(stream, INDEX "\tLUI    \t s%02u, #%02d\t// Load upper half of word\n", x, ((uiMIPSword & 0x001F0000) >> 16), (int)(uiMIPSword<<16)/(1<<16)); return;	// I
 	case 0x10: 	// cop0
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
 		{
-		case 0x00: printf(INDEX "\tMFC0 \tr%02d, f%02d \t\t// move f%d to r%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
-		case 0x04: printf(INDEX "\tMTC0 \tr%02d, f%02d \t\t// move r%d to f%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x00: fprintf(stream, INDEX "\tMFC0 \tr%02d, f%02d \t\t// move f%d to r%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x04: fprintf(stream, INDEX "\tMTC0 \tr%02d, f%02d \t\t// move r%d to f%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
 		case 0x10: // tlb
 			switch(uiMIPSword&0x3f)
 			{
-			case 0x01: printf(INDEX "\tTLBR\n",x); return;
-			case 0x02: printf(INDEX "\tTLBWI\n",x); return;
-			case 0x06: printf(INDEX "\tTLBWR\n",x); return;
-			case 0x08: printf(INDEX "\tTLBP\n",x); return;
-			case 0x18: printf(INDEX "\tERET\n",x); return;
+			case 0x01: fprintf(stream, INDEX "\tTLBR\n",x); return;
+			case 0x02: fprintf(stream, INDEX "\tTLBWI\n",x); return;
+			case 0x06: fprintf(stream, INDEX "\tTLBWR\n",x); return;
+			case 0x08: fprintf(stream, INDEX "\tTLBP\n",x); return;
+			case 0x18: fprintf(stream, INDEX "\tERET\n",x); return;
 			}
 		}
 		break;
@@ -2088,155 +2113,434 @@ void mips_print(const uint32_t x, const uint32_t uiMIPSword)
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
 		{
-		case 0x00: printf(INDEX "\tMFC1 \t r%2d, f%2d \t// move f%d to r%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
-		case 0x01: printf(INDEX "\tDMFC1\t r%2d, f%2d \t// move r%d to f%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
-		case 0x02: printf(INDEX "\tCFC1\n",x); return;
-		case 0x04: printf(INDEX "\tMTC1\n",x); return;
-		case 0x05: printf(INDEX "\tDMTC1\n",x); return;
-		case 0x06: printf(INDEX "\tCTC1\n",x); return;
-		case 0x08: printf(INDEX "\tBC1\n",x);
+		case 0x00: fprintf(stream, INDEX "\tMFC1 \t r%2d, f%2d \t// move f%d to r%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x01: fprintf(stream, INDEX "\tDMFC1\t r%2d, f%2d \t// move r%d to f%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x02: fprintf(stream, INDEX "\tCFC1\n",x); return;
+		case 0x04: fprintf(stream, INDEX "\tMTC1\n",x); return;
+		case 0x05: fprintf(stream, INDEX "\tDMTC1\n",x); return;
+		case 0x06: fprintf(stream, INDEX "\tCTC1\n",x); return;
+		case 0x08: fprintf(stream, INDEX "\tBC1\n",x);
 			switch((uiMIPSword>>16)&0x3)
 			{
-			case 0x00: printf(INDEX "\tBC1F\n",x); return;
-			case 0x01: printf(INDEX "\tBC1T\n",x); return;
-			case 0x02: printf(INDEX "\tBC1FL\n",x); return;
-			case 0x03: printf(INDEX "\tBC1TL\n",x); return;
+			case 0x00: fprintf(stream, INDEX "\tBC1F\n",x); return;
+			case 0x01: fprintf(stream, INDEX "\tBC1T\n",x); return;
+			case 0x02: fprintf(stream, INDEX "\tBC1FL\n",x); return;
+			case 0x03: fprintf(stream, INDEX "\tBC1TL\n",x); return;
 			}break;
 
 		case 0x10: // C1.S",x);
 			switch(uiMIPSword&0x3f)
 			{
-			case 0x00: printf(INDEX "\tADD.S\n",x); return;
-			case 0x01: printf(INDEX "\tSUB.S\n",x); return;
-			case 0x02: printf(INDEX "\tMUL.S\n",x); return;
-			case 0x03: printf(INDEX "\tDIV.S\n",x); return;
-			case 0x04: printf(INDEX "\tSQRT.S\n",x); return;
-			case 0x05: printf(INDEX "\tABS.S\n",x); return;
-			case 0x06: printf(INDEX "\tMOV.S\n",x); return;
-			case 0x07: printf(INDEX "\tNEG.S\n",x); return;
-			case 0x08: printf(INDEX "\tROUND.L.S\n",x); return;
-			case 0x09: printf(INDEX "\tTRUNC.L.S\n",x); return;
-			case 0x0A: printf(INDEX "\tCEIL.L.S\n",x); return;
-			case 0x0B: printf(INDEX "\tFLOOR.L.S\n",x); return;
-			case 0x0C: printf(INDEX "\tROUND.W.S\n",x); return;
-			case 0x0D: printf(INDEX "\tTRUNC.W.S\n",x); return;
-			case 0x0E: printf(INDEX "\tCEIL.W.S\n",x); return;
-			case 0x0F: printf(INDEX "\tFLOOR.W.S\n",x); return;
-			case 0x21: printf(INDEX "\tCVT.D.S\n",x); return;
-			case 0x24: printf(INDEX "\tCVT.W.S\n",x); return;
-			case 0x25: printf(INDEX "\tCVT.L.S\n",x); return;
-			case 0x30: printf(INDEX "\tC.F.S\n",x); return;
-			case 0x31: printf(INDEX "\tC.UN.S\n",x); return;
-			case 0x32: printf(INDEX "\tC.EQ.S\n",x); return;
-			case 0x33: printf(INDEX "\tC.UEQ.S\n",x); return;
-			case 0x34: printf(INDEX "\tC.OLT.S\n",x); return;
-			case 0x35: printf(INDEX "\tC.ULT.S\n",x); return;
-			case 0x36: printf(INDEX "\tC.OLE.S\n",x); return;
-			case 0x37: printf(INDEX "\tC.ULE.S\n",x); return;
-			case 0x38: printf(INDEX "\tC.SF.S\n",x); return;
-			case 0x39: printf(INDEX "\tC.NGLE.S\n",x); return;
-			case 0x3A: printf(INDEX "\tC.SEQ.S\n",x); return;
-			case 0x3B: printf(INDEX "\tC.NGL.S\n",x); return;
-			case 0x3C: printf(INDEX "\tC.LT.S\n",x); return;
-			case 0x3D: printf(INDEX "\tC.NGE.S\n",x); return;
-			case 0x3E: printf(INDEX "\tC.LE.S\n",x); return;
-			case 0x3F: printf(INDEX "\tC.NGT.S\n",x); return;
+			case 0x00: fprintf(stream, INDEX "\tADD.S\n",x); return;
+			case 0x01: fprintf(stream, INDEX "\tSUB.S\n",x); return;
+			case 0x02: fprintf(stream, INDEX "\tMUL.S\n",x); return;
+			case 0x03: fprintf(stream, INDEX "\tDIV.S\n",x); return;
+			case 0x04: fprintf(stream, INDEX "\tSQRT.S\n",x); return;
+			case 0x05: fprintf(stream, INDEX "\tABS.S\n",x); return;
+			case 0x06: fprintf(stream, INDEX "\tMOV.S\n",x); return;
+			case 0x07: fprintf(stream, INDEX "\tNEG.S\n",x); return;
+			case 0x08: fprintf(stream, INDEX "\tROUND.L.S\n",x); return;
+			case 0x09: fprintf(stream, INDEX "\tTRUNC.L.S\n",x); return;
+			case 0x0A: fprintf(stream, INDEX "\tCEIL.L.S\n",x); return;
+			case 0x0B: fprintf(stream, INDEX "\tFLOOR.L.S\n",x); return;
+			case 0x0C: fprintf(stream, INDEX "\tROUND.W.S\n",x); return;
+			case 0x0D: fprintf(stream, INDEX "\tTRUNC.W.S\n",x); return;
+			case 0x0E: fprintf(stream, INDEX "\tCEIL.W.S\n",x); return;
+			case 0x0F: fprintf(stream, INDEX "\tFLOOR.W.S\n",x); return;
+			case 0x21: fprintf(stream, INDEX "\tCVT.D.S\n",x); return;
+			case 0x24: fprintf(stream, INDEX "\tCVT.W.S\n",x); return;
+			case 0x25: fprintf(stream, INDEX "\tCVT.L.S\n",x); return;
+			case 0x30: fprintf(stream, INDEX "\tC.F.S\n",x); return;
+			case 0x31: fprintf(stream, INDEX "\tC.UN.S\n",x); return;
+			case 0x32: fprintf(stream, INDEX "\tC.EQ.S\n",x); return;
+			case 0x33: fprintf(stream, INDEX "\tC.UEQ.S\n",x); return;
+			case 0x34: fprintf(stream, INDEX "\tC.OLT.S\n",x); return;
+			case 0x35: fprintf(stream, INDEX "\tC.ULT.S\n",x); return;
+			case 0x36: fprintf(stream, INDEX "\tC.OLE.S\n",x); return;
+			case 0x37: fprintf(stream, INDEX "\tC.ULE.S\n",x); return;
+			case 0x38: fprintf(stream, INDEX "\tC.SF.S\n",x); return;
+			case 0x39: fprintf(stream, INDEX "\tC.NGLE.S\n",x); return;
+			case 0x3A: fprintf(stream, INDEX "\tC.SEQ.S\n",x); return;
+			case 0x3B: fprintf(stream, INDEX "\tC.NGL.S\n",x); return;
+			case 0x3C: fprintf(stream, INDEX "\tC.LT.S\n",x); return;
+			case 0x3D: fprintf(stream, INDEX "\tC.NGE.S\n",x); return;
+			case 0x3E: fprintf(stream, INDEX "\tC.LE.S\n",x); return;
+			case 0x3F: fprintf(stream, INDEX "\tC.NGT.S\n",x); return;
 			}
 			break;
-		case 0x11: //printf(INDEX "\tC1.D\n",x);
+		case 0x11: //fprintf(stream, INDEX "\tC1.D\n",x);
 			switch(uiMIPSword&0x3f)
 			{
-			case 0x00: printf(INDEX "\tADD.D\n",x); return;
-			case 0x01: printf(INDEX "\tSUB.D\n",x); return;
-			case 0x02: printf(INDEX "\tMUL.D\n",x); return;
-			case 0x03: printf(INDEX "\tDIV.D\n",x); return;
-			case 0x04: printf(INDEX "\tSQRT.D\n",x); return;
-			case 0x05: printf(INDEX "\tABS.D\n",x); return;
-			case 0x06: printf(INDEX "\tMOV.D\n",x); return;
-			case 0x07: printf(INDEX "\tNEG.D\n",x); return;
-			case 0x08: printf(INDEX "\tROUND.L.D\n",x); return;
-			case 0x09: printf(INDEX "\tTRUNC.L.D\n",x); return;
-			case 0x0A: printf(INDEX "\tCEIL.L.D\n",x); return;
-			case 0x0B: printf(INDEX "\tFLOOR.L.D\n",x); return;
-			case 0x0C: printf(INDEX "\tROUND.W.D\n",x); return;
-			case 0x0D: printf(INDEX "\tTRUNC.W.D\n",x); return;
-			case 0x0E: printf(INDEX "\tCEIL.W.D\n",x); return;
-			case 0x0F: printf(INDEX "\tFLOOR.W.D\n",x); return;
-			case 0x20: printf(INDEX "\tCVT.S.D\n",x); return;
-			case 0x24: printf(INDEX "\tCVT.W.D\n",x); return;
-			case 0x25: printf(INDEX "\tCVT.L.D\n",x); return;
-			case 0x30: printf(INDEX "\tC.F.D\n",x); return;
-			case 0x31: printf(INDEX "\tC.UN.D\n",x); return;
-			case 0x32: printf(INDEX "\tC.EQ.D\n",x); return;
-			case 0x33: printf(INDEX "\tC.UEQ.D\n",x); return;
-			case 0x34: printf(INDEX "\tC.OLT.D\n",x); return;
-			case 0x35: printf(INDEX "\tC.ULT.D\n",x); return;
-			case 0x36: printf(INDEX "\tC.OLE.D\n",x); return;
-			case 0x37: printf(INDEX "\tC.ULE.D\n",x); return;
-			case 0x38: printf(INDEX "\tC.SF.D\n",x); return;
-			case 0x39: printf(INDEX "\tC.NGLE.D\n",x); return;
-			case 0x3A: printf(INDEX "\tC.SEQ.D\n",x); return;
-			case 0x3B: printf(INDEX "\tC.NGL.D\n",x); return;
-			case 0x3C: printf(INDEX "\tC.LT.D\n",x); return;
-			case 0x3D: printf(INDEX "\tC.NGE.D\n",x); return;
-			case 0x3E: printf(INDEX "\tC.LE.D\n",x); return;
-			case 0x3F: printf(INDEX "\tC.NGT.D\n",x); return;
+			case 0x00: fprintf(stream, INDEX "\tADD.D\n",x); return;
+			case 0x01: fprintf(stream, INDEX "\tSUB.D\n",x); return;
+			case 0x02: fprintf(stream, INDEX "\tMUL.D\n",x); return;
+			case 0x03: fprintf(stream, INDEX "\tDIV.D\n",x); return;
+			case 0x04: fprintf(stream, INDEX "\tSQRT.D\n",x); return;
+			case 0x05: fprintf(stream, INDEX "\tABS.D\n",x); return;
+			case 0x06: fprintf(stream, INDEX "\tMOV.D\n",x); return;
+			case 0x07: fprintf(stream, INDEX "\tNEG.D\n",x); return;
+			case 0x08: fprintf(stream, INDEX "\tROUND.L.D\n",x); return;
+			case 0x09: fprintf(stream, INDEX "\tTRUNC.L.D\n",x); return;
+			case 0x0A: fprintf(stream, INDEX "\tCEIL.L.D\n",x); return;
+			case 0x0B: fprintf(stream, INDEX "\tFLOOR.L.D\n",x); return;
+			case 0x0C: fprintf(stream, INDEX "\tROUND.W.D\n",x); return;
+			case 0x0D: fprintf(stream, INDEX "\tTRUNC.W.D\n",x); return;
+			case 0x0E: fprintf(stream, INDEX "\tCEIL.W.D\n",x); return;
+			case 0x0F: fprintf(stream, INDEX "\tFLOOR.W.D\n",x); return;
+			case 0x20: fprintf(stream, INDEX "\tCVT.S.D\n",x); return;
+			case 0x24: fprintf(stream, INDEX "\tCVT.W.D\n",x); return;
+			case 0x25: fprintf(stream, INDEX "\tCVT.L.D\n",x); return;
+			case 0x30: fprintf(stream, INDEX "\tC.F.D\n",x); return;
+			case 0x31: fprintf(stream, INDEX "\tC.UN.D\n",x); return;
+			case 0x32: fprintf(stream, INDEX "\tC.EQ.D\n",x); return;
+			case 0x33: fprintf(stream, INDEX "\tC.UEQ.D\n",x); return;
+			case 0x34: fprintf(stream, INDEX "\tC.OLT.D\n",x); return;
+			case 0x35: fprintf(stream, INDEX "\tC.ULT.D\n",x); return;
+			case 0x36: fprintf(stream, INDEX "\tC.OLE.D\n",x); return;
+			case 0x37: fprintf(stream, INDEX "\tC.ULE.D\n",x); return;
+			case 0x38: fprintf(stream, INDEX "\tC.SF.D\n",x); return;
+			case 0x39: fprintf(stream, INDEX "\tC.NGLE.D\n",x); return;
+			case 0x3A: fprintf(stream, INDEX "\tC.SEQ.D\n",x); return;
+			case 0x3B: fprintf(stream, INDEX "\tC.NGL.D\n",x); return;
+			case 0x3C: fprintf(stream, INDEX "\tC.LT.D\n",x); return;
+			case 0x3D: fprintf(stream, INDEX "\tC.NGE.D\n",x); return;
+			case 0x3E: fprintf(stream, INDEX "\tC.LE.D\n",x); return;
+			case 0x3F: fprintf(stream, INDEX "\tC.NGT.D\n",x); return;
 			}
 			break;
-		case 0x14: //printf(INDEX "\tC1.W\n",x);
+		case 0x14: //fprintf(stream, INDEX "\tC1.W\n",x);
 			switch(uiMIPSword&0x3f)
 			{
-			case 0x20: printf(INDEX "\tCVT.S.W\n",x); return;
-			case 0x21: printf(INDEX "\tCVT.D.W\n",x); return;
+			case 0x20: fprintf(stream, INDEX "\tCVT.S.W\n",x); return;
+			case 0x21: fprintf(stream, INDEX "\tCVT.D.W\n",x); return;
 			}
 			break;
 
-		case 0x15: //printf(INDEX "\tC1.L\n",x);
+		case 0x15: //fprintf(stream, INDEX "\tC1.L\n",x);
 			switch(uiMIPSword&0x3f)
 			{
-			case 0x20: printf(INDEX "\tCVT.S.L\n",x); return;
-			case 0x21: printf(INDEX "\tCVT.D.L\n",x); return;
+			case 0x20: fprintf(stream, INDEX "\tCVT.S.L\n",x); return;
+			case 0x21: fprintf(stream, INDEX "\tCVT.D.L\n",x); return;
 			}
 			break;
 		}
 		break;
 
-	case 0x14: printf(INDEX "\tBEQL  \n",x); return;
-	case 0x15: printf(INDEX "\tBNEL  \n",x); return;
-	case 0x16: printf(INDEX "\tBLEZL \n",x); return;
-	case 0x17: printf(INDEX "\tBGTZL \n",x); return;
-	case 0x18: printf(INDEX "\tDADDI \n",x); return;
-	case 0x19: printf(INDEX "\tDADDIU\n",x); return;
-	case 0x1A: printf(INDEX "\tLDL   \n",x); return;
-	case 0x1B: printf(INDEX "\tLDR   \n",x); return;
-	case 0x20: printf(INDEX "\tLB    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Byte
-	case 0x21: printf(INDEX "\tLH    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Halfword
-	case 0x22: printf(INDEX "\tLWL   \n",x); return;
-	case 0x23: printf(INDEX "\tLW    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word
-	case 0x24: printf(INDEX "\tLBU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Unsigned Byte
-	case 0x25: printf(INDEX "\tLHU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Halfword unsigned
-	case 0x26: printf(INDEX "\tLWR   \n",x); return;
-	case 0x27: printf(INDEX "\tLWU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word unsigned
-	case 0x28: printf(INDEX "\tSB    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x29: printf(INDEX "\tSH    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x2A: printf(INDEX "\tSWL   \n",x); return;
-	case 0x2B: printf(INDEX "\tSW    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-	case 0x2C: printf(INDEX "\tSDL   \n",x); return;
-	case 0x2D: printf(INDEX "\tSDR   \n",x); return;
-	case 0x2E: printf(INDEX "\tSWR   \n",x); return;
-	case 0x2F: printf(INDEX "\tCACHE \n",x); return;
-	case 0x30: printf(INDEX "\tLL    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Linked Word atomic Read-Modify-Write ops
-	case 0x31: printf(INDEX "\tLWC1  \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word to co processor 1
-	case 0x34: printf(INDEX "\tLLD   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Linked Dbl Word atomic Read-Modify-Write ops
-	case 0x35: printf(INDEX "\tLDC1  \n",x); return;
-	case 0x37: printf(INDEX "\tLD    \t" L_OP "\n", x, OP_L(uiMIPSword)); return; 	// Load Double word
-	case 0x38: printf(INDEX "\tSC    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Linked Word atomic Read-Modify-Write ops
-	case 0x39: printf(INDEX "\tSWC1  \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Word from co processor 1 to memory
-	case 0x3C: printf(INDEX "\tSCD   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Conditional Double Word
-	case 0x3D: printf(INDEX "\tSDC1  \n",x); return;
-	case 0x3F: printf(INDEX "\tSD    \t" L_OP "\n", x, OP_L(uiMIPSword)); return; 	// Store Double word
+	case 0x14: fprintf(stream, INDEX "\tBEQL  \n",x); return;
+	case 0x15: fprintf(stream, INDEX "\tBNEL  \n",x); return;
+	case 0x16: fprintf(stream, INDEX "\tBLEZL \n",x); return;
+	case 0x17: fprintf(stream, INDEX "\tBGTZL \n",x); return;
+	case 0x18: fprintf(stream, INDEX "\tDADDI \n",x); return;
+	case 0x19: fprintf(stream, INDEX "\tDADDIU\n",x); return;
+	case 0x1A: fprintf(stream, INDEX "\tLDL   \n",x); return;
+	case 0x1B: fprintf(stream, INDEX "\tLDR   \n",x); return;
+	case 0x20: fprintf(stream, INDEX "\tLB    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Byte
+	case 0x21: fprintf(stream, INDEX "\tLH    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Halfword
+	case 0x22: fprintf(stream, INDEX "\tLWL   \n",x); return;
+	case 0x23: fprintf(stream, INDEX "\tLW    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word
+	case 0x24: fprintf(stream, INDEX "\tLBU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Unsigned Byte
+	case 0x25: fprintf(stream, INDEX "\tLHU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Halfword unsigned
+	case 0x26: fprintf(stream, INDEX "\tLWR   \n",x); return;
+	case 0x27: fprintf(stream, INDEX "\tLWU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word unsigned
+	case 0x28: fprintf(stream, INDEX "\tSB    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x29: fprintf(stream, INDEX "\tSH    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x2A: fprintf(stream, INDEX "\tSWL   \n",x); return;
+	case 0x2B: fprintf(stream, INDEX "\tSW    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x2C: fprintf(stream, INDEX "\tSDL   \n",x); return;
+	case 0x2D: fprintf(stream, INDEX "\tSDR   \n",x); return;
+	case 0x2E: fprintf(stream, INDEX "\tSWR   \n",x); return;
+	case 0x2F: fprintf(stream, INDEX "\tCACHE \n",x); return;
+	case 0x30: fprintf(stream, INDEX "\tLL    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Linked Word atomic Read-Modify-Write ops
+	case 0x31: fprintf(stream, INDEX "\tLWC1  \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word to co processor 1
+	case 0x34: fprintf(stream, INDEX "\tLLD   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Linked Dbl Word atomic Read-Modify-Write ops
+	case 0x35: fprintf(stream, INDEX "\tLDC1  \n",x); return;
+	case 0x37: fprintf(stream, INDEX "\tLD    \t" L_OP "\n", x, OP_L(uiMIPSword)); return; 	// Load Double word
+	case 0x38: fprintf(stream, INDEX "\tSC    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Linked Word atomic Read-Modify-Write ops
+	case 0x39: fprintf(stream, INDEX "\tSWC1  \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Word from co processor 1 to memory
+	case 0x3C: fprintf(stream, INDEX "\tSCD   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Conditional Double Word
+	case 0x3D: fprintf(stream, INDEX "\tSDC1  \n",x); return;
+	case 0x3F: fprintf(stream, INDEX "\tSD    \t" L_OP "\n", x, OP_L(uiMIPSword)); return; 	// Store Double word
 	}
 
-	printf(INDEX "\t...\t0x%08X\n",x, uiMIPSword); return;
+	fprintf(stream, INDEX "\t...\t0x%08X\n",x, uiMIPSword); return;
 }
 
+void sprintf_mips(char* stream, const uint32_t x, const uint32_t uiMIPSword)
+{
+	uint32_t op=uiMIPSword>>26;
+	uint32_t op2;
+
+	switch(op)
+	{
+	case 0x00:
+		op2=uiMIPSword&0x3f;
+		switch(op2)
+		{
+			case 0x00: sprintf(stream, INDEX "\tSLL   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x02: sprintf(stream, INDEX "\tSRL   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x03: sprintf(stream, INDEX "\tSRA   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x04: sprintf(stream, INDEX "\tSLLV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x07: sprintf(stream, INDEX "\tSRAV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x08: sprintf(stream, INDEX "\tJR    \tr%d\n", x, (uiMIPSword>>21)&0x1f); return;	// J
+			case 0x09: sprintf(stream, INDEX "\tJALR  \tr%d // PC=r%d, r%d=%d \n", x,
+					(uiMIPSword>>21)&0x1f,
+					(uiMIPSword>>21)&0x1f,
+					(uiMIPSword>>11)&0x1f,
+					x+8); return;	// J
+			case 0x0C: sprintf(stream, INDEX "\tSYSCALL\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x0D: sprintf(stream, INDEX "\tBREAK \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x0F: sprintf(stream, INDEX "\tSYNC  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x10: sprintf(stream, INDEX "\tMFHI  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x11: sprintf(stream, INDEX "\tMTHI  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x12: sprintf(stream, INDEX "\tMFLO  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x13: sprintf(stream, INDEX "\tMTLO  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x14: sprintf(stream, INDEX "\tDSLLV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x16: sprintf(stream, INDEX "\tDSRLV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x17: sprintf(stream, INDEX "\tDSRAV \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x18: sprintf(stream, INDEX "\tMULT  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x19: sprintf(stream, INDEX "\tMULTU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1A: sprintf(stream, INDEX "\tDIV   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1B: sprintf(stream, INDEX "\tDIVU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1C: sprintf(stream, INDEX "\tDMULT \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1D: sprintf(stream, INDEX "\tDMULTU\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1E: sprintf(stream, INDEX "\tDDIV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x1F: sprintf(stream, INDEX "\tDDIVU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x20: sprintf(stream, INDEX "\tADD   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x21: sprintf(stream, INDEX "\tADDU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x22: sprintf(stream, INDEX "\tSUB   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x23: sprintf(stream, INDEX "\tSUBU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x24: sprintf(stream, INDEX "\tAND   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x25: sprintf(stream, INDEX "\tOR    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x26: sprintf(stream, INDEX "\tXOR   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x27: sprintf(stream, INDEX "\tNOR   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2A: sprintf(stream, INDEX "\tSLT   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2B: sprintf(stream, INDEX "\tSLTU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2C: sprintf(stream, INDEX "\tDADD  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2D: sprintf(stream, INDEX "\tDADDU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2E: sprintf(stream, INDEX "\tDSUB  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x2F: sprintf(stream, INDEX "\tDSUBU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x30: sprintf(stream, INDEX "\tTGE   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x31: sprintf(stream, INDEX "\tTGEU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x32: sprintf(stream, INDEX "\tTLT   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x33: sprintf(stream, INDEX "\tTLTU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x34: sprintf(stream, INDEX "\tTEQ   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x36: sprintf(stream, INDEX "\tTNE   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x38: sprintf(stream, INDEX "\tDSLL  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3A: sprintf(stream, INDEX "\tDSRL  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3B: sprintf(stream, INDEX "\tDSRA  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3C: sprintf(stream, INDEX "\tDSLL32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3E: sprintf(stream, INDEX "\tDSRL32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x3F: sprintf(stream, INDEX "\tDSRA32\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+		}
+		break;
+
+	case 0x01:
+		op2=(uiMIPSword>>16)&0x1f;
+
+		switch(op2)
+		{
+		case 0x00: 	sprintf(stream, INDEX "\tBLTZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+		case 0x01: 	sprintf(stream, INDEX "\tBGEZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+		case 0x02: 	sprintf(stream, INDEX "\tBLTZL  \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+		case 0x03: 	sprintf(stream, INDEX "\tBGEZL  \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+		case 0x08: 	sprintf(stream, INDEX "\tTGEI\n",x); 	return;
+		case 0x09: 	sprintf(stream, INDEX "\tTGEIU\n",x); 	return;
+		case 0x0A: 	sprintf(stream, INDEX "\tTLTI\n",x); 	return;
+		case 0x0B: 	sprintf(stream, INDEX "\tTLTIU\n",x); 	return;
+		case 0x0C: 	sprintf(stream, INDEX "\tTEQI\n",x); 	return;
+		case 0x0E: 	sprintf(stream, INDEX "\tTNEI\n",x); 	return;
+		case 0x10: 	sprintf(stream, INDEX "\tBLTZAL \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link
+		case 0x11: 	sprintf(stream, INDEX "\tBGEZAL \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link
+		case 0x12: 	sprintf(stream, INDEX "\tBLTZALL\t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link likely
+		case 0x13: 	sprintf(stream, INDEX "\tBGEZALL\t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I and link likely
+		}
+
+		break;
+
+	case 0x02: 	sprintf(stream, INDEX "\tJ      \t" J_OP "\n", x, OP_J(x, uiMIPSword)); return;	// J
+	case 0x03: 	sprintf(stream, INDEX "\tJAL    \t" J_OP "\n", x, OP_J(x, uiMIPSword)); return;	// J
+	case 0x04: 	sprintf(stream, INDEX "\tBEQ    \t" B_OP "\n", x, OP_B(uiMIPSword)); return;	// I
+	case 0x05: 	sprintf(stream, INDEX "\tBNE    \t" B_OP "\n", x, OP_B(uiMIPSword)); return;	// I
+	case 0x06: 	sprintf(stream, INDEX "\tBLEZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+	case 0x07: 	sprintf(stream, INDEX "\tBGTZ   \t" BV_OP "\n", x, OP_BV(uiMIPSword)); return;	// I
+	case 0x08: 	sprintf(stream, INDEX "\tADDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x09: 	sprintf(stream, INDEX "\tADDIU  \t" I_OP "\n", x, OP_UI(uiMIPSword)); return;	// I
+	case 0x0A: 	sprintf(stream, INDEX "\tSLTI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0B: 	sprintf(stream, INDEX "\tSLTIU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0C: 	sprintf(stream, INDEX "\tANDI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0D: 	sprintf(stream, INDEX "\tORI    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0E: 	sprintf(stream, INDEX "\tXORI   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x0F: 	sprintf(stream, INDEX "\tLUI    \t s%02u, #%02d\t// Load upper half of word\n", x, ((uiMIPSword & 0x001F0000) >> 16), (int)(uiMIPSword<<16)/(1<<16)); return;	// I
+	case 0x10: 	// cop0
+		op2=(uiMIPSword>>21)&0x1f;
+		switch(op2)
+		{
+		case 0x00: sprintf(stream, INDEX "\tMFC0 \tr%02d, f%02d \t\t// move f%d to r%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x04: sprintf(stream, INDEX "\tMTC0 \tr%02d, f%02d \t\t// move r%d to f%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x10: // tlb
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x01: sprintf(stream, INDEX "\tTLBR\n",x); return;
+			case 0x02: sprintf(stream, INDEX "\tTLBWI\n",x); return;
+			case 0x06: sprintf(stream, INDEX "\tTLBWR\n",x); return;
+			case 0x08: sprintf(stream, INDEX "\tTLBP\n",x); return;
+			case 0x18: sprintf(stream, INDEX "\tERET\n",x); return;
+			}
+		}
+		break;
+
+	case 0x11: // cop1
+		op2=(uiMIPSword>>21)&0x1f;
+		switch(op2)
+		{
+		case 0x00: sprintf(stream, INDEX "\tMFC1 \t r%2d, f%2d \t// move f%d to r%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x01: sprintf(stream, INDEX "\tDMFC1\t r%2d, f%2d \t// move r%d to f%d\n",x, ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f), ((uiMIPSword>>16)&0x1f), ((uiMIPSword>>11)&0x1f)); return;
+		case 0x02: sprintf(stream, INDEX "\tCFC1\n",x); return;
+		case 0x04: sprintf(stream, INDEX "\tMTC1\n",x); return;
+		case 0x05: sprintf(stream, INDEX "\tDMTC1\n",x); return;
+		case 0x06: sprintf(stream, INDEX "\tCTC1\n",x); return;
+		case 0x08: sprintf(stream, INDEX "\tBC1\n",x);
+			switch((uiMIPSword>>16)&0x3)
+			{
+			case 0x00: sprintf(stream, INDEX "\tBC1F\n",x); return;
+			case 0x01: sprintf(stream, INDEX "\tBC1T\n",x); return;
+			case 0x02: sprintf(stream, INDEX "\tBC1FL\n",x); return;
+			case 0x03: sprintf(stream, INDEX "\tBC1TL\n",x); return;
+			}break;
+
+		case 0x10: // C1.S",x);
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x00: sprintf(stream, INDEX "\tADD.S\n",x); return;
+			case 0x01: sprintf(stream, INDEX "\tSUB.S\n",x); return;
+			case 0x02: sprintf(stream, INDEX "\tMUL.S\n",x); return;
+			case 0x03: sprintf(stream, INDEX "\tDIV.S\n",x); return;
+			case 0x04: sprintf(stream, INDEX "\tSQRT.S\n",x); return;
+			case 0x05: sprintf(stream, INDEX "\tABS.S\n",x); return;
+			case 0x06: sprintf(stream, INDEX "\tMOV.S\n",x); return;
+			case 0x07: sprintf(stream, INDEX "\tNEG.S\n",x); return;
+			case 0x08: sprintf(stream, INDEX "\tROUND.L.S\n",x); return;
+			case 0x09: sprintf(stream, INDEX "\tTRUNC.L.S\n",x); return;
+			case 0x0A: sprintf(stream, INDEX "\tCEIL.L.S\n",x); return;
+			case 0x0B: sprintf(stream, INDEX "\tFLOOR.L.S\n",x); return;
+			case 0x0C: sprintf(stream, INDEX "\tROUND.W.S\n",x); return;
+			case 0x0D: sprintf(stream, INDEX "\tTRUNC.W.S\n",x); return;
+			case 0x0E: sprintf(stream, INDEX "\tCEIL.W.S\n",x); return;
+			case 0x0F: sprintf(stream, INDEX "\tFLOOR.W.S\n",x); return;
+			case 0x21: sprintf(stream, INDEX "\tCVT.D.S\n",x); return;
+			case 0x24: sprintf(stream, INDEX "\tCVT.W.S\n",x); return;
+			case 0x25: sprintf(stream, INDEX "\tCVT.L.S\n",x); return;
+			case 0x30: sprintf(stream, INDEX "\tC.F.S\n",x); return;
+			case 0x31: sprintf(stream, INDEX "\tC.UN.S\n",x); return;
+			case 0x32: sprintf(stream, INDEX "\tC.EQ.S\n",x); return;
+			case 0x33: sprintf(stream, INDEX "\tC.UEQ.S\n",x); return;
+			case 0x34: sprintf(stream, INDEX "\tC.OLT.S\n",x); return;
+			case 0x35: sprintf(stream, INDEX "\tC.ULT.S\n",x); return;
+			case 0x36: sprintf(stream, INDEX "\tC.OLE.S\n",x); return;
+			case 0x37: sprintf(stream, INDEX "\tC.ULE.S\n",x); return;
+			case 0x38: sprintf(stream, INDEX "\tC.SF.S\n",x); return;
+			case 0x39: sprintf(stream, INDEX "\tC.NGLE.S\n",x); return;
+			case 0x3A: sprintf(stream, INDEX "\tC.SEQ.S\n",x); return;
+			case 0x3B: sprintf(stream, INDEX "\tC.NGL.S\n",x); return;
+			case 0x3C: sprintf(stream, INDEX "\tC.LT.S\n",x); return;
+			case 0x3D: sprintf(stream, INDEX "\tC.NGE.S\n",x); return;
+			case 0x3E: sprintf(stream, INDEX "\tC.LE.S\n",x); return;
+			case 0x3F: sprintf(stream, INDEX "\tC.NGT.S\n",x); return;
+			}
+			break;
+		case 0x11: //sprintf(stream, INDEX "\tC1.D\n",x);
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x00: sprintf(stream, INDEX "\tADD.D\n",x); return;
+			case 0x01: sprintf(stream, INDEX "\tSUB.D\n",x); return;
+			case 0x02: sprintf(stream, INDEX "\tMUL.D\n",x); return;
+			case 0x03: sprintf(stream, INDEX "\tDIV.D\n",x); return;
+			case 0x04: sprintf(stream, INDEX "\tSQRT.D\n",x); return;
+			case 0x05: sprintf(stream, INDEX "\tABS.D\n",x); return;
+			case 0x06: sprintf(stream, INDEX "\tMOV.D\n",x); return;
+			case 0x07: sprintf(stream, INDEX "\tNEG.D\n",x); return;
+			case 0x08: sprintf(stream, INDEX "\tROUND.L.D\n",x); return;
+			case 0x09: sprintf(stream, INDEX "\tTRUNC.L.D\n",x); return;
+			case 0x0A: sprintf(stream, INDEX "\tCEIL.L.D\n",x); return;
+			case 0x0B: sprintf(stream, INDEX "\tFLOOR.L.D\n",x); return;
+			case 0x0C: sprintf(stream, INDEX "\tROUND.W.D\n",x); return;
+			case 0x0D: sprintf(stream, INDEX "\tTRUNC.W.D\n",x); return;
+			case 0x0E: sprintf(stream, INDEX "\tCEIL.W.D\n",x); return;
+			case 0x0F: sprintf(stream, INDEX "\tFLOOR.W.D\n",x); return;
+			case 0x20: sprintf(stream, INDEX "\tCVT.S.D\n",x); return;
+			case 0x24: sprintf(stream, INDEX "\tCVT.W.D\n",x); return;
+			case 0x25: sprintf(stream, INDEX "\tCVT.L.D\n",x); return;
+			case 0x30: sprintf(stream, INDEX "\tC.F.D\n",x); return;
+			case 0x31: sprintf(stream, INDEX "\tC.UN.D\n",x); return;
+			case 0x32: sprintf(stream, INDEX "\tC.EQ.D\n",x); return;
+			case 0x33: sprintf(stream, INDEX "\tC.UEQ.D\n",x); return;
+			case 0x34: sprintf(stream, INDEX "\tC.OLT.D\n",x); return;
+			case 0x35: sprintf(stream, INDEX "\tC.ULT.D\n",x); return;
+			case 0x36: sprintf(stream, INDEX "\tC.OLE.D\n",x); return;
+			case 0x37: sprintf(stream, INDEX "\tC.ULE.D\n",x); return;
+			case 0x38: sprintf(stream, INDEX "\tC.SF.D\n",x); return;
+			case 0x39: sprintf(stream, INDEX "\tC.NGLE.D\n",x); return;
+			case 0x3A: sprintf(stream, INDEX "\tC.SEQ.D\n",x); return;
+			case 0x3B: sprintf(stream, INDEX "\tC.NGL.D\n",x); return;
+			case 0x3C: sprintf(stream, INDEX "\tC.LT.D\n",x); return;
+			case 0x3D: sprintf(stream, INDEX "\tC.NGE.D\n",x); return;
+			case 0x3E: sprintf(stream, INDEX "\tC.LE.D\n",x); return;
+			case 0x3F: sprintf(stream, INDEX "\tC.NGT.D\n",x); return;
+			}
+			break;
+		case 0x14: //sprintf(stream, INDEX "\tC1.W\n",x);
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x20: sprintf(stream, INDEX "\tCVT.S.W\n",x); return;
+			case 0x21: sprintf(stream, INDEX "\tCVT.D.W\n",x); return;
+			}
+			break;
+
+		case 0x15: //sprintf(stream, INDEX "\tC1.L\n",x);
+			switch(uiMIPSword&0x3f)
+			{
+			case 0x20: sprintf(stream, INDEX "\tCVT.S.L\n",x); return;
+			case 0x21: sprintf(stream, INDEX "\tCVT.D.L\n",x); return;
+			}
+			break;
+		}
+		break;
+
+	case 0x14: sprintf(stream, INDEX "\tBEQL  \n",x); return;
+	case 0x15: sprintf(stream, INDEX "\tBNEL  \n",x); return;
+	case 0x16: sprintf(stream, INDEX "\tBLEZL \n",x); return;
+	case 0x17: sprintf(stream, INDEX "\tBGTZL \n",x); return;
+	case 0x18: sprintf(stream, INDEX "\tDADDI \n",x); return;
+	case 0x19: sprintf(stream, INDEX "\tDADDIU\n",x); return;
+	case 0x1A: sprintf(stream, INDEX "\tLDL   \n",x); return;
+	case 0x1B: sprintf(stream, INDEX "\tLDR   \n",x); return;
+	case 0x20: sprintf(stream, INDEX "\tLB    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Byte
+	case 0x21: sprintf(stream, INDEX "\tLH    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Halfword
+	case 0x22: sprintf(stream, INDEX "\tLWL   \n",x); return;
+	case 0x23: sprintf(stream, INDEX "\tLW    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word
+	case 0x24: sprintf(stream, INDEX "\tLBU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Unsigned Byte
+	case 0x25: sprintf(stream, INDEX "\tLHU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Halfword unsigned
+	case 0x26: sprintf(stream, INDEX "\tLWR   \n",x); return;
+	case 0x27: sprintf(stream, INDEX "\tLWU   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word unsigned
+	case 0x28: sprintf(stream, INDEX "\tSB    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x29: sprintf(stream, INDEX "\tSH    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x2A: sprintf(stream, INDEX "\tSWL   \n",x); return;
+	case 0x2B: sprintf(stream, INDEX "\tSW    \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+	case 0x2C: sprintf(stream, INDEX "\tSDL   \n",x); return;
+	case 0x2D: sprintf(stream, INDEX "\tSDR   \n",x); return;
+	case 0x2E: sprintf(stream, INDEX "\tSWR   \n",x); return;
+	case 0x2F: sprintf(stream, INDEX "\tCACHE \n",x); return;
+	case 0x30: sprintf(stream, INDEX "\tLL    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Linked Word atomic Read-Modify-Write ops
+	case 0x31: sprintf(stream, INDEX "\tLWC1  \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Word to co processor 1
+	case 0x34: sprintf(stream, INDEX "\tLLD   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Load Linked Dbl Word atomic Read-Modify-Write ops
+	case 0x35: sprintf(stream, INDEX "\tLDC1  \n",x); return;
+	case 0x37: sprintf(stream, INDEX "\tLD    \t" L_OP "\n", x, OP_L(uiMIPSword)); return; 	// Load Double word
+	case 0x38: sprintf(stream, INDEX "\tSC    \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Linked Word atomic Read-Modify-Write ops
+	case 0x39: sprintf(stream, INDEX "\tSWC1  \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Word from co processor 1 to memory
+	case 0x3C: sprintf(stream, INDEX "\tSCD   \t" L_OP "\n", x, OP_L(uiMIPSword)); return;	// Store Conditional Double Word
+	case 0x3D: sprintf(stream, INDEX "\tSDC1  \n",x); return;
+	case 0x3F: sprintf(stream, INDEX "\tSD    \t" L_OP "\n", x, OP_L(uiMIPSword)); return; 	// Store Double word
+	}
+
+	sprintf(stream, INDEX "\t...\t0x%08X\n",x, uiMIPSword); return;
+}

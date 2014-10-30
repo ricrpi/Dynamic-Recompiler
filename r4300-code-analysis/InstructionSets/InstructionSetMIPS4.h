@@ -9,6 +9,7 @@
 #define MIPS_H_
 
 #include <stdint.h>
+#include <stdio.h>
 #include "InstructionSet.h"
 
 #define MIPS_REG_0     0x00000001
@@ -83,7 +84,8 @@ uint32_t ops_JumpAddress(const uint32_t* const uiMIPSword);
 /*
  * Provides printf() output for the raw word
  */
-void mips_print( const uint32_t x, const uint32_t uiMIPSword);
+void fprintf_mips(FILE* stream, const uint32_t x, const uint32_t uiMIPSword);
+void sprintf_mips(char* stream, const uint32_t x, const uint32_t uiMIPSword);
 
 uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins);
 

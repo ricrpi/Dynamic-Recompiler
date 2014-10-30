@@ -20,7 +20,7 @@
 			(y)->nextInstruction = (x);
 
 extern uint32_t bCountSaturates;
-
+extern char* currentTranslation;
 
 // ---------------- Function Pointers -------------------------------
 
@@ -74,6 +74,7 @@ typedef struct
 // -----------------------------------------------------------------
 
 void mem_lookup();
+void cc_interrupt();
 
 // -----------------------------------------------------------------
 
@@ -152,7 +153,11 @@ static TranslationsMap Translations[] =
 		{Translate_init,					"init"},					//
 		{Translate_DelaySlot,				"DelaySlot"},				//
 		{Translate_CountRegister,			"CountRegister"},			//
+
+#if defined(USE_TRANSLATE_DEBUG)
 		{Translate_Debug,					"Debug"},					// Provides Debug Hooks
+#endif
+
 		{Translate_Constants,				"Constants"},				//
 		{Translate_32BitRegisters,			"32BitRegisters"},			//
 		{Translate_Generic,					"Generic"},					//

@@ -9,6 +9,7 @@ C_SRCS += \
 ../Translations/C_Interface.c \
 ../Translations/Constants.c \
 ../Translations/CountReg.c \
+../Translations/Debug.c \
 ../Translations/DelaySlot.c \
 ../Translations/FPU.c \
 ../Translations/Literals.c \
@@ -24,6 +25,7 @@ OBJS += \
 ./Translations/C_Interface.o \
 ./Translations/Constants.o \
 ./Translations/CountReg.o \
+./Translations/Debug.o \
 ./Translations/DelaySlot.o \
 ./Translations/FPU.o \
 ./Translations/Literals.o \
@@ -39,6 +41,7 @@ C_DEPS += \
 ./Translations/C_Interface.d \
 ./Translations/Constants.d \
 ./Translations/CountReg.d \
+./Translations/Debug.d \
 ./Translations/DelaySlot.d \
 ./Translations/FPU.d \
 ./Translations/Literals.d \

@@ -23,6 +23,7 @@ uint32_t uiCountFrequency 	= 40;	// must be less than 128 else may not be able t
 uint32_t bMemoryOffsetCheck = 0;
 uint32_t bDoDMAonInterrupt 	= 1;
 
+char* currentTranslation = NULL;
 
 //=============================================================
 
@@ -77,6 +78,17 @@ void Translate_init(code_seg_t* const codeSegment)
 
 			mips_decode(*(codeSegment->MIPScode + x), newInstruction);
 
+#if defined(USE_INSTRUCTION_INIT_REGS)
+		memcpy(&newInstruction->Rd1_init,&newInstruction->Rd1, sizeof(reg_t));
+		memcpy(&newInstruction->Rd2_init,&newInstruction->Rd2, sizeof(reg_t));
+		memcpy(&newInstruction->R1_init,&newInstruction->R1, sizeof(reg_t));
+		memcpy(&newInstruction->R2_init,&newInstruction->R2, sizeof(reg_t));
+		memcpy(&newInstruction->R3_init,&newInstruction->R3, sizeof(reg_t));
+#endif
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	sprintf_mips(newInstruction->comment, (uint32_t)(codeSegment->MIPScode + x), *(codeSegment->MIPScode + x));
+#endif
 			if (NULL == prevInstruction)
 			{
 				codeSegment->Intermcode = newInstruction;
@@ -100,6 +112,9 @@ void Translate_Generic(code_seg_t* const codeSegment)
 	Instruction_t*new_ins;
 	ins = codeSegment->Intermcode;
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Generic";
+#endif
 	while (ins)
 	{
 		switch (ins->instruction)
@@ -418,6 +433,10 @@ void Translate_CleanUp(code_seg_t* const codeSegment)
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "CleanUp";
+#endif
+
 	while (ins)
 	{
 		if (NO_OP == ins->instruction)
@@ -448,45 +467,7 @@ void Translate_Write(code_seg_t* codeSegment)
 	emit_arm_code(codeSegment);
 }
 
-void Translate_Debug(code_seg_t* codeSegment)
-{
-	Instruction_t*ins;
-	Instruction_t*new_ins;
-	ins = codeSegment->Intermcode;
 
-	regID_t base;
-	int32_t offset;
-
-	//TODO Nasty global segmentData!
-
-	//load current segment Address
-	addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
-	codeSegment->Intermcode = new_ins = newInstrI(ARM_LDR_LIT, AL, REG_TEMP_DBG1, REG_NOT_USED, base, offset);
-	new_ins->nextInstruction = ins;
-	ins = new_ins;
-
-	//load segmentData->dbgCurrentSegment address
-	addLiteral(codeSegment, &base, &offset, (uint32_t)&segmentData.dbgCurrentSegment);
-	new_ins 		= newInstrI(ARM_LDR_LIT, AL, REG_TEMP_DBG2, REG_NOT_USED, base, offset);
-	ADD_LL_NEXT(new_ins, ins);
-
-	//store
-	new_ins 		= newInstrI(ARM_STR, AL, REG_NOT_USED, REG_TEMP_DBG1, REG_TEMP_DBG2, 0);
-	ADD_LL_NEXT(new_ins, ins);
-
-	insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS);
-
-	int x=0;
-	while (ins->nextInstruction->nextInstruction)
-	{
-		new_ins = newInstrI(ARM_MOV, AL, REG_HOST_R4, REG_NOT_USED, REG_NOT_USED, x);
-		ADD_LL_NEXT(new_ins, ins);
-
-		x++;		
-		ins = ins->nextInstruction;
-	}
-	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS);
-}
 
 
 void Translate(code_seg_t* const codeSegment)

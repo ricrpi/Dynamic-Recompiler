@@ -371,6 +371,9 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
+#if defined(USE_TRANSLATE_DEBUG)
+	Translate_Debug(code_seg);
+#endif
 	Translate_Registers(code_seg);
 
 	return code_seg;
@@ -398,6 +401,10 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrI(ARM_SUB, AL, REG_HOST_PC, REG_HOST_R0, REG_NOT_USED, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
+#if defined(USE_TRANSLATE_DEBUG)
+	Translate_Debug(code_seg);
+#endif
+
 	Translate_Registers(code_seg);
 
 	return code_seg;
@@ -414,6 +421,10 @@ code_seg_t* Generate_MIPS_Trap(code_segment_data_t* seg_data)
 	// Return
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	code_seg->Intermcode = ins = newInstruction;
+
+#if defined(USE_TRANSLATE_DEBUG)
+	Translate_Debug(code_seg);
+#endif
 
 	Translate_Registers(code_seg);
 

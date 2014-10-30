@@ -24,27 +24,24 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 	int32_t rotate = ins->rotate;
 	if (ins->I)
 	{
-		if (ins->immediate > 255 && 0 == ins->shift )
+		if (ins->immediate > 255)
 		{
 			int x;
 
-			for (x = 24; x > 0; x--)
+			for (x = 0; x < 16; x++)
 			{
-
-				if (ins->immediate & (0x80 << x))
+				if ((ins->immediate >> (x*2)) & (0x03))
 				{
 					//Found start of bits TODO what if imm is negative?
-					assert((ins->immediate & (0xFF << x)) == ins->immediate);
-					imm = ins->immediate >> x;
-					rotate = x;						//TODO check this isnt reversed
+					imm = ins->immediate >> (x*2);
+					rotate = x;
 
 					break;
 				}
 			}
 		}
 
-		assert(rotate < 32);
-		assert(ins->shiftType != ROTATE_RIGHT ||  ins->rotate < 16);
+		assert(rotate < 16);
 		assert(imm < 256);
 		return (rotate << 8) | (imm&0xFF);
 	}
@@ -253,7 +250,7 @@ static void opsh(char* str, uint32_t word)
 	}
 	else str[0] = 0;
 }
-void arm_print(const uint32_t addr, const uint32_t word)
+void printf_arm(const uint32_t addr, const uint32_t word)
 {
 	printf("0x%08x", addr);
 #if defined(SHOW_PRINT_ARM_VALUE)
@@ -375,10 +372,10 @@ void arm_print(const uint32_t addr, const uint32_t word)
 			if (word & 0x00000f00)	// any rotate
 			{
 				uint8_t ror = ((word>>8)&0xf)*2;
-				sprintf(Op2,", #%d", ((word&0xff)>> ror) || (word&0xff) << (32 - ror));
+				sprintf(Op2,", #%-11d (0x%08x)", ((word&0xff)<< ror) | (word&0xff) >> (32 - ror), ((word&0xff)<< ror) | (word&0xff) >> (32 - ror));
 			}else
 			{
-				sprintf(Op2,", #%d (0x%x)", word&0xff, word&0xff);
+				sprintf(Op2,", #%-11d (0x%08x)", word&0xff, word&0xff);
 			}
 		}
 		else

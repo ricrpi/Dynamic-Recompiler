@@ -185,7 +185,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 			for (x=0; x< count; x++)
 			{
-					arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+					printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			}
 			printLine();
 			return 1;
@@ -208,12 +208,12 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 			if (addr + x == (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
 			{
 				printf(".EntryPoint:\n");
-				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+				printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			}
 			else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
 				printf("\t.word\t%12d (0x%08x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			else
-				arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+				printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}
 
 		printLine();
@@ -248,7 +248,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 		for (x=0; x< count; x++)
 		{
-			mips_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			fprintf_mips(stdout, (uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}
 
 		// if printing segment then print next few instructions for Delay Slot analysis
@@ -258,7 +258,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 			for (x=CurrentCodeSeg->MIPScodeLen; x< CurrentCodeSeg->MIPScodeLen+3; x++)
 			{
-				mips_print((uint32_t)(CurrentCodeSeg->MIPScode + x), *(CurrentCodeSeg->MIPScode + x));
+				fprintf_mips(stdout, (uint32_t)(CurrentCodeSeg->MIPScode + x), *(CurrentCodeSeg->MIPScode + x));
 			}
 			printf("\naddr 0x%x, len %d, return reg %d\n"
 				"0x%08X %08X %02X (%d)\n"
@@ -500,12 +500,12 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 				if (addr + x == (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
 				{
 					printf(".EntryPoint:\n");
-					arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+					printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 				}
 				else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
 					printf("\t.word\t%12d (0x%08x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
 				else
-					arm_print((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+					printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			}
 		}
 	}

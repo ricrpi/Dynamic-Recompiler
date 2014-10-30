@@ -9,6 +9,7 @@
 #define INSTRUCTIONSET_H_
 
 #include <stdint.h>
+#include "DebugDefines.h"
 
 //-------------------------------------------------------------------
 
@@ -460,23 +461,26 @@ typedef enum
 
 typedef enum
 {
-	EQ, // Z = 1			Equal
-	NE, // Z = 0			Not Equal
-	CS, // C = 1 			Unsigned Higher or same
-	CC, // C = 0 			Unsigned Lower
-	MI, // N = 1			Negative
-	PL, // N = 0			Positive or Zero
-	VS, // V = 1			Overflow
-	VC, // V = 0			No Overflow
-	HI, // C = 1 && Z = 0 	Unsigned Higher
-	LS,	// C = 0 || Z = 1 	Unsigned Lower or equal
-	GE,	// N = V 			Signed Greater
-	LT,	// N != V 			Signed less than
-	GT,	// Z = 0 && N = V 	Signed greater then
-	LE,	// Z = 1 || N! = V	Signed less than or equal
-	AL,	// Always
-	NV	// Never
-
+	EQ, 	// Z = 1			Equal
+	NE, 	// Z = 0			Not Equal
+	CS, 	// C = 1 			Unsigned Higher or same
+	CC, 	// C = 0 			Unsigned Lower
+	MI, 	// N = 1			Negative
+	PL, 	// N = 0			Positive or Zero
+	VS, 	// V = 1			Overflow
+	VC, 	// V = 0			No Overflow
+	HI, 	// C = 1 && Z = 0 	Unsigned Higher
+	LS,		// C = 0 || Z = 1 	Unsigned Lower or equal
+	GE,		// N = V 			Signed Greater
+	LT,		// N != V 			Signed less than
+	GT,		// Z = 0 && N = V 	Signed greater then
+	LE,		// Z = 1 || N! = V	Signed less than or equal
+	AL,		// Always
+	NV,		// Never
+	LTZ = MI,
+	GEZ = PL,
+	LEZ = LE,
+	GTZ	= GT
 } Condition_e;
 
 typedef struct _Instruction
@@ -512,6 +516,13 @@ typedef struct _Instruction
 	reg_t R2;  // Input 2
 	reg_t R3;  // Input 3
 
+#if defined (USE_INSTRUCTION_INIT_REGS)
+	reg_t Rd1_init;
+	reg_t Rd2_init;
+	reg_t R1_init;
+	reg_t R2_init;
+	reg_t R3_init;
+#endif
 	//----------------------- control bits ------------------------
 
 	uint8_t A:1;			// Accumulate
@@ -523,6 +534,10 @@ typedef struct _Instruction
 	uint8_t U:1;			// Up/Down, set for inc, clear for decrement
 	uint8_t W:1;			// Writeback bit set to write to base register
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	#define COMMENT_LENGTH (200)
+	char comment[COMMENT_LENGTH];
+#endif
 } Instruction_t;
 
 //-------------------------------------------------------------------

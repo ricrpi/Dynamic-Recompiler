@@ -15,6 +15,10 @@ void Translate_Literals(code_seg_t* const codeSegment)
 
 	literal_t* l = codeSegment->literals;
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Literals";
+#endif
+
 	while (l)
 	{
 		CountLiterals ++;

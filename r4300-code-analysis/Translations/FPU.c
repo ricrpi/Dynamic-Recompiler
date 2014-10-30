@@ -12,7 +12,9 @@ void Translate_FPU(code_seg_t* const codeSegment)
 	Instruction_t*ins;
 	//Instruction_t*new_ins;
 	ins = codeSegment->Intermcode;
-
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "FPU";
+#endif
 	while (ins)
 	{
 		switch (ins->instruction)

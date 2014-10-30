@@ -10,6 +10,7 @@
 #include "InstructionSet.h"
 #include "InstructionSet_ascii.h"
 #include "InstructionSetARM6hf.h"
+#include "Translate.h"
 #include "CodeSegments.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -17,9 +18,8 @@
 #include "Debugger.h"
 
 
-static void sprintReg(char* str, const reg_t r)
+static void sprintf_reg_t(char* str, const reg_t r)
 {
-
 
 #if defined(SHOW_PRINT_INT_CONST)
 	char cnst[20];
@@ -91,16 +91,17 @@ static void sprintReg(char* str, const reg_t r)
 	else if (r.regID == REG_MULTLO)    sprintf(str, "M_LO  ");
 	else if (r.regID == REG_LLBIT)     sprintf(str, "LLBIT ");
 
-	else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d ", r.regID - REG_HOST);
-	else if (r.regID >= REG_TEMP)		 sprintf(str, "t%-3d ", r.regID - REG_TEMP);
-	else if (r.regID >= REG_CO)          sprintf(str, "c%-3d ", r.regID - REG_CO);
-	else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str,"f%-3d ", r.regID - (REG_WIDE|REG_FP));
-	else if (r.regID >= REG_WIDE)        sprintf(str, "r%-3dw", r.regID - REG_WIDE);
-	else if (r.regID >= REG_FP)          sprintf(str, "f%-3d ", r.regID - REG_FP);
-	else if (r.regID >= 0)               sprintf(str, "r%-3d ", r.regID);
-	else                                 sprintf(str, "    ");
+	else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d  ", r.regID - REG_HOST);
+	else if (r.regID >= REG_TEMP)		 sprintf(str, "t%-3d  ", r.regID - REG_TEMP);
+	else if (r.regID >= REG_CO)          sprintf(str, "c%-3d  ", r.regID - REG_CO);
+	else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str,"f%-3d  ", r.regID - (REG_WIDE|REG_FP));
+	else if (r.regID >= REG_WIDE)        sprintf(str, "r%-3dw ", r.regID - REG_WIDE);
+	else if (r.regID >= REG_FP)          sprintf(str, "f%-3d  ", r.regID - REG_FP);
+	else if (r.regID >= 0)               sprintf(str, "r%-3d  ", r.regID);
+	else                                 sprintf(str, "      ");
 #endif
 }
+
 static void sprintRegList(char* str, const Instruction_t* const ins)
 {
 	int i;
@@ -312,6 +313,19 @@ Instruction_t* newEmptyInstr()
 	newInstr->U=1;			// Up/Down, set for inc, clear for decrement
 	newInstr->W=0;			// Writeback bit set to write to base register
 
+#if defined(USE_INSTRUCTION_INIT_REGS)
+	newInstr->Rd1_init.regID = REG_NOT_USED;
+	newInstr->Rd2_init.regID = REG_NOT_USED;
+	newInstr->R1_init.regID = REG_NOT_USED;
+	newInstr->R2_init.regID = REG_NOT_USED;
+	newInstr->R3_init.regID = REG_NOT_USED;
+#endif
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	if (currentTranslation)
+	strcpy(newInstr->comment, currentTranslation);
+#endif
+
 	return newInstr;
 
 }
@@ -420,11 +434,25 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 
 	if (heading)
 	{
+		#if defined(USE_INSTRUCTION_COMMENTS)
+			printf("\t");
+		#endif
+
+#if defined(USE_INSTRUCTION_INIT_REGS)
+#if defined(SHOW_PRINT_INT_CONST)
+		printf("command   Rd1                     Rd2                     R1                      R2                      R3                       A B I Ln PR S U W immediate                 shift\n");
+		#else
+
+		printf("command   Rd1         Rd2         R1          R2          R3           A B I Ln PR S U W immediate                 shift\n");
+		#endif
+#else
 		#if defined(SHOW_PRINT_INT_CONST)
 		printf("command   Rd1                     Rd2                     R1                      R2                      R3                       A B I Ln PR S U W immediate                 shift\n");
 		#else
+
 		printf("command   Rd1   Rd2   R1    R2    R3     A B I Ln PR S U W immediate                 shift\n");
 		#endif
+#endif
 	}
 
 	#define SZE 50
@@ -436,27 +464,51 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 
 	sprintInstr(instruction, ins);
 
-	sprintReg(rd1, ins->Rd1);
-	sprintReg(rd2, ins->Rd2);
-	sprintReg(r1, ins->R1);
-	sprintReg(r2, ins->R2);
-	sprintReg(r3, ins->R3);
+	sprintf_reg_t(rd1, ins->Rd1);
+	sprintf_reg_t(rd2, ins->Rd2);
+	sprintf_reg_t(r1, ins->R1);
+	sprintf_reg_t(r2, ins->R2);
+	sprintf_reg_t(r3, ins->R3);
 
+#if defined(USE_INSTRUCTION_INIT_REGS)
+	sprintf_reg_t(rd1 + strlen(rd1), ins->Rd1_init);
+	sprintf_reg_t(rd2 + strlen(rd2), ins->Rd2_init);
+	sprintf_reg_t(r1 + strlen(r1), ins->R1_init);
+	sprintf_reg_t(r2 + strlen(r2), ins->R2_init);
+	sprintf_reg_t(r3 + strlen(r3), ins->R3_init);
+#endif
 
 	sprintf(offset, "%-11d (0x%08X)", ins->offset, ins->offset);
 	sprintf(shift, "%-2d (0x%02X)", ins->shift, ins->shift);
 
+	#if defined(USE_INSTRUCTION_COMMENTS)
+		if (ins->comment[0] == '0')
+		{
+			printf("\n%s\t", ins->comment);
+		}
+		else
+		{
+			printf("\t");
+		}
+	#endif
 
 	if (ins->instruction == ARM_LDM
 			|| ins->instruction == ARM_STM )
 	{
 		sprintRegList(buffer, ins);
-		printf("%-9s %s%s%s%s\n", instruction, rd1, rd2, r1, buffer);
+		#if defined(SHOW_PRINT_INT_CONST)
+		printf("%-9s %s%s%s%-100s", instruction, rd1, rd2, r1, buffer);
+		#else
+		printf("%-9s %s%s%s%-66s", instruction, rd1, rd2, r1, buffer);
+		#endif
+
+
+
 	}
 	else
 	{
-#if defined(SHOW_PRINT_INT_CONST)
-		printf("%-9s %-24s%-24s%-24s%-24s%-24s %d %d %d %d  %d  %d %d %d %-25s %-9s\n"
+		#if defined(SHOW_PRINT_INT_CONST)
+			printf("%-9s %-24s%-24s%-24s%-24s%-24s %d %d %d %d  %d  %d %d %d %-25s %-9s"
 				, instruction
 				, rd1, rd2, r1, r2, r3
 				, ins->A
@@ -468,8 +520,8 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 				, ins->U
 				, ins->W
 				, offset, shift);
-#else
-		printf("%-9s %-6s%-6s%-6s%-6s%-6s %d %d %d %d  %d  %d %d %d %-25s %-9s\n"
+		#else
+			printf("%-9s %-6s%-6s%-6s%-6s%-6s %d %d %d %d  %d  %d %d %d %-25s %-9s"
 				, instruction
 				, rd1, rd2, r1, r2, r3
 				, ins->A
@@ -481,8 +533,19 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 				, ins->U
 				, ins->W
 				, offset, shift);
-#endif
+		#endif
 	}
+
+	#if defined(USE_INSTRUCTION_COMMENTS)
+		if (ins->comment[0] == '0')
+		{
+			printf("\n");
+		}
+		else
+		{
+			printf(" %s\n", ins->comment);
+		}
+	#endif
 }
 
 

@@ -18,10 +18,26 @@
 
 // ========= Extra Debugging Information ==============================
 
+// Print the register map when registers re-assigned (TranslateRegiters())
 //#define SHOW_REG_TRANSLATION_MAP
+
+// Print the constants in intermediate code
 //#define SHOW_PRINT_INT_CONST
+
+//Print the raw Hex values when reading arm instructions (arm_decode)
 #define SHOW_PRINT_ARM_VALUE
+
+//Print when a segment is deleted
 #define SHOW_PRINT_SEGMENT_DELETE
+
+// Print MIPS code / Translation step for each intermediate instruction
+#define USE_INSTRUCTION_COMMENTS
+
+//store the initial MIPS registers assigned to intermediate instruction
+#define USE_INSTRUCTION_INIT_REGS
+
+// Use the translation that adds debugging markers
+#define USE_TRANSLATE_DEBUG
 
 // ========= Recompiling Checks =======================================
 

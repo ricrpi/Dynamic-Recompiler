@@ -10,6 +10,8 @@ Tasks to complete:
 
 v Fix Register number translations.
 
+- Check ARM encode immediate shifting
+
 - Build 32-bit translation.
 
 - Fix COUNT translation when COUNT is updated in code. 

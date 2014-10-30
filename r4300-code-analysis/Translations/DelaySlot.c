@@ -67,6 +67,9 @@
  */
 void Translate_DelaySlot(code_seg_t*  codeSegment)
 {
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "DelaySlot";
+#endif
 	Instruction_e ops = ops_type(*(codeSegment->MIPScode + codeSegment->MIPScodeLen -1));
 
 	Instruction_t* delayInstruction 	= NULL;

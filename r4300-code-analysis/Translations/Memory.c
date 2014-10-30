@@ -26,6 +26,10 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 	//TODO we need to check that memory being modified is not MIPS code!
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Memory";
+#endif
+
 	regID_t	funcTempReg;
 	int32_t	funcTempImm;
 	Instruction_t* new_ins;
@@ -96,7 +100,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			}
 
 			// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
-			new_ins = newInstrI(ARM_STR_LIT, NE, REG_NOT_USED, funcTempReg, REG_TEMP_MEM1, funcTempImm&0xfff);
+			new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, funcTempReg, REG_TEMP_MEM1, funcTempImm&0xfff);
 			// TODO do we need to set ins->U ?
 			ADD_LL_NEXT(new_ins, ins);
 
@@ -109,7 +113,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			// now lookup virtual address
 			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup);
 
-			new_ins = newInstrI(ARM_STR_LIT, NE, REG_NOT_USED, funcTempReg, REG_HOST_R0, funcTempImm&0xfff);
+			new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, funcTempReg, REG_HOST_R0, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
 
 			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
@@ -141,7 +145,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			new_ins = newInstrI(ARM_LDR_LIT, NE, funcTempReg, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
+			new_ins = newInstrI(ARM_LDR, NE, funcTempReg, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
 
 			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup);

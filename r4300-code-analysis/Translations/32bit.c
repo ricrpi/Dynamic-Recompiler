@@ -18,6 +18,10 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 	regID_t Rd1, R1, R2;
 	ins = codeSegment->Intermcode;
 
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "32BitRegisters";
+#endif
+
 	while (ins)
 	{
 		Rd1 = ins->Rd1.regID;
