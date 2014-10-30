@@ -25,30 +25,57 @@ static code_seg_t* CurrentCodeSeg = NULL;
 
 static unsigned long int Mstrtoul(char* addr, char** tailPointer, int base)
 {
+	//TODO  do better error detection here
 	int x;
 
-	//TODO  do better error detection here
-	for (x = 0; x < strnlen(addr, LINE_LEN); x++)
+	if (!strncmp("fp",addr,2))
 	{
-		switch (addr[x])
-		{
-		case '+':
-			addr[x] = '\0';
-			return strtoul(addr, tailPointer, base) + strtoul(&addr[x+1], tailPointer, base);
-		case '-':
-			addr[x] = '\0';
-			return strtoul(addr, tailPointer, base) - strtoul(&addr[x+1], tailPointer, base);
-		case '*':
-			addr[x] = '\0';
-			return strtoul(addr, tailPointer, base) * strtoul(&addr[x+1], tailPointer, base);
-		case '/':
-			addr[x] = '\0';
-			return strtoul(addr, tailPointer, base) / strtoul(&addr[x+1], tailPointer, base);
-		default:
-			break;
-		}
+		for (x = 0; x < strnlen(addr, LINE_LEN); x++)
+			{
+				switch (addr[x])
+				{
+				case '+':
+					addr[x] = '\0';
+					return MMAP_FP_BASE + strtoul(&addr[x+1], tailPointer, base);
+				case '-':
+					addr[x] = '\0';
+					return MMAP_FP_BASE - strtoul(&addr[x+1], tailPointer, base);
+				case '*':
+					addr[x] = '\0';
+					return MMAP_FP_BASE * strtoul(&addr[x+1], tailPointer, base);
+				case '/':
+					addr[x] = '\0';
+					return MMAP_FP_BASE / strtoul(&addr[x+1], tailPointer, base);
+				default:
+					break;
+				}
+			}
+			return MMAP_FP_BASE;
 	}
-	return strtoul(addr, tailPointer, base);
+	else
+	{
+		for (x = 0; x < strnlen(addr, LINE_LEN); x++)
+		{
+			switch (addr[x])
+			{
+			case '+':
+				addr[x] = '\0';
+				return strtoul(addr, tailPointer, base) + strtoul(&addr[x+1], tailPointer, base);
+			case '-':
+				addr[x] = '\0';
+				return strtoul(addr, tailPointer, base) - strtoul(&addr[x+1], tailPointer, base);
+			case '*':
+				addr[x] = '\0';
+				return strtoul(addr, tailPointer, base) * strtoul(&addr[x+1], tailPointer, base);
+			case '/':
+				addr[x] = '\0';
+				return strtoul(addr, tailPointer, base) / strtoul(&addr[x+1], tailPointer, base);
+			default:
+				break;
+			}
+		}
+		return strtoul(addr, tailPointer, base);
+	}
 }
 
 void getCmd() {
