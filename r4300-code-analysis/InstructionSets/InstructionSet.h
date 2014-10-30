@@ -88,7 +88,7 @@
 
 // Configurable #defines if you want to change
 // which registers hold the emulation frame data or emulation flags
-#define REG_EMU_FP			REG_HOST_FP
+#define REG_EMU_FP			REG_HOST_R10
 #define REG_EMU_FLAGS		REG_HOST_R12
 
 // emulation flag bits
@@ -393,6 +393,7 @@ typedef enum _Instruction_e {
 	ARM_REVSH,
 	ARM_AND,		// R1 (Rd) = R2 (Rn) & Op2
 	ARM_B,
+	ARM_BX,			// lr = pc-4, pc = R1 (Rm)
 	ARM_EOR,
 	ARM_SUB,		// Rd1 (Rd) = R1 - Op2
 	ARM_RSB,		// Rd1 (Rd) = Op2 - R1

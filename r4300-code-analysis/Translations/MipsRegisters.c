@@ -317,7 +317,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 				}
 				else if (nextUsed == 0)
 				{
-					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd1.regID, REG_EMU_FP, ins->Rd1.regID * 4);
+					new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, ins->Rd1.regID, REG_EMU_FP, ins->Rd1.regID * 4);
 					new_ins->nextInstruction = ins->nextInstruction;
 					ins->nextInstruction = new_ins;
 					ins = ins->nextInstruction;
@@ -335,7 +335,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_TEMP_STR_CONST, REG_NOT_USED, regBase, offset);
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, REG_TEMP_STR_CONST, REG_EMU_FP, ins->Rd1.regID * 4);
+				new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, REG_TEMP_STR_CONST, REG_EMU_FP, ins->Rd1.regID * 4);
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
@@ -351,7 +351,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 				}
 				else if (nextUsed == 0)
 				{
-					new_ins = newInstrI(ARM_STR_LIT, AL, REG_NOT_USED, ins->Rd2.regID, REG_EMU_FP, ins->Rd2.regID * 4);
+					new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, ins->Rd2.regID, REG_EMU_FP, ins->Rd2.regID * 4);
 					new_ins->nextInstruction = ins->nextInstruction;
 					ins->nextInstruction = new_ins;
 					ins = ins->nextInstruction;

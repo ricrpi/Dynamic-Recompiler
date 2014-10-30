@@ -178,6 +178,9 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 			return ins->cond << 28 | 0xA << 24 | ins->Ln << 24 | (((ins->offset - addr - ARM_BRANCH_OFFSET)/4)&0xffffff);
 		else
 			return ins->cond << 28 | 0xA << 24 | ins->Ln << 24 | ((ins->offset - ARM_BRANCH_OFFSET)&0xffffff);
+	case ARM_BX:
+		return ins->cond << 28 | 0x12fff10 | ins->Ln << 5 | R1;
+
 	//case JR:
 		//assert(ins->I == 0);
 		// we just need to move the specified register into the pc on arm
@@ -277,6 +280,17 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 	else if((word & 0x0f000000) == 0x0b000000) // Branch and Link
 	{
 		printf("\tbl%s\t%d // (0x%x)\n", arm_cond[word>>28], ((int32_t)(word&0xffffff) << 8)/(1 << 8), ((word&0xffffff) << 8)/(1 << 8));
+	}
+	else if ((word & 0x0fffffd0) == 0x012fff10)	// BX / BLX
+	{
+		if (word & 0x20)
+		{
+			printf("\tblx%s\t%s\n", arm_cond[word>>28], arm_reg_a[word&0xf]);
+		}
+		else
+		{
+			printf("\tbx%s\t%s\n", arm_cond[word>>28], arm_reg_a[word&0xf]);
+		}
 	}
 	else if((word & 0x0e400000) == 0x08000000) // LDM/STM
 	{

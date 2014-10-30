@@ -42,6 +42,12 @@ Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, c
 	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
+#if 1
+	// load function address from [fp + offset] into PC
+	newInstruction 	= newInstr(ARM_BX, cond, REG_NOT_USED, REG_TEMP_CALL2C, REG_NOT_USED);
+	newInstruction->Ln = 1;
+	ADD_LL_NEXT(newInstruction, ins);
+#else
 	//set lr
 	newInstruction 	= newInstr(ARM_MOV, AL, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC);
 	ADD_LL_NEXT(newInstruction, ins);
@@ -49,6 +55,7 @@ Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, c
 	// load function address from [fp + offset] into PC
 	newInstruction 	= newInstr(ARM_MOV, cond, REG_HOST_PC, REG_NOT_USED, REG_TEMP_CALL2C);
 	ADD_LL_NEXT(newInstruction, ins);
+#endif
 
 	// pop lr
 	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_LR);

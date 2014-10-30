@@ -86,18 +86,18 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 		}
 		else
 		{
-			newInstruction = newInstrI(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff);
+			newInstruction = newInstrIS(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff);
 			newInstruction->nextInstruction = ins->nextInstruction;
 			ADD_LL_NEXT(newInstruction, ins);
 
 			if (instrCountRemaining > 255)
 			{
-				newInstruction = newInstrI(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff00);
+				newInstruction = newInstrIS(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff00);
 				ADD_LL_NEXT(newInstruction, ins);
 			}
 
-			newInstruction = newInstr(ARM_CMP, AL, REG_NOT_USED, REG_COMPARE, REG_COUNT);
-			ADD_LL_NEXT(newInstruction, ins);
+			//newInstruction = newInstr(ARM_CMP, AL, REG_NOT_USED, REG_COMPARE, REG_COUNT);
+			//ADD_LL_NEXT(newInstruction, ins);
 
 			// We need to set IP7 of the Cause Register and call cc_interrupt()
 			newInstruction = newInstrI(ARM_ORR, AL, REG_CAUSE, REG_CAUSE, REG_NOT_USED, 0x8000);
