@@ -311,7 +311,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 		for (x=0; x< count; x++)
 		{
-			printf("0x08x\t0x08x\t%11d\n",(uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			printf("0x%08x\t0x%08x\t%11d\n",(uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}
 
 		printLine();

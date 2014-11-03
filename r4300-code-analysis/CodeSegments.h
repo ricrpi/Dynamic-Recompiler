@@ -122,7 +122,7 @@ typedef struct _code_segment_data
 	code_seg_t* segBranchUnknown;
 	code_seg_t* segTrap;
 
-	code_seg_t* dbgCurrentSegment;
+	volatile code_seg_t* dbgCurrentSegment;
 } code_segment_data_t;
 
 //-------------------------------------------------------------------

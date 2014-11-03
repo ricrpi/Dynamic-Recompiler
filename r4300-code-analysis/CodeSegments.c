@@ -193,7 +193,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 			*base = REG_HOST_PC;
 		}
 	}
-	else
+	else	// codeSegment does not have any literals yet
 	{
 		codeSegment->literals = newLiteral(value);
 		*offset = 0;
@@ -864,15 +864,14 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 
 	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)segmentData.StaticSegments->ARMEntryPoint;
 
-#if 0
+#if 1
 	printf("FUNC_GEN_START                   0x%x\n", (uint32_t)segmentData.segStart->ARMEntryPoint);
 	printf("FUNC_GEN_STOP                    0x%x\n", (uint32_t)segmentData.segStop->ARMEntryPoint);
-	printf("FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS  0x%x\n", (uint32_t)segmentData.segMem->ARMEntryPoint);
-	printf("FUNC_GEN_INTERRUPT               0x%x\n", (uint32_t)segmentData.segInterrupt->ARMEntryPoint);
+	//printf("FUNC_GEN_LOOKUP_VIRTUAL_ADDRESS  0x%x\n", (uint32_t)segmentData.segMem->ARMEntryPoint);
+	//printf("FUNC_GEN_INTERRUPT               0x%x\n", (uint32_t)segmentData.segInterrupt->ARMEntryPoint);
 	printf("FUNC_GEN_BRANCH_UNKNOWN          0x%x\n", (uint32_t)segmentData.segBranchUnknown->ARMEntryPoint);
-	printf("FUNC_GEN_TRAP                    0x%x\n", (uint32_t)segmentData.segTrap->ARMEntryPoint);
+	//printf("FUNC_GEN_TRAP                    0x%x\n", (uint32_t)segmentData.segTrap->ARMEntryPoint);
 	printf("RECOMPILED_CODE_START            0x%x\n", (uint32_t)segmentData.StaticSegments->ARMEntryPoint);
-
 #endif
 
 	segmentData.dbgCurrentSegment = segmentData.StaticSegments;
