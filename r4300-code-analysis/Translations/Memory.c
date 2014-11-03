@@ -111,7 +111,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ADD_LL_NEXT(new_ins, ins);
 
 			// now lookup virtual address
-			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup);
+			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, REG_HOST_STM_R1_3);
 
 			new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, funcTempReg, REG_HOST_R0, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
@@ -148,7 +148,8 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			new_ins = newInstrI(ARM_LDR, NE, funcTempReg, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
 
-			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup);
+			//TODO set R0
+			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, REG_HOST_STM_R1_3);
 
 			break;
 		case LBU: break;

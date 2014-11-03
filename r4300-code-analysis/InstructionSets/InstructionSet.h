@@ -95,6 +95,12 @@
 #define REG_EMU_FLAG_DS		(0x00)
 
 //The following is for Register Mask operations
+#define REG_HOST_STM_R0 		(0x0001)
+#define REG_HOST_STM_R1 		(0x0002)
+#define REG_HOST_STM_R2 		(0x0004)
+#define REG_HOST_STM_R3 		(0x0008)
+#define REG_HOST_STM_R1_3 		(REG_HOST_STM_R1|REG_HOST_STM_R2|REG_HOST_STM_R3)
+#define REG_HOST_STM_R2_3 		(REG_HOST_STM_R2|REG_HOST_STM_R3)
 #define REG_HOST_STM_FP 		(0x0800)
 #define REG_HOST_STM_SP			(0x2000)
 #define REG_HOST_STM_LR 		(0x4000)

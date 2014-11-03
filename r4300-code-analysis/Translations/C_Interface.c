@@ -8,6 +8,7 @@
 #include "Translate.h"
 #include "CodeSegments.h"
 #include "InstructionSetMIPS4.h"
+#include "InstructionSetARM6hf.h"
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -362,7 +363,7 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
 	ADD_LL_NEXT(newInstruction, ins);
 
-	insertCall_To_C(code_seg, ins, AL, (size_t)&cc_interrupt);
+	insertCall_To_C(code_seg, ins, AL, (size_t)&cc_interrupt, REG_HOST_STM_EABI);
 
 	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI);
 	ADD_LL_NEXT(newInstruction, ins);
@@ -395,7 +396,7 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_R0);
 	code_seg->Intermcode = ins = newInstruction;
 
-	insertCall_To_C(code_seg,ins, AL, (uint32_t)&branchUnknown);
+	insertCall_To_C(code_seg,ins, AL, (uint32_t)&branchUnknown, REG_HOST_STM_R1_3);
 
 	// Now jump to the compiled code
 	newInstruction 		= newInstrI(ARM_SUB, AL, REG_HOST_PC, REG_HOST_R0, REG_NOT_USED, 0);

@@ -27,7 +27,7 @@ char* currentTranslation = NULL;
 
 //=============================================================
 
-Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress)
+Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress, uint32_t Rmask)
 {
 	Instruction_t* newInstruction;
 	regID_t base;
@@ -39,7 +39,7 @@ Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, c
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//push lr
-	newInstruction 	= newInstrPUSH(AL, REG_HOST_STM_LR);
+	newInstruction 	= newInstrPUSH(AL, Rmask | REG_HOST_STM_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 #if 1
@@ -58,7 +58,7 @@ Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, c
 #endif
 
 	// pop lr
-	newInstruction 	= newInstrPOP(AL, REG_HOST_STM_LR);
+	newInstruction 	= newInstrPOP(AL, Rmask | REG_HOST_STM_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	return ins;

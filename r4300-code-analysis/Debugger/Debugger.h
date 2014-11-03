@@ -26,17 +26,24 @@
 					"\ttranslate write                   Generate ARM code from Intermediate code\n"
 
 
-#define HELP_PRINT 	"\tprint mips                        Print current segment MIPS code\n"\
-					"\tprint mips [x]                    Print [x] instructions from current segment MIPS code\n"\
-					"\tprint mips [x] [y]                Print [y] MIPS code instructions starting from address [x]\n"\
+#define HELP_PRINT 	"\tprint arm                         Print current segment ARM code\n"\
+					"\tprint arm [x]                     Print [x] instructions from current segment ARM code\n" \
+					"\tprint arm [x] [y]                 Print [y] ARM code instructions starting from address [x]\n" \
 					"\tprint intermediate                Print intermediate code\n" \
 					"\tprint literal                     Print literals for this code segment\n" \
-					"\tprint arm                         Print current segment ARM code\n"\
-					"\tprint arm [x]                     Print [x] instructions from current segment ARM code\n" \
-					"\tprint arm [x] [y]                 Print [y] ARM code instructions starting from address [x]\n"
+					"\tprint lookup [x] [y]              Print CodeSegment corresponding to mips address [x] to [x + y]\n"\
+					"\tprint mips                        Print current segment MIPS code\n"\
+					"\tprint mips [x]                    Print [x] instructions from current segment MIPS code\n"\
+					"\tprint mips [x] [y]                Print [y] MIPS code instructions starting from address [x]\n"\
+					"\tprint reg                         Print registers\n" \
+					"\tprint reg mips                    Print mips registers\n" \
+					"\tprint reg arm                     Print arm registers\n" \
+					"\tprint value [x] [y]               Print raw values from address [x] to [x + y]\n"
 
 #define HELP_SEG 	"\tseg [1|2]                         Change to segment, current Segment branches/continues to\n" \
 					"\tseg 0                             Change to First segment\n" \
+					"\tseg start                         Change to START segment\n" \
+					"\tseg stop                          Change to STOP segment\n" \
 					"\tseg                               Print Summary for code segment\n"
 
 #define HELP_GEN 	"R4300 code analysis debugger:\n\n"\

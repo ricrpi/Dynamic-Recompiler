@@ -294,6 +294,28 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 				, CurrentCodeSeg->MIPSRegistersUsedCount);
 		}
 	}
+	else if (!CMD_CMP(1, "value"))
+	{
+		uint32_t count = 10;
+		uint32_t* addr = CurrentCodeSeg->ARMcode;
+
+		if (strlen(userInput[3]))
+		{
+			count = Mstrtoul(userInput[3], &tailPointer, 0);
+			addr = (uint32_t*)((Mstrtoul(userInput[2], &tailPointer, 0))&~0x3);
+		}
+		else if (strlen(userInput[2]))
+		{
+			count = Mstrtoul(userInput[2], &tailPointer, 0);
+		}
+
+		for (x=0; x< count; x++)
+		{
+			printf("0x08x\t0x08x\t%11d\n",(uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+		}
+
+		printLine();
+	}
 	else if (!CMD_CMP(1, "intermediate"))
 	{
 		CodeSeg_print(CurrentCodeSeg);
@@ -304,20 +326,45 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 	}
 	else if (!CMD_CMP(1, "reg"))
 	{
-		DebugRuntimePrintMIPS();
+		if (strlen(userInput[2]))
+		{
+			if (!CMD_CMP(2, "mips"))
+			{
+				DebugRuntimePrintMIPS();
+			}
+			else if (!CMD_CMP(2, "arm"))
+			{
+				#ifndef __i386
+						printf("\n\tr0 0x%08x\t r8  0x%08x\n", context->arm_r0, context->arm_r8);
+						printf("\tr1 0x%08x\t r9  0x%08x\n", context->arm_r1, context->arm_r9);
+						printf("\tr2 0x%08x\t r10 0x%08x\n", context->arm_r2, context->arm_r10);
+						printf("\tr3 0x%08x\t fp  0x%08x\n", context->arm_r3, context->arm_fp);
+						printf("\tr4 0x%08x\t ip  0x%08x\n", context->arm_r4, context->arm_ip);
+						printf("\tr5 0x%08x\t sp  0x%08x\n", context->arm_r5, context->arm_sp);
+						printf("\tr6 0x%08x\t lr  0x%08x\n", context->arm_r6, context->arm_lr);
+						printf("\tr7 0x%08x\t pc  0x%08x\n", context->arm_r7, context->arm_pc);
+						printf("\tcpsr 0x%08x\n", context->arm_cpsr);
 
-#ifndef __i386
-		printf("\n\tr0 0x%08x\t r8  0x%08x\n", context->arm_r0, context->arm_r8);
-		printf("\tr1 0x%08x\t r9  0x%08x\n", context->arm_r1, context->arm_r9);
-		printf("\tr2 0x%08x\t r10 0x%08x\n", context->arm_r2, context->arm_r10);
-		printf("\tr3 0x%08x\t fp  0x%08x\n", context->arm_r3, context->arm_fp);
-		printf("\tr4 0x%08x\t ip  0x%08x\n", context->arm_r4, context->arm_ip);
-		printf("\tr5 0x%08x\t sp  0x%08x\n", context->arm_r5, context->arm_sp);
-		printf("\tr6 0x%08x\t lr  0x%08x\n", context->arm_r6, context->arm_lr);
-		printf("\tr7 0x%08x\t pc  0x%08x\n", context->arm_r7, context->arm_pc);
-		printf("\tcpsr 0x%08x\n", context->arm_cpsr);
+				#endif
+			}
+		}
+		else
+		{
+			DebugRuntimePrintMIPS();
 
-#endif
+			#ifndef __i386
+				printf("\n\tr0 0x%08x\t r8  0x%08x\n", context->arm_r0, context->arm_r8);
+				printf("\tr1 0x%08x\t r9  0x%08x\n", context->arm_r1, context->arm_r9);
+				printf("\tr2 0x%08x\t r10 0x%08x\n", context->arm_r2, context->arm_r10);
+				printf("\tr3 0x%08x\t fp  0x%08x\n", context->arm_r3, context->arm_fp);
+				printf("\tr4 0x%08x\t ip  0x%08x\n", context->arm_r4, context->arm_ip);
+				printf("\tr5 0x%08x\t sp  0x%08x\n", context->arm_r5, context->arm_sp);
+				printf("\tr6 0x%08x\t lr  0x%08x\n", context->arm_r6, context->arm_lr);
+				printf("\tr7 0x%08x\t pc  0x%08x\n", context->arm_r7, context->arm_pc);
+				printf("\tcpsr 0x%08x\n", context->arm_cpsr);
+			#endif
+		}
+
 		printLine();
 	}
 	else if (!CMD_CMP(1, "lookup"))
@@ -501,6 +548,17 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	}
 	else
 	{
+		if (strlen(userInput[2])
+				&& !CMD_CMP(2, "help"))
+		{
+			int x;
+			for (x=0; x < COUNTOF(Translations); x++)
+			{
+				printf("%d. %s\n", x, Translations[x].name);
+			}
+			return 0;
+		}
+
 		if (!strlen(userInput[2]))
 		{
 			bounds[1] = bounds[0];
@@ -628,7 +686,14 @@ int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* con
 	{
 		if 		(!CMD_CMP(1, "print"))		printf(HELP_PRINT);
 		else if (!CMD_CMP(1, "segment"))	printf(HELP_SEG);
-		else if (!CMD_CMP(1, "translate")) 	printf(HELP_TRANS);
+		else if (!CMD_CMP(1, "translate"))
+		{
+			int x;
+			for (x=0; x < COUNTOF(Translations); x++)
+			{
+				printf("%d. %s\n", x, Translations[x].name);
+			}
+		}
 		else printf(HELP_GEN);
 	}
 	else

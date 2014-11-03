@@ -472,14 +472,14 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 			printf("\tmvn%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 			break;
 		}
-	}
+	}	// TODO ARM FPU printf
 	//else if ((word & 0x0c000000) == 0x0c000000)
 	//{
 	//	printf("%x\tTODO co processor\n", addr); // TODO arm co-processor instructions
 	//}
 	else
 	{
-		printf ("\tUnknown Command %0x08x %010d\n", word, word);
+		printf ("\tUnknown Command - value =  %010d (%0x08x)\n", word, word);
 #if defined(ABORT_ARM_DECODE)
 		abort();
 #endif
