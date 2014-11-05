@@ -855,10 +855,9 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 		segmentData.dbgCurrentSegment = seg;
 		Translate(seg);
 
-		emit_arm_code(seg);
-
 		seg = seg->next;
 	}
+
 	segmentData.dbgCurrentSegment = seg;
 	Translate(seg);
 
