@@ -36,7 +36,7 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 			ins_addr = ucontext->uc_mcontext.arm_pc;
 		#endif
 
-		printf("\nSegmentation detected trying to access address 0x%x on instruction 0x%x\n", si->si_addr, ins_addr);
+		printf("\nSegmentation detected trying to access address %p on instruction 0x%x\n", si->si_addr, ins_addr);
 	}
 	if (sig == SIGABRT)	printf("\nAbort detected\n");
 

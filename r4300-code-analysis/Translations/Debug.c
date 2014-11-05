@@ -55,7 +55,7 @@ void Translate_Debug(code_seg_t* codeSegment)
 	int x=0;
 	while (ins->nextInstruction->nextInstruction)
 	{
-		new_ins = newInstrI(ARM_MOV, AL, REG_HOST_R4, REG_NOT_USED, REG_NOT_USED, x);
+		new_ins = newInstrI(ARM_MOV, AL, REG_EMU_DEBUG1, REG_NOT_USED, REG_NOT_USED, x);
 		ADD_LL_NEXT(new_ins, ins);
 
 		x++;

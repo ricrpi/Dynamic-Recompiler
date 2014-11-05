@@ -9,6 +9,43 @@
 #include "string.h"
 #include "DebugDefines.h"
 
+#define COUNTOF(x)	(sizeof(x)/sizeof(x[0]))
+
+static unsigned char RegsAvailable[] = {
+	0
+	, 1
+	, 2
+	, 3
+#if (REG_EMU_DEBUG1 != REG_HOST_R4 && REG_EMU_FLAGS != REG_HOST_R4 && REG_EMU_FP != REG_HOST_R4 && REG_EMU_CC_FP != REG_HOST_R4)
+	, 4
+#endif
+#if (REG_EMU_DEBUG1 != REG_HOST_R5 && REG_EMU_FLAGS != REG_HOST_R5 && REG_EMU_FP != REG_HOST_R5 && REG_EMU_CC_FP != REG_HOST_R5)
+	, 5
+#endif
+#if (REG_EMU_DEBUG1 != REG_HOST_R6 && REG_EMU_FLAGS != REG_HOST_R6 && REG_EMU_FP != REG_HOST_R6 && REG_EMU_CC_FP != REG_HOST_R6)
+	, 6
+#endif
+#if (REG_EMU_DEBUG1 != REG_HOST_R7 && REG_EMU_FLAGS != REG_HOST_R7 && REG_EMU_FP != REG_HOST_R7 && REG_EMU_CC_FP != REG_HOST_R7)
+	, 7
+#endif
+#if (REG_EMU_DEBUG1 != REG_HOST_R8 && REG_EMU_FLAGS != REG_HOST_R8 && REG_EMU_FP != REG_HOST_R8 && REG_EMU_CC_FP != REG_HOST_R8)
+	, 8
+#endif
+#if (REG_EMU_DEBUG1 != REG_HOST_R9 && REG_EMU_FLAGS != REG_HOST_R9 && REG_EMU_FP != REG_HOST_R9 && REG_EMU_CC_FP != REG_HOST_R9)
+	, 9
+#endif
+#if (REG_EMU_DEBUG1 != REG_HOST_R10 && REG_EMU_FLAGS != REG_HOST_R10 && REG_EMU_FP != REG_HOST_R10 && REG_CC_FP != REG_HOST_R10)
+	, 10
+#endif
+#if (REG_EMU_DEBUG1 != REG_HOST_R11 && REG_EMU_FLAGS != REG_HOST_R11 && REG_EMU_FP != REG_HOST_R11 && REG_CC_FP != REG_HOST_R11)
+	, 11
+#endif
+#if (REG_EMU_DEBUG1 != REG_HOST_R12 && REG_EMU_FLAGS != REG_HOST_R12 && REG_EMU_FP != REG_HOST_R12 && REG_CC_FP != REG_HOST_R12)
+	, 12
+#endif
+};
+
+
 static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_t Reg)
 {
 	const Instruction_t* in = ins;
@@ -138,17 +175,17 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 	}
 }
 
-static void getNextRegister(Instruction_t* ins, uint32_t* uiCurrentRegister)
+static void getNextRegister(Instruction_t* ins, uint32_t* uiCurrentRegisterIndex)
 {
-	uint32_t uiLastRegister = *uiCurrentRegister;
+	uint32_t uiLastRegisterIndex = *uiCurrentRegisterIndex;
 
-	while ((FindRegNextUsedAgain(ins, REG_HOST + *uiCurrentRegister) > 0))
+	while ((FindRegNextUsedAgain(ins, REG_HOST + RegsAvailable[*uiCurrentRegisterIndex]) > 0))
 	{
-		(*uiCurrentRegister)++;
-		if (*uiCurrentRegister > 10) *uiCurrentRegister = 0;
+		(*uiCurrentRegisterIndex)++;
+		if (*uiCurrentRegisterIndex > COUNTOF(RegsAvailable)) *uiCurrentRegisterIndex = 0;
 
 		// Have we looped round all registers?
-		if (uiLastRegister == *uiCurrentRegister){
+		if (uiLastRegisterIndex == *uiCurrentRegisterIndex){
 			abort();
 		}
 	}
@@ -192,7 +229,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		ins = ins->nextInstruction;
 	}
 
-	for (x=0; x < REG_HOST + 11; x++)
+	for (x=0; x < REG_HOST + COUNTOF(RegsAvailable); x++)
 	{
 		if (counts[x]) NumberRegUsed++;
 	}
@@ -225,35 +262,35 @@ void Translate_Registers(code_seg_t* const codeSegment)
 
 		//we should do this in the 'instruction' domain so that non-overlapping register usage can be 'flattened'
 
-		uint32_t uiCurrentRegister = 0;
+		uint32_t uiCurrentRegisterIndex = 0;
 
-		getNextRegister(ins, &uiCurrentRegister);
+		getNextRegister(ins, &uiCurrentRegisterIndex);
 
 		while (ins)
 		{
 			if (ins->Rd1.regID != REG_NOT_USED  && ins->Rd1.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + uiCurrentRegister, 0);
-				getNextRegister(ins, &uiCurrentRegister);
+				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+				getNextRegister(ins, &uiCurrentRegisterIndex);
 			}
 
 			if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + uiCurrentRegister, 0);
-				getNextRegister(ins, &uiCurrentRegister);
+				UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+				getNextRegister(ins, &uiCurrentRegisterIndex);
 			}
 
 			if (ins->R1.regID != REG_NOT_USED && ins->R1.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->R1.regID, REG_HOST + uiCurrentRegister, 0);
-				getNextRegister(ins, &uiCurrentRegister);
+				UpdateRegWithReg(ins,ins->R1.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+				getNextRegister(ins, &uiCurrentRegisterIndex);
 			}
 
 			if (ins->R2.regID != REG_NOT_USED && ins->R2.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->R2.regID, REG_HOST + uiCurrentRegister, 0);
-				getNextRegister(ins, &uiCurrentRegister);
+				UpdateRegWithReg(ins,ins->R2.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+				getNextRegister(ins, &uiCurrentRegisterIndex);
 			}
 
 			if (ins->R3.regID != REG_NOT_USED && ins->R3.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->R3.regID, REG_HOST + uiCurrentRegister, 0);
-				getNextRegister(ins, &uiCurrentRegister);
+				UpdateRegWithReg(ins,ins->R3.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+				getNextRegister(ins, &uiCurrentRegisterIndex);
 			}
 
 			ins = ins->nextInstruction;
@@ -305,7 +342,6 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 		while (ins)
 		{
 			if (ins->Rd1.regID < REG_TEMP
-					&& ins->Rd1.state == RS_REGISTER
 				)
 			{
 				int32_t nextUsed = FindRegNextUsedAgain(ins, ins->Rd1.regID);

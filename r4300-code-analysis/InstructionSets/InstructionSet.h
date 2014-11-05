@@ -88,8 +88,11 @@
 
 // Configurable #defines if you want to change
 // which registers hold the emulation frame data or emulation flags
-#define REG_EMU_FP			REG_HOST_R10
-#define REG_EMU_FLAGS		REG_HOST_R12
+
+#define REG_CC_FP			REG_HOST_R11		// The register used for Frame Pointer by compiler
+#define REG_EMU_FP			REG_HOST_R10		// The 'FramePointer' used for MIPS register base
+#define REG_EMU_FLAGS		REG_HOST_R12		// Register to hold flags passed between segments
+#define REG_EMU_DEBUG1		REG_HOST_R4			// Register used for Debugging
 
 // emulation flag bits
 #define REG_EMU_FLAG_DS		(0x00)
@@ -111,6 +114,22 @@
 #define REG_HOST_STM_ALL        (0x7FFF)
 
 #define REG_T_SIZE	 (REG_HOST + 0x10)
+
+//===============================================================
+
+#if !defined(REG_EMU_FP)
+#error "Need to have a register to point to Emulatated MIPS registers"
+#endif
+
+#if !defined(REG_EMU_FLAGS)
+#define REG_EMU_FLAGS REG_NOT_USED
+#endif
+
+#if !defined(REG_EMU_DEBUG1)
+#define REG_EMU_DEBUG1 REG_NOT_USED
+#endif
+
+//===============================================================
 
 typedef enum _r_state_e {
 	RS_REGISTER,
