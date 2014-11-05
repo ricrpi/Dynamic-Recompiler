@@ -501,6 +501,8 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	Instruction_t *ins = codeSeg->Intermcode;
 	literal_t* lits = codeSeg->literals;
 
+	assert (!codeSeg->ARMcode);
+
 	if (!ins)
 	{
 		printf("cannot emit arm code as not compiled yet\n");
