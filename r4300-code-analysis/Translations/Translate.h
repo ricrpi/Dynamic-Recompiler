@@ -87,6 +87,8 @@ code_seg_t* Generate_MIPS_Trap(code_segment_data_t* seg_data);
 
 // -----------------------------------------------------------------
 
+void DebugRuntimePrintSegment();
+
 void DebugRuntimePrintMIPS();
 
 Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress, uint32_t Rmask);

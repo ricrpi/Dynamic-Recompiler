@@ -43,10 +43,10 @@ void Translate_Debug(code_seg_t* codeSegment)
 	ADD_LL_NEXT(new_ins, ins);
 
 #if defined(USE_INSTRUCTION_COMMENTS)
-	currentTranslation = "Call DebugRuntimePrintMIPS()";
+	currentTranslation = "Call DebugRuntimePrintSegment()";
 #endif
 
-	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS, REG_HOST_STM_EABI);
+	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintSegment, REG_HOST_STM_EABI);
 
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Debug - Instruction count";
@@ -61,9 +61,4 @@ void Translate_Debug(code_seg_t* codeSegment)
 		x++;
 		ins = ins->nextInstruction;
 	}
-
-#if defined(USE_INSTRUCTION_COMMENTS)
-	currentTranslation = "Call DebugRuntimePrintMIPS()";
-#endif
-	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS, REG_HOST_STM_EABI);
 }
