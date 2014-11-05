@@ -146,27 +146,34 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 
 	if (!CurrentCodeSeg->MIPSReturnRegister)
 	{
-		printf("Seg  0x%08x  \t0x%08x\ttype: %s\n"
+		printf("Seg  0x%08x  \t0x%08x\t0x%08x\ttype: %s\n"
 				"next segments:\n"
 				, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode
+				, (uint32_t)CurrentCodeSeg->ARMcode
 				, seg_type_s[CurrentCodeSeg->Type]);
 
 		if (CurrentCodeSeg->pContinueNext != NULL)
 		{
-			printf(" (1) 0x%08x  \t0x%08x\t (Continue)\n"
-					, (uint32_t)CurrentCodeSeg->pContinueNext, (uint32_t)CurrentCodeSeg->pContinueNext->MIPScode);
+			printf(" (1) 0x%08x  \t0x%08x\t0x%08x\t (Continue)\n"
+					, (uint32_t)CurrentCodeSeg->pContinueNext
+					, (uint32_t)CurrentCodeSeg->pContinueNext->MIPScode
+					, (uint32_t)CurrentCodeSeg->pContinueNext->ARMcode);
 		}
 
 		if (CurrentCodeSeg->pBranchNext != NULL)
 		{
 			if (CurrentCodeSeg->MIPScode == CurrentCodeSeg->pBranchNext->MIPScode)	//Loops on itself
 			{
-				printf(" (2) 0x%08x  \t0x%08x\t (Loop)\n"
-									, (uint32_t)CurrentCodeSeg->pBranchNext, (uint32_t)CurrentCodeSeg->pBranchNext->MIPScode);
+				printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Loop)\n"
+					, (uint32_t)CurrentCodeSeg->pBranchNext
+					, (uint32_t)CurrentCodeSeg->pBranchNext->MIPScode
+					, (uint32_t)CurrentCodeSeg->pBranchNext->ARMcode);
 			}else
 			{
-				printf(" (2) 0x%08x  \t0x%08x\t (Branch)\n"
-									, (uint32_t)CurrentCodeSeg->pBranchNext, (uint32_t)CurrentCodeSeg->pBranchNext->MIPScode);
+				printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Branch)\n"
+					, (uint32_t)CurrentCodeSeg->pBranchNext
+					, (uint32_t)CurrentCodeSeg->pBranchNext->MIPScode
+					, (uint32_t)CurrentCodeSeg->pBranchNext->ARMcode);
 			}
 		}
 
@@ -177,8 +184,11 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 	}
 	else
 	{
-		printf("Seg  0x%08x  \t0x%08x\ttype: %s\nnext segments:\n"
-				, (uint32_t)CurrentCodeSeg, (uint32_t)CurrentCodeSeg->MIPScode, seg_type_s[CurrentCodeSeg->Type]);
+		printf("Seg  0x%08x  \t0x%08x\t0x%08x\ttype: %s\nnext segments:\n"
+				, (uint32_t)CurrentCodeSeg
+				, (uint32_t)CurrentCodeSeg->MIPScode
+				, (uint32_t)CurrentCodeSeg->ARMcode
+				, seg_type_s[CurrentCodeSeg->Type]);
 
 		code_seg_t*  tempCodeSeg=segmentData->StaticSegments;
 		x=1;
@@ -186,7 +196,10 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 		{
 			if (tempCodeSeg->pBranchNext == CurrentCodeSeg)
 			{
-				printf(" (%d) 0x%08x  \t0x%08x\n", x, (uint32_t)tempCodeSeg->pBranchNext, (uint32_t)tempCodeSeg->pBranchNext->MIPScode);
+				printf(" (%d) 0x%08x  \t0x%08x\t0x%08x\n", x
+						, (uint32_t)tempCodeSeg->pBranchNext
+						, (uint32_t)tempCodeSeg->pBranchNext->MIPScode
+						, (uint32_t)tempCodeSeg->pBranchNext->ARMcode);
 				x++;
 			}
 
@@ -370,23 +383,60 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 	else if (!CMD_CMP(1, "lookup"))
 	{
 		uint32_t val = Mstrtoul(userInput[2], &tailPointer, 0);
-		uint32_t len = Mstrtoul(userInput[3], &tailPointer, 0);
-		int x;
+		uint32_t len = 1; //Mstrtoul(userInput[3], &tailPointer, 0);
+		int x=0;
 
-		if (val < 0x88000000)
+		if (val < 0x81000000)
 		{
 			for (x=0; x < len; x++)
 			{
-				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)segmentData->DynamicBounds[(val)/4 + x]);
+				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)segmentData->DynamicBounds[(val-0x80000000)/4 + x]);
 			}
 		}
-		else
+		else if (val < 0x83FFFFFF)	//Dynamic Recompiled ARM code
+		{
+			code_seg_t* codeseg = segmentData->StaticSegments;
+
+			while (codeseg)
+			{
+				if (codeseg->ARMcode)
+				{
+					if  ((uint32_t)codeseg->ARMcode <= val
+							&& (uint32_t)codeseg->ARMcode + codeseg->ARMcodeLen < val)
+					{
+						printf("0x%08x => Static Segment 0x%08x\n",val,(uint32_t)codeseg);
+						return 1;
+					}
+				}
+				codeseg = codeseg->next;
+			}
+
+			codeseg = segmentData->DynamicSegments;
+
+			while (codeseg)
+			{
+				if (codeseg->ARMcode)
+				{
+					if  ((uint32_t)codeseg->ARMcode <= val
+							&& (uint32_t)codeseg->ARMcode + codeseg->ARMcodeLen < val)
+					{
+						printf("0x%08x => Dynamic Segment 0x%08x\n",val,(uint32_t)codeseg);
+						return 1;
+					}
+				}
+				codeseg = codeseg->next;
+			}
+
+		}
+		else if (val < 0x88000000)
 		{
 			for (x=0; x < len; x++)
 			{
 				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)segmentData->StaticBounds[(val-0x88000000)/4 + x]);
 			}
 		}
+
+
 	}
 	else
 	{
@@ -405,14 +455,19 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 
 	if (!strlen(userInput[1]))
 	{
-		printf("First Segment   0x%x, number of segments %d\n", (uint32_t)segmentData->StaticSegments, segmentData->count);
+		printf("First Segment   0x%x, number of segments %d\n"
+				, (uint32_t)segmentData->StaticSegments
+				, segmentData->count);
 
 		printf("Current Segment 0x%x\n"
 				"\tMIPS            ARM\n"
-				"\t0x%08X %u\t0x%08X %u\n\n",
-				(uint32_t)CurrentCodeSeg,
-				(uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen,
-				(uint32_t)CurrentCodeSeg->ARMcode, CurrentCodeSeg->ARMcodeLen);
+				"\t0x%08X %u\t0x%08X %u \tEntry Point: 0x%08X\n\n"
+				, (uint32_t)CurrentCodeSeg
+				, (uint32_t)CurrentCodeSeg->MIPScode
+				, CurrentCodeSeg->MIPScodeLen
+				, (uint32_t)CurrentCodeSeg->ARMcode
+				, CurrentCodeSeg->ARMcodeLen
+				, (uint32_t)CurrentCodeSeg->ARMEntryPoint);
 	}
 	else if (!CMD_CMP(1, "start"))
 	{
@@ -598,10 +653,13 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	return 0;
 }
 
-void DebugRuntimePrintMIPS()
+void DebugRuntimePrintSegment()
 {
 	printf("Current Segment 0x%08x\n\n", (uint32_t)segmentData.dbgCurrentSegment);
+}
 
+void DebugRuntimePrintMIPS()
+{
 	int x;
 
 	for (x=0; x < 16; x++)
@@ -678,6 +736,7 @@ int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* con
 
 		printf("Starting ...\n");
 
+		CurrentCodeSeg = NULL; // So that if emulation errors then Debugger will look at correct segment
 		uint32_t ret = run();
 
 		printf("End run: %u (0x%x)\n", ret, ret);
