@@ -250,6 +250,9 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			// now lookup virtual address
 			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, 0);
 
+			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+			ADD_LL_NEXT(new_ins, ins);
+
 			break;
 		case LBU: break;
 		case LHU: break;

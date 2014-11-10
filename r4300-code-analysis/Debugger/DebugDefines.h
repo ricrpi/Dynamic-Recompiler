@@ -15,6 +15,7 @@
 //#define TEST_BRANCHING_BACKWARD
 //#define TEST_BRANCH_TO_C
 //#define TEST_LITERAL
+#define TEST_ROR
 
 // ========= Extra Debugging Information ==============================
 
@@ -26,6 +27,8 @@
 
 //Print the raw Hex values when reading arm instructions (arm_decode)
 #define SHOW_PRINT_ARM_VALUE
+
+#define SHOW_PRINT_MIPS_VALUE
 
 //Print when a segment is deleted
 #define SHOW_PRINT_SEGMENT_DELETE

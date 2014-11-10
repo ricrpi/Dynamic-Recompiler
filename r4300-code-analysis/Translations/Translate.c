@@ -219,14 +219,35 @@ void Translate_Generic(code_seg_t* const codeSegment)
 
 						ADD_LL_NEXT(new_ins, ins);
 					}
+
+					if (imm > 255)
+					{
+						new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
+						ins->immediate = ins->immediate & 0xFF;
+						ADD_LL_NEXT(new_ins, ins);
+					}
 				}
 				break;
 			case ADDIU:
-				if (ins->immediate > 255)
 				{
-					new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
-					ins->immediate = ins->immediate & 0xFF;
-					ADD_LL_NEXT(new_ins, ins);
+					if (imm < 0)
+					{
+						InstrI(ins, ARM_SUB,AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm));
+						ins->immediate = (-ins->immediate) & 0xFF;
+					}
+					if (imm < -255)
+					{
+						new_ins = newInstrI(ARM_SUB, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
+
+						ADD_LL_NEXT(new_ins, ins);
+					}
+
+					if (imm > 255)
+					{
+						new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
+						ins->immediate = ins->immediate & 0xFF;
+						ADD_LL_NEXT(new_ins, ins);
+					}
 				}
 				break;
 			case SLTI:
