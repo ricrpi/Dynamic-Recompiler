@@ -24,6 +24,7 @@
 		((val & 0x001F0000) >> 16), \
 		(int)(val&0xffff)
 
+
 // Technically these are I OPs but I want to format the output differently
 #define B_OP "r%02u, s%02u, #%02d\t\t// branch to 0x%08x"
 #define OP_B(val) \
@@ -47,8 +48,8 @@
 		((val << 2) & 0x0FFFFFFF), \
 		((((x&0xf0000000)|(val<<2)) & 0x0FFFFFFF) - x)
 
-#define R_OP ""
-#define OP_R(val) (val)
+#define R_OP "r%02u, r%02u, r%02u"
+#define OP_R(val) ((val>>11)&0x1f, (val>>21)&0x1f, (val>>16)&0x1f)
 
 #define L_OP "r%02u, [r%02u, #%02d]"
 #define OP_L(val) \
@@ -2025,7 +2026,7 @@ void fprintf_mips(FILE* stream, const uint32_t x, const uint32_t uiMIPSword)
 			case 0x1D: fprintf(stream, INDEX "\tDMULTU\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 			case 0x1E: fprintf(stream, INDEX "\tDDIV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 			case 0x1F: fprintf(stream, INDEX "\tDDIVU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x20: fprintf(stream, INDEX "\tADD   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x20: fprintf(stream, INDEX "\tADD   \t" R_OP "\n", x, OP_R(uiMIPSword)); return;	// I
 			case 0x21: fprintf(stream, INDEX "\tADDU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 			case 0x22: fprintf(stream, INDEX "\tSUB   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 			case 0x23: fprintf(stream, INDEX "\tSUBU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
@@ -2305,7 +2306,7 @@ void sprintf_mips(char* stream, const uint32_t x, const uint32_t uiMIPSword)
 			case 0x1D: sprintf(stream, INDEX "\tDMULTU\t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 			case 0x1E: sprintf(stream, INDEX "\tDDIV  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 			case 0x1F: sprintf(stream, INDEX "\tDDIVU \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
-			case 0x20: sprintf(stream, INDEX "\tADD   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
+			case 0x20: sprintf(stream, INDEX "\tADD   \t" R_OP "\n", x, OP_R(uiMIPSword)); return;	// I
 			case 0x21: sprintf(stream, INDEX "\tADDU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 			case 0x22: sprintf(stream, INDEX "\tSUB   \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I
 			case 0x23: sprintf(stream, INDEX "\tSUBU  \t" I_OP "\n", x, OP_I(uiMIPSword)); return;	// I

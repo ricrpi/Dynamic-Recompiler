@@ -79,8 +79,8 @@ void Translate_Trap(code_seg_t* const codeSegment)
 			case TEQI: break;	// TODO TRAP Conditional
 			case TNEI: break;	// TODO TRAP Conditional
 			case ADDI: 			//TODO TRAP Overflow
-				ins->instruction = ARM_ADD;
-				ins->S = 1;
+				//ins->instruction = ARM_ADD;
+				//ins->S = 1;
 				//insertCall_To_C(codeSegment, ins, VS, MMAP_FP_BASE + FUNC_GEN_TRAP);
 				break;
 			case ADDIU:

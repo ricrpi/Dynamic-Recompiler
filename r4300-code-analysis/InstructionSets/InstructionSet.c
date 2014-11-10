@@ -363,6 +363,10 @@ Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, cons
 	return newIns;
 }
 
+/*
+ * offset: 		The number of instructions to branch over
+ * absolute:	=1? Treats offset as an address
+ */
 Instruction_t* newInstrB(const Condition_e cond, const int32_t offset, const uint32_t absolute)
 {
 	Instruction_t* newInstr = newEmptyInstr();
@@ -370,6 +374,10 @@ Instruction_t* newInstrB(const Condition_e cond, const int32_t offset, const uin
 	return InstrB(newInstr, cond, offset, absolute);
 }
 
+/*
+ * offset: 		The number of instructions to branch over
+ * absolute:	=1? Treats offset as an address
+ */
 Instruction_t* newInstrBL(const Condition_e cond, const int32_t offset, const uint32_t absolute)
 {
 	Instruction_t* newInstr = newEmptyInstr();

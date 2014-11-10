@@ -30,7 +30,9 @@ void Translate_Memory(code_seg_t* const codeSegment)
 	currentTranslation = "Memory";
 #endif
 
-	regID_t	funcTempReg;
+	regID_t Rd1;
+	regID_t	R1;
+	regID_t R2;
 	int32_t	funcTempImm;
 	Instruction_t* new_ins;
 
@@ -82,43 +84,76 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		case SWL: break;
 		case SW:
 			//TODO optimize for constants
-			funcTempReg = ins->R1.regID;
+			R1 = ins->R1.regID;
+			R2 = ins->R2.regID;
+
 			funcTempImm = ins->immediate;
 
-			//test if raw address or virtual
-			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0x08 << 24);
+			//test if raw address or virtual this could be 0x80 or 0xA0 for cached / non cached access
+			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0x80 << 24);
 
-			// if address is raw (NE) then add base offset to get to host address
-			new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, uMemoryBase << 24);
+			//Turn 0xA0 to 0x80
+			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, (0x20) << 24);
 			ADD_LL_NEXT(new_ins, ins);
 
-			//check immediate is not too large for ARM and if it is then add additional imm
-			if (funcTempImm > 0xFFF || funcTempImm < -0xFFF)
+			// if address is raw (NE) then add base offset to get to host address
+			if (uMemoryBase < 0x80)
 			{
-				new_ins = newInstrI(ARM_ORR, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, funcTempImm&0xf000);
+				new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (0x80 - uMemoryBase) << 24);
+				ADD_LL_NEXT(new_ins, ins);
+			} else if (uMemoryBase > 0x80)
+			{
+				new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (uMemoryBase - 0x80) << 24);
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
-			new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, funcTempReg, REG_TEMP_MEM1, funcTempImm&0xfff);
-			// TODO do we need to set ins->U ?
+			if (funcTempImm > 0)
+			{
+				//check immediate is not too large for ARM and if it is then add additional imm
+				if (funcTempImm > 0xFFF)
+				{
+					new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (funcTempImm)&0xf000);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
+				new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, R1, REG_TEMP_MEM1, funcTempImm&0xfff);
+				new_ins->U = 1;
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else
+			{
+				if  (funcTempImm < -0xFFF)
+				{
+					new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (-funcTempImm)&0xf000);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+
+				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
+				new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, R2, REG_TEMP_MEM1, (-funcTempImm)&0xfff);
+				new_ins->U = 0;
+				ADD_LL_NEXT(new_ins, ins);
+			}
+
+			new_ins = newInstrB(NE, CALL_TO_C_INSTR_COUNT + 2, 0);
+			new_ins->U = 0;
 			ADD_LL_NEXT(new_ins, ins);
 
 			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, ins->R1.regID);
+			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1);
 			ADD_LL_NEXT(new_ins, ins);
 
 			// now lookup virtual address
-			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, REG_HOST_STM_R1_3);
+			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, 0);
 
-			new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, funcTempReg, REG_HOST_R0, funcTempImm&0xfff);
+			new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, R1, REG_HOST_R0, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
 
 			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
 			ADD_LL_NEXT(new_ins, ins);
 
+			// TODO we need to check memory changed is not in code space
 			break;
 		case SDL: break;
 		case SDR: break;
@@ -131,22 +166,54 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		case LWL: break;
 		case LW:
 
-			funcTempReg = ins->Rd1.regID;
+			Rd1 = ins->Rd1.regID;
+			R1 = ins->R1.regID;
+
 			funcTempImm = ins->immediate;
 
-			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0x08 << 24);
+			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, R1, REG_NOT_USED, 0x80 << 24);
 
-			new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, uMemoryBase << 24);
+			//Turn 0xA0 to 0x80
+			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_MEM1, R1, REG_NOT_USED, (0x20) << 24);
 			ADD_LL_NEXT(new_ins, ins);
 
-			if (funcTempImm > 0xFFF || funcTempImm < -0xFFF)
+			// if address is raw (NE) then add base offset to get to host address
+			if (uMemoryBase < 0x80)
 			{
-				new_ins = newInstrI(ARM_ORR, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, funcTempImm&0xf000);
+				new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (0x80 - uMemoryBase) << 24);
+				ADD_LL_NEXT(new_ins, ins);
+			} else if (uMemoryBase > 0x80)
+			{
+				new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (uMemoryBase - 0x80) << 24);
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			new_ins = newInstrI(ARM_LDR, NE, funcTempReg, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
-			ADD_LL_NEXT(new_ins, ins);
+			if (funcTempImm > 0)
+			{
+				//check immediate is not too large for ARM and if it is then add additional imm
+				if (funcTempImm > 0xFFF)
+				{
+					new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (funcTempImm)&0xf000);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
+				new_ins = newInstrI(ARM_LDR, NE, Rd1, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
+				new_ins->U = 1;
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else
+			{
+				if  (funcTempImm < -0xFFF)
+				{
+					new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (-funcTempImm)&0xf000);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+
+				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
+				new_ins = newInstrI(ARM_LDR, NE, Rd1, REG_NOT_USED, REG_TEMP_MEM1, (-funcTempImm)&0xfff);
+				new_ins->U = 0;
+				ADD_LL_NEXT(new_ins, ins);
+			}
 
 			//TODO set R0
 			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, REG_HOST_STM_R1_3);

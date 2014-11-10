@@ -435,7 +435,7 @@ typedef enum _Instruction_e {
 	ARM_MOV,		// Rd1 (Rd) = Op2
 	ARM_BIC,		// Rd1 (Rd) = R1 (Rn) AND ~Op2
 	ARM_MVN,		// Rd1 (Rd) = ~Op2
-	ARM_LDR,		// R1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
+	ARM_LDR,		// Rd1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
 	ARM_STR,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
 	ARM_LDRD,		// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
 	ARM_STRD,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)

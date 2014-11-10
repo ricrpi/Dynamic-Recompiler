@@ -20,20 +20,21 @@
 
 static uint32_t ALU_OP2(const Instruction_t* ins)
 {
-	int32_t imm = ins->immediate;
+	uint32_t imm = (uint32_t)ins->immediate;
 	int32_t rotate = ins->rotate;
+
 	if (ins->I)
 	{
-		if (ins->immediate > 255)
+		if (imm > 255)
 		{
 			int x;
 
 			for (x = 0; x < 16; x++)
 			{
-				if ((ins->immediate >> (x*2)) & (0x03))
+				if (((uint32_t)ins->immediate >> (x*2)) & (0x03))
 				{
 					//Found start of bits TODO what if imm is negative?
-					imm = ins->immediate >> (x*2);
+					imm = (uint32_t)ins->immediate >> (x*2);
 					rotate = x;
 
 					break;
@@ -172,7 +173,6 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate>>4)&0xf) | 0xd0 | (ins->immediate&0xf);
 	case ARM_STRD_LIT:
 			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate>>4)&0xf) | 0xf0 | (ins->immediate&0xf);
-
 	case ARM_B:
 		if (ins->I)
 			return ins->cond << 28 | 0xA << 24 | ins->Ln << 24 | (((ins->offset - addr )/4 - ARM_BRANCH_OFFSET)&0xffffff);
@@ -501,7 +501,9 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	Instruction_t *ins = codeSeg->Intermcode;
 	literal_t* lits = codeSeg->literals;
 
+#if defined(ASSERT_ARM_NOT_COMPILED)
 	assert (!codeSeg->ARMcode);
+#endif
 
 	if (!ins)
 	{

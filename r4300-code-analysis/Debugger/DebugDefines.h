@@ -44,6 +44,7 @@
 // You can strip the REG_HOST flags when emiting arm code
 // or when registers are translated.
 #undef DO_HOSTREG_RENUMBER_IN_TRANSLATIONS
+//#define ASSERT_ARM_NOT_COMPILED
 
 
 // ========= Customize Aborts for debugging ===========================

@@ -19,6 +19,8 @@
 #define ADD_LL(x, y) (x)->nextInstruction = (y)->nextInstruction; \
 			(y)->nextInstruction = (x);
 
+#define CALL_TO_C_INSTR_COUNT	(4)
+
 extern uint32_t bCountSaturates;
 extern char* currentTranslation;
 

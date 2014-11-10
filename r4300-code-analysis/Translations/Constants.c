@@ -61,6 +61,13 @@ void Translate_Constants(code_seg_t* const codeSegment)
 		{
 
 		case LUI:
+		{
+			regID_t base;
+			int32_t offset;
+			addLiteral(codeSegment, &base, &offset, ins->immediate << 16);
+
+			InstrI(ins, ARM_LDR_LIT, AL, ins->Rd1.regID, REG_NOT_USED, base, offset);
+
 			ins->Rd1.state = RS_CONSTANT_I8;
 			if (ins->immediate < 0)
 			{
@@ -68,7 +75,8 @@ void Translate_Constants(code_seg_t* const codeSegment)
 			}else
 			{
 			ins->Rd1.i8 = ins->immediate;
-			}			break;
+			}
+		}break;
 		default: break;
 		}
 		ins = ins->nextInstruction;

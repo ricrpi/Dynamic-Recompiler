@@ -124,6 +124,8 @@ void Translate_Generic(code_seg_t* const codeSegment)
 #endif
 	while (ins)
 	{
+		int32_t imm = ins->immediate;
+
 		switch (ins->instruction)
 		{
 			case SLL: break;
@@ -204,7 +206,21 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case TLTIU: break;
 			case TEQI: break;
 			case TNEI: break;
-			case ADDI: break;
+			case ADDI:
+				{
+					if (imm < 0)
+					{
+						InstrI(ins, ARM_SUB,AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm));
+						ins->immediate = (-ins->immediate) & 0xFF;
+					}
+					if (imm < -255)
+					{
+						new_ins = newInstrI(ARM_SUB, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
+
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+				break;
 			case ADDIU:
 				if (ins->immediate > 255)
 				{
@@ -260,12 +276,43 @@ void Translate_Generic(code_seg_t* const codeSegment)
 
 				}
 				break;
-			case ANDI: break;
-			case ORI:
-				if (ins->immediate > 255)
+			case ANDI:
+				if (imm < 0)
 				{
-					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
+					new_ins = newInstrI(ARM_BIC, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm)&0xFF);
 					ins->immediate = ins->immediate & 0xFF;
+					ADD_LL_NEXT(new_ins, ins);
+				}
+
+				if (imm < 255)
+				{
+					new_ins = newInstrI(ARM_BIC, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
+
+					ADD_LL_NEXT(new_ins, ins);
+				}
+
+				break;
+			case ORI:
+
+				ins->immediate = ins->immediate&0xff;
+
+				if (imm < 0)
+				{
+					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, 0xFF000000);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, 0x00FF0000);
+					ADD_LL_NEXT(new_ins, ins);
+
+					if ((imm)&0x0000FF00)
+					{	new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (imm)&0x0000FF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+
+				if (imm > 255)
+				{
+					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, imm&0xFF00);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
