@@ -96,6 +96,15 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, (0x20) << 24);
 			ADD_LL_NEXT(new_ins, ins);
 
+
+			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
+			ADD_LL_NEXT(new_ins, ins);
+
+			ins = insertCall_To_C(codeSegment, ins, AL, (uint32_t)&p_r_a, REG_HOST_STM_ALL ^ REG_HOST_STM_EABI);
+
+			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+			ADD_LL_NEXT(new_ins, ins);
+
 			// if address is raw (NE) then add base offset to get to host address
 			if (uMemoryBase < 0x80)
 			{
@@ -152,6 +161,14 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
 			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
+						ADD_LL_NEXT(new_ins, ins);
+
+						ins = insertCall_To_C(codeSegment, ins, AL, (uint32_t)&p_r_a, REG_HOST_STM_ALL ^ REG_HOST_STM_EABI);
+
+						new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+						ADD_LL_NEXT(new_ins, ins);
 
 			// TODO we need to check memory changed is not in code space
 			break;

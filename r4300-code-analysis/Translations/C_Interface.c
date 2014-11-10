@@ -31,6 +31,28 @@ void mem_lookup(unsigned int addr)
 	printf("mem_lookup(0x%08x) called\n",addr);
 }
 
+void p_r_a(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3
+		, uint32_t r4, uint32_t r5, uint32_t r6, uint32_t r7
+		, uint32_t r8, uint32_t r9, uint32_t r10, uint32_t r11
+		, uint32_t r12, uint32_t r13, uint32_t r14, uint32_t r15)
+{
+	printf( "r0 %08x\t r8  %08x\n"
+			"r1 %08x\t r9  %08x\n"
+			"r2 %08x\t r10 %08x\n"
+			"r3 %0x8\t fp  %08x\n"
+			"r4 %0x8\t r12 %08x\n"
+			"r5 %0x8\t sp  %08x\n"
+			"r6 %0x8\t lr  %08x\n"
+			"r7 %0x8\t pc  %08x\n"
+			, r0, r8
+			, r1, r9
+			, r2, r10
+			, r3, r11
+			, r4, r12
+			, r5, r13
+			, r6, r14
+			, r7, r15);
+}
 /*
  * Function to Compile MIPS code at 'address' and then return the ARM_PC counter to jump to
  */
