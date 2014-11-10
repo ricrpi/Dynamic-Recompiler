@@ -36,14 +36,14 @@ void p_r_a(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3
 		, uint32_t r8, uint32_t r9, uint32_t r10, uint32_t r11
 		, uint32_t r12, uint32_t r13, uint32_t r14, uint32_t r15)
 {
-	printf( "r0 %08x\t r8  %08x\n"
-			"r1 %08x\t r9  %08x\n"
-			"r2 %08x\t r10 %08x\n"
-			"r3 %0x8\t fp  %08x\n"
-			"r4 %0x8\t r12 %08x\n"
-			"r5 %0x8\t sp  %08x\n"
-			"r6 %0x8\t lr  %08x\n"
-			"r7 %0x8\t pc  %08x\n"
+	printf( "\tr0 0x%08x\t r8  0x%08x\n"
+			"\tr1 0x%08x\t r9  0x%08x\n"
+			"\tr2 0x%08x\t r10 0x%08x\n"
+			"\tr3 0x%08x\t fp  0x%08x\n"
+			"\tr4 0x%08x\t ip  0x%08x\n"
+			"\tr5 0x%08x\t sp  0x%08x\n"
+			"\tr6 0x%08x\t lr  0x%08x\n"
+			"\tr7 0x%08x\t pc  0x%08x\n"
 			, r0, r8
 			, r1, r9
 			, r2, r10

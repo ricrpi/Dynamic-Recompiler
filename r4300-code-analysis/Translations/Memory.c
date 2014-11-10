@@ -143,7 +143,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			new_ins = newInstrB(NE, CALL_TO_C_INSTR_COUNT + 2, 0);
+			new_ins = newInstrB(NE, CALL_TO_C_INSTR_COUNT + 4, 0);
 			new_ins->U = 0;
 			ADD_LL_NEXT(new_ins, ins);
 
@@ -162,13 +162,18 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
 			ADD_LL_NEXT(new_ins, ins);
 
+			//------------------------------------------------------------
+
+
 			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
-						ADD_LL_NEXT(new_ins, ins);
+			ADD_LL_NEXT(new_ins, ins);
 
-						ins = insertCall_To_C(codeSegment, ins, AL, (uint32_t)&p_r_a, REG_HOST_STM_ALL ^ REG_HOST_STM_EABI);
+			ins = insertCall_To_C(codeSegment, ins, AL, (uint32_t)&p_r_a, REG_HOST_STM_ALL ^ REG_HOST_STM_EABI);
 
-						new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
-						ADD_LL_NEXT(new_ins, ins);
+			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+			ADD_LL_NEXT(new_ins, ins);
+
+			//------------------------------------------------------------
 
 			// TODO we need to check memory changed is not in code space
 			break;
@@ -232,8 +237,18 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			//TODO set R0
-			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, REG_HOST_STM_R1_3);
+			new_ins = newInstrB(NE, CALL_TO_C_INSTR_COUNT + 4, 0);
+			new_ins->U = 0;
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1);
+			ADD_LL_NEXT(new_ins, ins);
+
+			// now lookup virtual address
+			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, 0);
 
 			break;
 		case LBU: break;
