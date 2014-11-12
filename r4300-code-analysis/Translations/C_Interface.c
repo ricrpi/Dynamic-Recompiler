@@ -322,10 +322,15 @@ code_seg_t* Generate_CodeStart(code_segment_data_t* seg_data)
 	// return back to debugger
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
+
 #elif defined(TEST_ROR)
-	// return back to debugger
-	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0x00120000);
+
+	newInstruction 		= newInstrI(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_NOT_USED, 0x00138000);
 	ADD_LL_NEXT(newInstruction, ins);
+
+	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
 #else
 	addLiteral(code_seg, &base, &offset,(uint32_t)MMAP_FP_BASE);
 	assert(base == REG_HOST_PC);
