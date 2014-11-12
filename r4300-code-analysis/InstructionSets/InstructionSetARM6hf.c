@@ -44,7 +44,7 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 
 		assert(rotate < 16);
 		assert(imm < 256);
-		return (rotate << 8) | (imm&0xFF);
+		return (((16-rotate)&0xf) << 8) | (imm&0xFF);
 	}
 	else if (ins->R3.regID != REG_NOT_USED)
 	{
@@ -391,7 +391,7 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 			if (word & 0x00000f00)	// any rotate
 			{
 				uint8_t ror = ((word>>8)&0xf)*2;
-				sprintf(Op2,", #%-11d (0x%08x)", ((word&0xff)<< ror) | (word&0xff) >> (32 - ror), ((word&0xff)<< ror) | (word&0xff) >> (32 - ror));
+				sprintf(Op2,", #%-11d (0x%08x)", ((word&0xff) << (32 - ror) | (word&0xff) >> (ror)), ((word&0xff)<< (32 - ror)) | (word&0xff) >> (ror));
 			}else
 			{
 				sprintf(Op2,", #%-11d (0x%08x)", word&0xff, word&0xff);
