@@ -27,6 +27,58 @@ char* currentTranslation = NULL;
 
 //=============================================================
 
+Instruction_t* insertP_R_A(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond)
+{
+	Instruction_t* new_ins;
+	regID_t base;
+	int32_t offset;
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	char* oldCurrentTranslation = currentTranslation;
+	currentTranslation = "insertP_R_A()";
+#endif
+
+	addLiteral(code_seg, &base, &offset, (uint32_t)&p_r_a);
+
+	new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
+	ADD_LL_NEXT(new_ins, ins);
+
+	new_ins 	= newInstrPUSH(AL, REG_HOST_STM_ALL ^ REG_HOST_STM_EABI);
+	ADD_LL_NEXT(new_ins, ins);
+
+	new_ins 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
+	ADD_LL_NEXT(new_ins, ins);
+
+#if 1
+	// load function address from [fp + offset] into PC
+	new_ins 	= newInstr(ARM_BX, cond, REG_NOT_USED, REG_HOST_R0, REG_NOT_USED);
+	new_ins->Ln = 1;
+	ADD_LL_NEXT(new_ins, ins);
+#else
+	//set lr
+	new_ins 	= newInstr(ARM_MOV, AL, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC);
+	ADD_LL_NEXT(new_ins, ins);
+
+	// load function address from [fp + offset] into PC
+	new_ins 	= newInstr(ARM_MOV, cond, REG_HOST_PC, REG_NOT_USED, REG_HOST_R0);
+	ADD_LL_NEXT(new_ins, ins);
+#endif
+
+	// pop lr
+	new_ins 	= newInstrPOP(AL, REG_HOST_STM_ALL ^ REG_HOST_STM_EABI);
+	ADD_LL_NEXT(new_ins, ins);
+
+	new_ins 	= newInstrPOP(AL, REG_HOST_STM_EABI);
+	ADD_LL_NEXT(new_ins, ins);
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = oldCurrentTranslation;
+#endif
+
+	return ins;
+}
+
+
 Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress, uint32_t Rmask)
 {
 	Instruction_t* newInstruction;
@@ -206,50 +258,8 @@ void Translate_Generic(code_seg_t* const codeSegment)
 			case TLTIU: break;
 			case TEQI: break;
 			case TNEI: break;
-			case ADDI:
-				{
-					if (imm < 0)
-					{
-						InstrI(ins, ARM_SUB,AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm));
-						ins->immediate = (-ins->immediate) & 0xFF;
-					}
-					if (imm < -255)
-					{
-						new_ins = newInstrI(ARM_SUB, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
-
-						ADD_LL_NEXT(new_ins, ins);
-					}
-
-					if (imm > 255)
-					{
-						new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
-						ins->immediate = ins->immediate & 0xFF;
-						ADD_LL_NEXT(new_ins, ins);
-					}
-				}
-				break;
-			case ADDIU:
-				{
-					if (imm < 0)
-					{
-						InstrI(ins, ARM_SUB,AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm));
-						ins->immediate = (-ins->immediate) & 0xFF;
-					}
-					if (imm < -255)
-					{
-						new_ins = newInstrI(ARM_SUB, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
-
-						ADD_LL_NEXT(new_ins, ins);
-					}
-
-					if (imm > 255)
-					{
-						new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
-						ins->immediate = ins->immediate & 0xFF;
-						ADD_LL_NEXT(new_ins, ins);
-					}
-				}
-				break;
+			case ADDI: break;
+			case ADDIU: break;
 			case SLTI:
 				if (ins->immediate > 255)
 				{
@@ -297,49 +307,10 @@ void Translate_Generic(code_seg_t* const codeSegment)
 
 				}
 				break;
-			case ANDI:
-				if (imm < 0)
-				{
-					new_ins = newInstrI(ARM_BIC, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm)&0xFF);
-					ins->immediate = ins->immediate & 0xFF;
-					ADD_LL_NEXT(new_ins, ins);
-				}
-
-				if (imm < 255)
-				{
-					new_ins = newInstrI(ARM_BIC, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
-
-					ADD_LL_NEXT(new_ins, ins);
-				}
-
-				break;
-			case ORI:
-
-				ins->immediate = ins->immediate&0xff;
-
-				if (imm < 0)
-				{
-					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, 0xFF000000);
-					ADD_LL_NEXT(new_ins, ins);
-
-					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, 0x00FF0000);
-					ADD_LL_NEXT(new_ins, ins);
-
-					if ((imm)&0x0000FF00)
-					{	new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (imm)&0x0000FF00);
-						ADD_LL_NEXT(new_ins, ins);
-					}
-				}
-
-				if (imm > 255)
-				{
-					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, imm&0xFF00);
-					ADD_LL_NEXT(new_ins, ins);
-				}
-				break;
+			case ANDI: break;
+			case ORI: break;
 			case XORI: break;
-			case LUI:
-				break;
+			case LUI: break;
 			case MFC0: break;
 			case MTC0:
 				if (ins->R1.regID == 0)
