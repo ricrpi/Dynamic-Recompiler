@@ -97,6 +97,8 @@ void DebugRuntimePrintSegment();
 
 void DebugRuntimePrintMIPS();
 
+Instruction_t* insertP_R_A(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond);
+
 Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress, uint32_t Rmask);
 
 void Translate_init(code_seg_t* const codeSegment);
@@ -115,7 +117,7 @@ void Translate_Constants(code_seg_t* const codeSegment);
  * Function to turn 64bit registers into multiple 32-bit registers
  *
  */
-void Translate_32BitRegisters(code_seg_t* const codeSegment);
+void Translate_ALU(code_seg_t* const codeSegment);
 
 void Translate_Generic(code_seg_t* const codeSegment);
 
@@ -167,7 +169,7 @@ static TranslationsMap Translations[] =
 #endif
 
 		{Translate_Constants,				"Constants"},				//
-		{Translate_32BitRegisters,			"32BitRegisters"},			//
+		{Translate_ALU,						"ALU"},						//
 		{Translate_Generic,					"Generic"},					//
 		{Translate_FPU,						"FPU"},						//
 		{Translate_Trap,					"Trap"},					// Not seen in DynaRec
