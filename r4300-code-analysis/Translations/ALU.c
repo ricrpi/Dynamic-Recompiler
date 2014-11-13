@@ -11,7 +11,7 @@
  * Function to turn 64bit registers into multiple 32-bit registers
  *
  */
-void Translate_32BitRegisters(code_seg_t* const codeSegment)
+void Translate_ALU(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	Instruction_t*new_ins;
@@ -19,7 +19,7 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 	ins = codeSegment->Intermcode;
 
 #if defined(USE_INSTRUCTION_COMMENTS)
-	currentTranslation = "32BitRegisters";
+	currentTranslation = "ALU";
 #endif
 
 	while (ins)
@@ -27,6 +27,7 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 		Rd1 = ins->Rd1.regID;
 		R1 = ins->R1.regID;
 		R2 = ins->R2.regID;
+		int32_t imm = ins->immediate;
 		switch (ins->instruction)
 		{
 			case DSLLV:
@@ -179,9 +180,7 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 			case ADDU: break;
 			case SUB: break;
 			case SUBU: break;
-			case AND:
-
-				break;
+			case AND: break;
 			case OR: break;
 			case XOR: break;
 			case NOR: break;
@@ -209,12 +208,89 @@ void Translate_32BitRegisters(code_seg_t* const codeSegment)
 			case TLTIU: break;
 			case TEQI: break;
 			case TNEI: break;
-			case ADDI: break;
-			case ADDIU: break;
+			case ADDI:
+				{
+					if (imm < 0)
+					{
+						InstrI(ins, ARM_SUB,AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm));
+						ins->immediate = (-ins->immediate) & 0xFF;
+					}
+					if (imm < -255)
+					{
+						new_ins = newInstrI(ARM_SUB, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
+
+						ADD_LL_NEXT(new_ins, ins);
+					}
+
+					if (imm > 255)
+					{
+						new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
+						ins->immediate = ins->immediate & 0xFF;
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+				break;
+			case ADDIU:
+				{
+					if (imm < 0)
+					{
+						InstrI(ins, ARM_SUB,AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm));
+						ins->immediate = (-ins->immediate) & 0xFF;
+					}
+					if (imm < -255)
+					{
+						new_ins = newInstrI(ARM_SUB, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
+
+						ADD_LL_NEXT(new_ins, ins);
+					}
+
+					if (imm > 255)
+					{
+						new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
+						ins->immediate = ins->immediate & 0xFF;
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+				break;
 			case SLTI: break;
 			case SLTIU: break;
-			case ANDI: break;
-			case ORI: break;
+			case ANDI:
+				if (imm < 0)
+				{
+					new_ins = newInstrI(ARM_BIC, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm)&0xFF);
+					ins->immediate = ins->immediate & 0xFF;
+					ADD_LL_NEXT(new_ins, ins);
+				}
+
+				if (imm < 255)
+				{
+					new_ins = newInstrI(ARM_BIC, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
+			case ORI:
+				ins->immediate = ins->immediate&0xff;
+
+				if (imm < 0)
+				{
+					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, 0xFF000000);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, 0x00FF0000);
+					ADD_LL_NEXT(new_ins, ins);
+
+					if ((imm)&0x0000FF00)
+					{	new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (imm)&0x0000FF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+
+				if (imm > 255)
+				{
+					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, imm&0xFF00);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
 			case XORI: break;
 			case LUI: break;
 			case MFC0: break;
