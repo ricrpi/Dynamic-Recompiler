@@ -253,6 +253,7 @@ static void opsh(char* str, uint32_t word)
 	}
 	else str[0] = 0;
 }
+
 void printf_arm(const uint32_t addr, const uint32_t word)
 {
 	printf("0x%08x", addr);
@@ -260,24 +261,29 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 	printf(" 0x%08x", word);
 #endif
 
-	if ((word & 0x0fb00f90) == 0x01000090) // swap
-	{
-		printf("\tswap\n");
-	}
-	else if((word & 0x0fc00090) == 0x00000090) // Multiply
-	{
-		printf("\tmul%s\n", arm_cond[word>>28]);
-	}
-	else if ((word & 0x0fe0007f) == 0x07e0001f)	// bfc
-	{
-		printf("\tbfc%s\t%s, #%d, #%d\n", arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], (word>>7)&0x1f, ((word>>16)&0x1f) - ((word>>7)&0x1f));
-	}
-	else if((word & 0x0f000000) == 0x0a000000) // Branch
+	// ADC - See ALU
+	// ADD - See ALU
+	// AND - See ALU
+	// ASR - See ALU
+	if((word & 0x0f000000) == 0x0a000000) // B
 	{
 		// TODO we could lookup the function being branched to ...
 		printf("\tb%s\t%d   // (0x%x)\n", arm_cond[word>>28], ((int32_t)(word&0xffffff) << 8)/(1 << 8), ((word&0xffffff) << 8)/(1 << 8));
 	}
-	else if((word & 0x0f000000) == 0x0b000000) // Branch and Link
+	else if ((word & 0x0fe0007f) == 0x07e0001f) // BFC
+	{
+		printf("\tbfc%s\t%s, #%d, #%d\n", arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], (word>>7)&0x1f, ((word>>16)&0x1f) - ((word>>7)&0x1f));
+	}
+	else if ((word & 0x0fe00070) == 0x07c00010) // BFI
+	{
+		printf("\tbfi%s\t%s, %s, #%d, #%d\n", arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word)&0xf], (word>>7)&0x1f, ((word>>16)&0x1f) - ((word>>7)&0x1f));
+	}
+	// BIC - See ALU
+	else if((word & 0x0ff000f0) == 0x01200070) //BKPT
+	{
+		printf("\tbkpt #%d\n", ((word>>4)&0xfff0) | (word&0xf));
+	}
+	else if((word & 0x0f000000) == 0x0b000000) // BL
 	{
 		printf("\tbl%s\t%d // (0x%x)\n", arm_cond[word>>28], ((int32_t)(word&0xffffff) << 8)/(1 << 8), ((word&0xffffff) << 8)/(1 << 8));
 	}
@@ -292,6 +298,33 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 			printf("\tbx%s\t%s\n", arm_cond[word>>28], arm_reg_a[word&0xf]);
 		}
 	}
+	else if ((word & 0xff000010) == 0xee000000) // CDP
+	{
+		printf("\tcdp\t\n");
+	}
+	else if ((word & 0x0f000010) == 0x0e000000) // CDP2
+	{
+		printf("\tcdp2\t\n");
+	}
+	else if ((word == 0xf57ff01f)) // CLREX	ARMv6K, ARMv7
+	{
+		printf("\tclrex\n");
+	}
+	//CLZ
+	//CMN See ALU
+	//CMP See ALU
+	//CPS
+	//CPY
+	//DBG
+	//DMB
+	//DSB
+	//ENTERX
+	//EOR See ALU
+	//HB/HBL/HBLP/HBP (Thumb)
+	//HVC
+	//ISB
+	//IT (Thumb)
+	//LDC
 	else if((word & 0x0e400000) == 0x08000000) // LDM/STM
 	{
 		char regs[60];
@@ -316,18 +349,6 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 		{
 			printf("\tstm%s%s\t%s%s, {%s}\n", pre, arm_cond[word>>28], arm_reg_a[(word>>16)&0xf], wb, regs);
 		}
-	}
-	else if((word & 0x0fbf0fff) == 0x010f0000) // MRS
-	{
-
-	}
-	else if((word & 0x0fbffff0) == 0x0129f000) // MSR (all)
-	{
-
-	}
-	else if((word & 0x0fbff000) == 0x0329f000) // MSR (flag)
-	{
-
 	}
 	else if((word & 0x0c000000) == 0x04000000) // LDR / STR Immediate
 	{
@@ -382,6 +403,130 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 			printf("\t%s%s%s\t%s, [%s], %s%s%s\n", ins, byt, arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], minus, arm_reg_a[(word)&0xf], str_opsh);
 
 	}
+	//LDRB
+	//LDRBT
+	//LDRD
+	//LDREX
+	//LDREXB
+	//LDREXD
+	//LDREXH
+	//LDRH
+	//LDRHT
+	//LDRSB
+	//LDRSBT
+	//LDRSH
+	//LDRSHT
+	//LDRT
+	//LEAVEX
+	//LSL See ALU
+	//LSR See ALU
+	//MCR
+	//MCRR
+	//MLA
+	//MLS
+	//MOV See ALU
+	//MOVT
+	//MRC
+	//MRRC
+	else if((word & 0x0fbf0fff) == 0x010f0000) // MRS
+	{
+
+	}
+	else if((word & 0x0fbffff0) == 0x0129f000) // MSR (all)
+	{
+
+	}
+	else if((word & 0x0fbff000) == 0x0329f000) // MSR (flag)
+	{
+
+	}
+	else if((word & 0x0fc00090) == 0x00000090) // MUL
+	{
+		printf("\tmul%s\n", arm_cond[word>>28]);
+	}
+	//MVN See ALU
+	//NEG
+	//ORN
+	//ORR See ALU
+	//PKH
+	//PLD
+	//PLI
+	//POP
+	//PUSH
+	//QADD
+	//QADD16
+	//QADD8
+	//QASX
+	//QDADD
+	//QDSUB
+	//QSAX
+	//QSUB
+	//QSUB16
+	//QSUB8
+	//RBIT
+	//REV
+	//REV16
+	//REVSH
+	//RFE
+	//ROR See ALU
+	//RRX
+	//RSB See ALU
+	//RSC See ALU
+	//SADD16
+	//SADD8
+	//SASX
+	//SBC See ALU
+	//SBFX
+	//SDIV
+	//SEL
+	//SETEND
+	//SEV
+	//SVC
+	else if ((word & 0x0fb00f90) == 0x01000090) // SWP
+	{
+		printf("\tswp\n");
+	}
+	//SXTAB
+	//SXTAB16
+	//SXTAH
+	//SXTB
+	//SXTB16
+	//SXTH
+	//TBB, TBH
+	//TEQ See ALU
+	//TST See ALU
+	//UADD16
+	//UADD8
+	//UASX
+	//UDF
+	//UDIV
+	//UHADD16
+	//UHADD8
+	//UHASX
+	//UHSAX
+	//UHSUB16
+	//UHSUB8
+	//UMAAL
+	//UMLAL
+	//UMULL
+	//UQADD16
+	//UQADD8
+	//UQASX
+	//UQSAX
+	//UQSUB16
+	//UQSUB8
+	//USAD8
+	//USADA8
+	//USAT
+	//USAT16
+	//USAX
+	//USUB16
+	//USUB8
+	//UXTAB
+	//UXTAB16
+	//UXTB
+	//UXTB16
+	//UXTH
 	else if((word & 0x0c000000) == 0x00000000) // ALU
 	{
 		char Op2[30];
@@ -472,11 +617,118 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 			printf("\tmvn%s\t%s, %s%s\n", 	arm_cond[word>>28], arm_reg_a[(word>>12)&0xf], arm_reg_a[(word>>16)&0xf], Op2); break;
 			break;
 		}
-	}	// TODO ARM FPU printf
-	//else if ((word & 0x0c000000) == 0x0c000000)
-	//{
-	//	printf("%x\tTODO co processor\n", addr); // TODO arm co-processor instructions
-	//}
+	}
+	//VABA
+	//VABD
+	//VABS
+	//VACGE/VACGT/VACLE/VACLT
+	//VADD
+	//VADDHN
+	//VADDL/VADDW
+	//VAND
+	//VBIC
+	//VBIF
+	//VCEQ
+	//VCGE
+	//VCGT
+	//VCLE
+	//VCLS
+	//VCLT
+	//VCLZ
+	//VCMP/VCMPE
+	//VCNT
+	//VCVT
+	//VCVTB/VCVTT
+	//VDIV
+	//VDUP
+	//VEOR
+	//VEXT
+	//VFMA/VFMS
+	//VFNMA/VFNMS
+	//VHADD
+	//VLD1
+	//VLD2
+	//VLD3
+	//VLD4
+	//VLDM
+	//VLDR
+	//VMAX/VMIN
+	//VMLA/VMLAL
+	//VMOV
+	//VMOVL
+	//VMOVN
+	//VMRS
+	//VMSR
+	//VMUL
+	//VMVN
+	//VNEG
+	//VNMLA
+	//VORN
+	//VORR
+	//VPADAL
+	//VPADD
+	//VPADDL
+	//VPMAX/VPMIN
+	//VPOP
+	//VPUSH
+	//VQABS
+	//VQADD
+	//VQDMLAL
+	//VQDMULH
+	//VQDMULL
+	//VQMOVN
+	//VQNEG
+	//VQRDMULH
+	//VQRSHL
+	//VQRSHRN
+	//VQSHL
+	//VQSHRN
+	//VQSUB
+	//VRADDHN
+	//VRECPE
+	//VRECPS
+	//VREV16/VREV32
+	//VRHADD
+	//VRSHL
+	//VRSHR
+	//VRSHRN
+	//VRQSRTS
+	//VRSRA
+	//VRSUBHN
+	//VSHL
+	//VSHLL
+	//VSHR
+	//VSHRN
+	//VSLI
+	//VSQRT
+	//VSRA
+	//VSRI
+	//VST1
+	//VST2
+	//VST3
+	//VST4
+	//VSTM
+	//VSTR
+	//VSUB
+	//VSUBHN
+	//VSUBL
+	//VSWP
+	//VTBL
+	//VTRN
+	//VTST
+	//VUZP
+	//VZIP
+	//WFE
+	else if ((word&0x0fffffff) == 0x0320f002)
+	{
+		printf("\twfe\n");
+	}
+	//WFI
+	else if ((word&0x0fffffff) == 0x0320f003)
+	{
+		printf("\twfi\n");
+	}
+	//YIELD
 	else
 	{
 		printf ("\tUnknown Command - value =  %010d (%0x08x)\n", word, word);

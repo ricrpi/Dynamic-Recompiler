@@ -4,7 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../Translations/32bit.c \
+../Translations/ALU.c \
 ../Translations/Branching.c \
 ../Translations/C_Interface.c \
 ../Translations/Constants.c \
@@ -20,7 +20,7 @@ C_SRCS += \
 ../Translations/Trap.c 
 
 OBJS += \
-./Translations/32bit.o \
+./Translations/ALU.o \
 ./Translations/Branching.o \
 ./Translations/C_Interface.o \
 ./Translations/Constants.o \
@@ -36,7 +36,7 @@ OBJS += \
 ./Translations/Trap.o 
 
 C_DEPS += \
-./Translations/32bit.d \
+./Translations/ALU.d \
 ./Translations/Branching.d \
 ./Translations/C_Interface.d \
 ./Translations/Constants.d \
