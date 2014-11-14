@@ -53,7 +53,8 @@
 					HELP_TRANS "\n"\
 					HELP_SEG "\n"
 
+void Debugger_wrapper();
 
-int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context);
+int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context, size_t* regs);
 
 #endif /* DEBUGGER_H_ */

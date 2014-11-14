@@ -156,6 +156,8 @@ void Translate_Literals(code_seg_t* const codeSegment);
 
 void Translate_Write(code_seg_t* const codeSegment);
 
+void Translate_BreakAtEndSegment(code_seg_t* codeSegment);
+
 void Translate_Debug(code_seg_t* const codeSegment);
 
 void Translate(code_seg_t* const codeSegment);
@@ -178,6 +180,7 @@ static TranslationsMap Translations[] =
 		{Translate_Debug,					"Debug"},					// Provides Debug Hooks
 #endif
 		{Translate_CleanUp,					"CleanUp"},					// must be after load/storeCachedRegisters
+		{Translate_BreakAtEndSegment,		"BreakAtEnd"},
 		{Translate_Branch,					"Branch"},					// Convert MIPS branches
 
 		// translations after this point must not change segment length

@@ -140,6 +140,40 @@ static void printLine()
 	printf("_____________________________________\n\n");
 }
 
+static void printregs(mcontext_t* context, size_t* regs)
+{
+	if (context)
+	{
+	#ifndef __i386
+			printf("\n\tr0 0x%08x\t r8  0x%08x\n", context->arm_r0, context->arm_r8);
+			printf("\tr1 0x%08x\t r9  0x%08x\n", context->arm_r1, context->arm_r9);
+			printf("\tr2 0x%08x\t r10 0x%08x\n", context->arm_r2, context->arm_r10);
+			printf("\tr3 0x%08x\t fp  0x%08x\n", context->arm_r3, context->arm_fp);
+			printf("\tr4 0x%08x\t ip  0x%08x\n", context->arm_r4, context->arm_ip);
+			printf("\tr5 0x%08x\t sp  0x%08x\n", context->arm_r5, context->arm_sp);
+			printf("\tr6 0x%08x\t lr  0x%08x\n", context->arm_r6, context->arm_lr);
+			printf("\tr7 0x%08x\t pc  0x%08x\n", context->arm_r7, context->arm_pc);
+			printf("\tcpsr 0x%08x\n", context->arm_cpsr);
+
+	#endif
+	}
+	else if (regs)
+	{
+		printf("\n\tr0 0x%08x\t r8  0x%08x\n", regs[0], regs[8]);
+		printf("\tr1 0x%08x\t r9  0x%08x\n", regs[1], regs[9]);
+		printf("\tr2 0x%08x\t r10 0x%08x\n", regs[2], regs[10]);
+		printf("\tr3 0x%08x\t fp  0x%08x\n", regs[3], regs[11]);
+		printf("\tr4 0x%08x\t ip  0x%08x\n", regs[4], regs[12]);
+		printf("\tr5 0x%08x\t sp  0x%08x\n", regs[5], regs[13]);
+		printf("\tr6 0x%08x\t lr  0x%08x\n", regs[6], regs[14]);
+		printf("\tr7 0x%08x\n", regs[7]);
+	}
+	else
+	{
+		printf("Cannot print registers\n");
+	}
+}
+
 static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData, const uint32_t val, const code_seg_t* const CurrentCodeSeg)
 {
 	int x;
@@ -208,7 +242,7 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 	}
 }
 
-static int Debugger_print(const code_segment_data_t* const segmentData, mcontext_t* context)
+static int Debugger_print(const code_segment_data_t* const segmentData, mcontext_t* context, size_t* regs)
 {
 	int x=0;
 	char *tailPointer;
@@ -347,35 +381,14 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 			}
 			else if (!CMD_CMP(2, "arm"))
 			{
-				#ifndef __i386
-						printf("\n\tr0 0x%08x\t r8  0x%08x\n", context->arm_r0, context->arm_r8);
-						printf("\tr1 0x%08x\t r9  0x%08x\n", context->arm_r1, context->arm_r9);
-						printf("\tr2 0x%08x\t r10 0x%08x\n", context->arm_r2, context->arm_r10);
-						printf("\tr3 0x%08x\t fp  0x%08x\n", context->arm_r3, context->arm_fp);
-						printf("\tr4 0x%08x\t ip  0x%08x\n", context->arm_r4, context->arm_ip);
-						printf("\tr5 0x%08x\t sp  0x%08x\n", context->arm_r5, context->arm_sp);
-						printf("\tr6 0x%08x\t lr  0x%08x\n", context->arm_r6, context->arm_lr);
-						printf("\tr7 0x%08x\t pc  0x%08x\n", context->arm_r7, context->arm_pc);
-						printf("\tcpsr 0x%08x\n", context->arm_cpsr);
-
-				#endif
+				printregs(context,regs);
 			}
 		}
 		else
 		{
 			DebugRuntimePrintMIPS();
 
-			#ifndef __i386
-				printf("\n\tr0 0x%08x\t r8  0x%08x\n", context->arm_r0, context->arm_r8);
-				printf("\tr1 0x%08x\t r9  0x%08x\n", context->arm_r1, context->arm_r9);
-				printf("\tr2 0x%08x\t r10 0x%08x\n", context->arm_r2, context->arm_r10);
-				printf("\tr3 0x%08x\t fp  0x%08x\n", context->arm_r3, context->arm_fp);
-				printf("\tr4 0x%08x\t ip  0x%08x\n", context->arm_r4, context->arm_ip);
-				printf("\tr5 0x%08x\t sp  0x%08x\n", context->arm_r5, context->arm_sp);
-				printf("\tr6 0x%08x\t lr  0x%08x\n", context->arm_r6, context->arm_lr);
-				printf("\tr7 0x%08x\t pc  0x%08x\n", context->arm_r7, context->arm_pc);
-				printf("\tcpsr 0x%08x\n", context->arm_cpsr);
-			#endif
+			printregs(context,regs);
 		}
 
 		printLine();
@@ -706,7 +719,12 @@ void DebugRuntimePrintMIPS()
 	return;
 }
 
-int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context)
+void Debugger_wrapper(size_t* regs)
+{
+	while (Debugger_start(&segmentData, 0, regs));
+}
+
+ int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context, size_t* regs)
 {
 	//find segment
 	if (!CurrentCodeSeg) CurrentCodeSeg = segmentData->dbgCurrentSegment;
@@ -722,7 +740,7 @@ int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* con
 	}
 	else if (!CMD_CMP(0, "print"))
 	{
-		Debugger_print(segmentData, context);
+		Debugger_print(segmentData, context, regs);
 	}
 	else if (!CMD_CMP(0, "segment"))
 	{

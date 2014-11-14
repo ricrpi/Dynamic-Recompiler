@@ -50,7 +50,7 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 
 	printf("Current segment 0x%X\n\n", (uint32_t)segmentData.dbgCurrentSegment);
 
-	while (Debugger_start(&segmentData, &ucontext->uc_mcontext));
+	while (Debugger_start(&segmentData, &ucontext->uc_mcontext, NULL));
 
 	exit(0);
 }
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
 
 	printf("\nFinished processing ROM\n");
 
-	while (Debugger_start(&segmentData, NULL));
+	while (Debugger_start(&segmentData, NULL, NULL));
 
 
 	munmap((uint32_t*)MMAP_BASE, MMAP_BASE_SIZE + romlength);

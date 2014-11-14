@@ -9,6 +9,32 @@
 #include "Debugger.h"	// RWD
 
 
+void Translate_BreakAtEndSegment(code_seg_t* codeSegment)
+{
+	Instruction_t*ins, *new_ins;
+	ins = codeSegment->Intermcode;
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Call Debugger_wrapper()";
+#endif
+
+	while (ins->nextInstruction->nextInstruction)
+	{
+		ins = ins->nextInstruction;
+	}
+
+	new_ins = newInstrPUSH(AL, REG_HOST_STM_ALL);
+	ADD_LL_NEXT(new_ins, ins);
+
+	new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_SP);
+	ADD_LL_NEXT(new_ins, ins);
+
+	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)Debugger_wrapper, 0);
+
+	new_ins = newInstrPOP(AL, REG_HOST_STM_ALL);
+	ADD_LL_NEXT(new_ins, ins);
+}
+
 void Translate_Debug(code_seg_t* codeSegment)
 {
 	Instruction_t*ins;

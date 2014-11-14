@@ -15,7 +15,7 @@
 //#define TEST_BRANCHING_BACKWARD
 //#define TEST_BRANCH_TO_C
 //#define TEST_LITERAL
-#define TEST_ROR
+//#define TEST_ROR
 
 // ========= Extra Debugging Information ==============================
 
