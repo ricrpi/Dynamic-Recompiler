@@ -174,6 +174,8 @@ typedef enum _Instruction_e {
 	INVALID,
 	NO_OP,
 
+	INT_BRANCH,
+
 	SLL,	// Rd1 (rd) = R1 (rt) << imm5 				The contents of the low-order 32-bit word of GPR rt are shifted left, inserting zeroes into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
     SRL,	// Rd1 (rd) = R1 (rt) >> imm5				The contents of the low-order 32-bit word of GPR rt are shifted right, inserting zeros into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
     SRA,	// Rd1 (rd) = R1 (rt) >> imm5 (arithmetic)	The contents of the low-order 32-bit word of GPR rt are shifted right, duplicating the sign-bit (bit 31) in the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
@@ -587,6 +589,8 @@ Instruction_t* newInstrI(const Instruction_e ins, const Condition_e cond, const 
 Instruction_t* newInstrS(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
 
 Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
+
+Instruction_t* newInstrIntB(const Condition_e cond, const Instruction_t* ins);
 
 Instruction_t* newInstrB(const Condition_e cond, const int32_t offset, const uint32_t absolute);
 

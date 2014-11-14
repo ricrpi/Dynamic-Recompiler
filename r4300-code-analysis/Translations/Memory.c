@@ -136,8 +136,8 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			new_ins = newInstrB(NE, CALL_TO_C_INSTR_COUNT + 6, 0);
-			new_ins->U = 0;
+			Instruction_t* branchFrom,*branchTo;
+			branchFrom = new_ins = newEmptyInstr();
 			ADD_LL_NEXT(new_ins, ins);
 
 			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
@@ -152,7 +152,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, R1, REG_HOST_R0, funcTempImm&0xfff);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+			branchTo = new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
 			ADD_LL_NEXT(new_ins, ins);
 
 			//------------------------------------------------------------
@@ -160,6 +160,8 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ins = insertP_R_A(codeSegment, ins, AL);
 
 			//------------------------------------------------------------
+
+			InstrIntB(branchFrom, NE, branchTo->nextInstruction);
 
 			// TODO we need to check memory changed is not in code space
 			break;

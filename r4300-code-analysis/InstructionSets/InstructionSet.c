@@ -252,6 +252,13 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 	return ins;
 }
 
+Instruction_t* InstrIntB(Instruction_t* ins, const Condition_e cond, const Instruction_t* find_ins)
+{
+	ins->instruction = INT_BRANCH;
+	ins->branchToThisInstruction = find_ins;
+	return ins;
+}
+
 Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t offset, const uint32_t absolute)
 {
 	ins->instruction = ARM_B;
@@ -261,6 +268,7 @@ Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t 
 	ins->R2.regID    = REG_NOT_USED;
 	ins->I = absolute;
 	ins->offset = offset;
+	ins->Ln = 0;
 
 	return ins;
 }
@@ -330,6 +338,8 @@ Instruction_t* newEmptyInstr()
 
 }
 
+
+
 Instruction_t* newInstr(const Instruction_e ins, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
 {
 	Instruction_t* newIns = newEmptyInstr();
@@ -361,6 +371,12 @@ Instruction_t* newInstrIS(const Instruction_e ins, 	const Condition_e cond, cons
 	newIns->S = 1;
 
 	return newIns;
+}
+
+Instruction_t* newInstrIntB(const Condition_e cond, const Instruction_t* ins)
+{
+	Instruction_t* newInstr = newEmptyInstr();
+	return InstrIntB(newInstr, cond, ins);
 }
 
 /*

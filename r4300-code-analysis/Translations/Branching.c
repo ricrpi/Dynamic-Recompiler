@@ -40,6 +40,46 @@ static void getTgtAddress(code_seg_t* const codeSegment, uint32_t instructionCou
 	}
 }
 
+static uint32_t FindInstructionIndex(code_seg_t* const codeSegment, const Instruction_t* const find_ins)
+{
+	uint32_t index = 0;
+	Instruction_t*	ins= 			codeSegment->Intermcode;
+
+	while (ins && ins != find_ins)
+	{
+		index++;
+		ins = ins->nextInstruction;
+	}
+
+	return index;
+}
+
+void Translate_InterCode_Branch(code_seg_t* const codeSegment)
+{
+	Instruction_t*	ins;
+	ins = 			codeSegment->Intermcode;
+	uint32_t index = 0;
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Resolving Intermediate Branches";
+#endif
+
+	while (ins)
+	{
+		switch (ins->instruction)
+		{
+		case INT_BRANCH:
+			ins->instruction = ARM_B;
+			ins->offset = FindInstructionIndex(codeSegment, ins->branchToThisInstruction) - index;
+
+			break;
+		default: break;
+		}
+		index++;
+		ins = ins->nextInstruction;
+	}
+}
+
 void Translate_Branch(code_seg_t* const codeSegment)
 {
 	Instruction_t*	ins;

@@ -135,6 +135,8 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment);
 
 void Translate_CleanUp(code_seg_t* const codeSegment);
 
+void Translate_InterCode_Branch(code_seg_t* const codeSegment);
+
 void Translate_Branch(code_seg_t* const codeSegment);
 
 /*
@@ -163,11 +165,6 @@ static TranslationsMap Translations[] =
 		{Translate_init,					"init"},					//
 		{Translate_DelaySlot,				"DelaySlot"},				//
 		{Translate_CountRegister,			"CountRegister"},			//
-
-#if defined(USE_TRANSLATE_DEBUG)
-		{Translate_Debug,					"Debug"},					// Provides Debug Hooks
-#endif
-
 		{Translate_Constants,				"Constants"},				//
 		{Translate_ALU,						"ALU"},						//
 		{Translate_Generic,					"Generic"},					//
@@ -177,8 +174,15 @@ static TranslationsMap Translations[] =
 		{Translate_LoadStoreWriteBack, 		"LoadStoreWriteBack"},		//
 		{Translate_LoadCachedRegisters, 	"LoadCachedRegisters"},		//
 		{Translate_StoreCachedRegisters, 	"StoreCachedRegisters"},	//
+#if defined(USE_TRANSLATE_DEBUG)
+		{Translate_Debug,					"Debug"},					// Provides Debug Hooks
+#endif
 		{Translate_CleanUp,					"CleanUp"},					// must be after load/storeCachedRegisters
-		{Translate_Branch,					"Branch"},					// translations after must not change segment length
+		{Translate_Branch,					"Branch"},					// Convert MIPS branches
+
+		// translations after this point must not change segment length
+
+		{Translate_InterCode_Branch,		"Intermediate Branch"},
 		{Translate_Registers, 				"Registers"},				//
 		{Translate_Literals, 				"Literals"},				//
 		{Translate_Write, 					"Write"}					//
