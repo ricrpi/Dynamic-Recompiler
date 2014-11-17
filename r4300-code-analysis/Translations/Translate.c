@@ -43,7 +43,7 @@ Instruction_t* insertP_R_A(code_seg_t* const code_seg, Instruction_t* ins, const
 	new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
 	ADD_LL_NEXT(new_ins, ins);
 
-	new_ins 	= newInstrPUSH(AL, REG_HOST_STM_ALL ^ REG_HOST_STM_EABI);
+	new_ins 	= newInstrPUSH(AL, REG_HOST_STM_ALL & ~REG_HOST_STM_EABI);
 	ADD_LL_NEXT(new_ins, ins);
 
 	new_ins 		= newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
@@ -65,7 +65,7 @@ Instruction_t* insertP_R_A(code_seg_t* const code_seg, Instruction_t* ins, const
 #endif
 
 	// pop lr
-	new_ins 	= newInstrPOP(AL, REG_HOST_STM_ALL ^ REG_HOST_STM_EABI);
+	new_ins 	= newInstrPOP(AL, REG_HOST_STM_ALL & ~REG_HOST_STM_EABI);
 	ADD_LL_NEXT(new_ins, ins);
 
 	new_ins 	= newInstrPOP(AL, REG_HOST_STM_EABI);
