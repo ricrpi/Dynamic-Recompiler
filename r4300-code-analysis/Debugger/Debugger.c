@@ -495,6 +495,10 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 	{
 		CurrentCodeSeg = segmentData->segMem;
 	}
+	else if (!CMD_CMP(1, "branch"))
+	{
+		CurrentCodeSeg = segmentData->segBranchUnknown;
+	}
 	else if (!CMD_CMP(1, "interrupt"))
 	{
 		CurrentCodeSeg = segmentData->segInterrupt;
@@ -735,6 +739,11 @@ void Debugger_wrapper(size_t* regs)
 	if (userInput[0][0] == '\0') return 1;
 
 	if (!CMD_CMP(0, "quit"))
+	{
+		exit(0);
+		//return 0;
+	}
+	else if (!CMD_CMP(0, "continue"))
 	{
 		return 0;
 	}
