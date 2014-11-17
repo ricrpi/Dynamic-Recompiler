@@ -265,7 +265,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 	printf("Segment 0x%x uses %d registers\n",(uint32_t)codeSegment, NumberRegUsed);
 #endif
 
-	if (NumberRegUsed <= 11)
+	if (NumberRegUsed <= COUNTOF(RegsAvailable))
 	{
 		ins = codeSegment->Intermcode;
 		uint32_t uiCurrentRegister = 0;
@@ -376,9 +376,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 				if (nextUsed == -2)
 				{
 					new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, ins->Rd1.regID, REG_EMU_FP, ins->Rd1.regID * 4);
-					new_ins->nextInstruction = ins->nextInstruction;
-					ins->nextInstruction = new_ins;
-					ins = ins->nextInstruction;
+					ADD_LL_NEXT(new_ins, ins);
 				}
 				if (nextUsed == -1) // Register will be over-written before next use so don't bother saving
 				{
@@ -394,9 +392,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 				if (nextUsed == -2)
 				{
 					new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, ins->Rd2.regID, REG_EMU_FP, ins->Rd2.regID * 4);
-					new_ins->nextInstruction = ins->nextInstruction;
-					ins->nextInstruction = new_ins;
-					ins = ins->nextInstruction;
+					ADD_LL_NEXT(new_ins, ins);
 				}
 				if (nextUsed == -1) // Register will be over-written before next use so don't bother saving
 				{
