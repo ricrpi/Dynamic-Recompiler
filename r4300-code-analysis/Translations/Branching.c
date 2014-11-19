@@ -71,7 +71,24 @@ void Translate_InterCode_Branch(code_seg_t* const codeSegment)
 		case INT_BRANCH:
 			ins->instruction = ARM_B;
 			ins->offset = FindInstructionIndex(codeSegment, ins->branchToThisInstruction) - index;
+			break;
 
+		case ARM_LDR_LIT:
+		case ARM_MOV:
+			if (ins->Rd1.regID == REG_HOST_LR && ins->branchToThisInstruction)
+			{
+				int32_t offset;
+				offset = (FindInstructionIndex(codeSegment, ins->branchToThisInstruction) - index)*4 - 8;
+
+				if (offset >= 0)
+				{
+					InstrI(ins, ARM_ADD, ins->cond, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, offset );
+				}
+				else
+				{
+					InstrI(ins, ARM_SUB, ins->cond, REG_HOST_LR, REG_HOST_PC, REG_NOT_USED, -offset );
+				}
+			}
 			break;
 		default: break;
 		}
@@ -99,6 +116,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 	while (ins)
 	{
 		instruction = ins->instruction;
+		regID_t R1 = ins->R1.regID;
+		regID_t R2 = ins->R2.regID;
+		regID_t Rd1 = ins->Rd1.regID;
+
 		switch (instruction)
 		{
 			case BEQ:
@@ -106,16 +127,16 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				offset = ins->offset;
 				if (0 == ins->R2.regID)
 				{
-					InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, REG_NOT_USED, 0);
+					InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
-					new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, ins->R1.regID , REG_NOT_USED, 0);
+					new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, R1 , REG_NOT_USED, 0);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				else
 				{
-					Instr(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, ins->R2.regID | REG_WIDE);
+					Instr(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, R2 | REG_WIDE);
 
-					new_ins = newInstr(ARM_CMP, EQ, REG_NOT_USED, ins->R1.regID , ins->R2.regID);
+					new_ins = newInstr(ARM_CMP, EQ, REG_NOT_USED, R1 , ins->R2.regID);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 
@@ -134,16 +155,16 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				offset = ins->offset;
 				if (0 == ins->R2.regID)
 				{
-					InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, REG_NOT_USED, 0);
+					InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
-					new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, ins->R1.regID , REG_NOT_USED, 0);
+					new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, R1 , REG_NOT_USED, 0);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				else
 				{
-					Instr(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, ins->R2.regID | REG_WIDE);
+					Instr(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, R2 | REG_WIDE);
 
-					new_ins = newInstr(ARM_CMP, EQ, REG_NOT_USED, ins->R1.regID , ins->R2.regID);
+					new_ins = newInstr(ARM_CMP, EQ, REG_NOT_USED, R1 , R2);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 
@@ -190,14 +211,14 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				offset = ins->offset;
 				if (0 == ins->R2.regID)
 				{
-					InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, REG_NOT_USED, 0);
+					InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
 					//new_ins = newInstrI(ARM_CMP, PL, REG_NOT_USED, ins->R1.regID , REG_NOT_USED, 0);
 					//ADD_LL_NEXT(new_ins, ins);
 				}
 				else
 				{
-					Instr(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, ins->R2.regID | REG_WIDE);
+					Instr(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, R2 | REG_WIDE);
 
 					//new_ins = newInstrI(ARM_CMP, PL, REG_NOT_USED, ins->R1.regID , ins->R2.regID);
 					//ADD_LL_NEXT(new_ins, ins);
@@ -219,9 +240,9 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 				offset = ins->offset;
 
-				InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, REG_NOT_USED, 0);
+				InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
-				new_ins = newInstrI(ARM_CMP, PL, REG_NOT_USED, ins->R1.regID , REG_NOT_USED, 0); // if not minus
+				new_ins = newInstrI(ARM_CMP, PL, REG_NOT_USED, R1 , REG_NOT_USED, 0); // if not minus
 				ADD_LL_NEXT(new_ins, ins);
 
 				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);
@@ -238,9 +259,9 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 				offset = ins->offset;
 
-				InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, REG_NOT_USED, 0);
+				InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
-				new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, ins->R1.regID , REG_NOT_USED, 0); // if upper 64 bit is EQ then check lower
+				new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, R1 , REG_NOT_USED, 0); // if upper 64 bit is EQ then check lower
 				ADD_LL_NEXT(new_ins, ins);
 
 				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);
@@ -257,9 +278,9 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 				offset = ins->offset;
 
-				InstrI(ins, ARM_CMP, AL, REG_NOT_USED, ins->R1.regID | REG_WIDE, REG_NOT_USED, 0);
+				InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
-				new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, ins->R1.regID , REG_NOT_USED, 0); // upper is 0 what about lower
+				new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, R1 , REG_NOT_USED, 0); // upper is 0 what about lower
 				ADD_LL_NEXT(new_ins, ins);
 
 				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);

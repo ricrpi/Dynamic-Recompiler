@@ -170,6 +170,12 @@ static void sprintInstr(char* str, const Instruction_t* const ins)
 
 //------------------------------------------------------------------
 
+Instruction_t* newInstrCopy(const Instruction_t* ins)
+{
+	Instruction_t* newInstr = (Instruction_t*)malloc(sizeof(Instruction_t));
+	memcpy(newInstr, ins, sizeof(Instruction_t));
+	return newInstr;
+}
 Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
 {
 	ins->instruction = ins_e;
@@ -252,10 +258,51 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 	return ins;
 }
 
+Instruction_t* InstrS(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
+{
+	ins->instruction = ins_e;
+		ins->cond        = cond;
+		ins->Rd1.regID   = Rd1;
+		ins->R1.regID    = R1;
+		ins->R2.regID    = R2;
+
+		ins->I = 0;
+		ins->S = 1;
+
+		switch (ins_e)
+		{
+		case SLL:
+		case SLLV:
+			ins-> shiftType = LOGICAL_LEFT; break;
+		case SRL:
+		case SRLV:
+			ins-> shiftType = LOGICAL_RIGHT; break;
+		case SRA:
+		case SRAV:
+			ins-> shiftType = ARITHMETIC_RIGHT; break;
+		case ARM_TST:
+		case ARM_TEQ:
+		case ARM_CMP:
+		case ARM_CMN:
+			assert(Rd1 == REG_NOT_USED); break;
+
+		case ARM_MOV:
+		case ARM_MVN:
+			assert(R1 == REG_NOT_USED); break;
+		case ARM_LDR_LIT:
+		case ARM_STR_LIT:
+
+			break;
+		default: break;
+		}
+
+		return ins;
+}
+
 Instruction_t* InstrIntB(Instruction_t* ins, const Condition_e cond, const Instruction_t* find_ins)
 {
 	ins->instruction = INT_BRANCH;
-	ins->branchToThisInstruction = find_ins;
+	ins->branchToThisInstruction = (Instruction_t*)find_ins;
 	return ins;
 }
 
@@ -523,7 +570,7 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 		#if defined(SHOW_PRINT_INT_CONST)
 		printf("%-9s %s%s%s%-100s", instruction, rd1, rd2, r1, buffer);
 		#else
-		printf("%-9s %s%s%s%-66s", instruction, rd1, rd2, r1, buffer);
+		printf("%-9s %s%s%s%-71s", instruction, rd1, rd2, r1, buffer);
 		#endif
 
 

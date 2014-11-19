@@ -40,7 +40,7 @@
 #define USE_INSTRUCTION_INIT_REGS
 
 // Use the translation that adds debugging markers
-#define USE_TRANSLATE_DEBUG
+//#define USE_TRANSLATE_DEBUG
 
 // ========= Recompiling Checks =======================================
 

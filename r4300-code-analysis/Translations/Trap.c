@@ -84,7 +84,7 @@ void Translate_Trap(code_seg_t* const codeSegment)
 				//insertCall_To_C(codeSegment, ins, VS, MMAP_FP_BASE + FUNC_GEN_TRAP);
 				break;
 			case ADDIU:
-				ins->instruction = ARM_ADD;
+			//	ins->instruction = ARM_ADD;
 				break;
 			case SLTI: break;
 			case SLTIU: break;

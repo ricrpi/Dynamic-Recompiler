@@ -30,6 +30,42 @@ void Translate_ALU(code_seg_t* const codeSegment)
 		int32_t imm = ins->immediate;
 		switch (ins->instruction)
 		{
+			case SLL:
+				{
+					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
+					ins->shift = imm;
+					ins->shiftType = LOGICAL_LEFT;
+				}break;
+			case SRL:
+				{
+					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
+					ins->shift = imm;
+					ins->shiftType = LOGICAL_RIGHT;
+				}break;
+			case SRA:
+				{
+					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
+					ins->shift = imm;
+					ins->shiftType = ARITHMETIC_RIGHT;
+				}break;
+			case SLLV:
+				{
+					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
+					ins->R3.regID = R2;
+					ins->shiftType = LOGICAL_LEFT;
+				}break;
+			case SRLV:
+				{
+					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
+					ins->R3.regID = R2;
+					ins->shiftType = LOGICAL_RIGHT;
+				}break;
+			case SRAV:
+				{
+					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
+					ins->R3.regID = R2;
+					ins->shiftType = ARITHMETIC_RIGHT;
+				}break;
 			case DSLLV:
 				/*
 				 *		Rd1 W        Rd1            R1 W           R1               R2 W          R2
@@ -39,30 +75,30 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				 */
 
 				// 1. Work out lower Word
-				Instr(ins, ARM_MOV, AL, ins->Rd1.regID , REG_NOT_USED, ins->R1.regID);
+				Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
 				ins->shiftType = LOGICAL_LEFT;
 				ins->R3.regID = R2;
 
 				// 2. Work out upper word
-				new_ins = newInstr(ARM_MOV, AL, ins->Rd1.regID | REG_WIDE, REG_NOT_USED, ins->R1.regID | REG_WIDE);
+				new_ins = newInstr(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1 | REG_WIDE);
 				new_ins->shiftType = LOGICAL_LEFT;
-				new_ins->R3.regID = ins->R2.regID;
+				new_ins->R3.regID = R2;
 				ADD_LL_NEXT(new_ins, ins);
 
 				// 3. Work out lower shifted to upper
-				new_ins = newInstrIS(ARM_RSB, AL, REG_TEMP_GEN2, REG_NOT_USED, ins->R2.regID, 32);
+				new_ins = newInstrIS(ARM_RSB, AL, REG_TEMP_GEN2, REG_NOT_USED, R2, 32);
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstr(ARM_ORR, PL, ins->Rd1.regID | REG_WIDE, REG_NOT_USED, ins->R1.regID);
+				new_ins = newInstr(ARM_ORR, PL, Rd1 | REG_WIDE, REG_NOT_USED, R1);
 				new_ins->shiftType = LOGICAL_RIGHT;
 				new_ins->R3.regID = REG_TEMP_GEN2;
 				ADD_LL_NEXT(new_ins, ins);
 
 				// 4. Work out R1 << into Rd1 W (i.e. where R2 > 32) If this occurs then Step 1 and 2 didn't do anything
-				new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_GEN1, REG_NOT_USED, ins->R1.regID, 32);
+				new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_GEN1, REG_NOT_USED, R1, 32);
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstr(ARM_ORR, PL, ins->Rd1.regID | REG_WIDE, ins->R1.regID, REG_TEMP_GEN1);
+				new_ins = newInstr(ARM_ORR, PL, Rd1 | REG_WIDE, R1, REG_TEMP_GEN1);
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
@@ -176,17 +212,46 @@ void Translate_ALU(code_seg_t* const codeSegment)
 			case DMULTU: break;
 			case DDIV: break;
 			case DDIVU: break;
-			case ADD: break;
+			case ADD:
+				{
+					Instr(ins, ARM_ADD, AL, Rd1, R1, R2);
+				} break;
 			case ADDU: break;
 			case SUB: break;
 			case SUBU: break;
-			case AND: break;
-			case OR: break;
-			case XOR: break;
+			case AND:
+				{
+					Instr(ins, ARM_AND, AL, Rd1, R1, R2);
+
+					new_ins = newInstr(ARM_AND, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
+					ADD_LL_NEXT(new_ins, ins);
+				}break;
+			case OR:
+				{
+					Instr(ins, ARM_ORR, AL, Rd1, R1, R2);
+
+					new_ins = newInstr(ARM_ORR, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
+			case XOR:
+				{
+					Instr(ins, ARM_EOR, AL, Rd1, R1, R2);
+
+					new_ins = newInstr(ARM_EOR, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
 			case NOR: break;
 			case SLT: break;
 			case SLTU: break;
-			case DADD: break;
+			case DADD:
+				{
+					InstrS(ins, ARM_ADD, AL, Rd1, R1, R2);
+					new_ins = newInstr(ARM_ADC, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
 			case DADDU: break;
 			case DSUB: break;
 			case DSUBU: break;
@@ -208,25 +273,43 @@ void Translate_ALU(code_seg_t* const codeSegment)
 			case TLTIU: break;
 			case TEQI: break;
 			case TNEI: break;
-			case ADDI:
+			case ADDI:	// TRAP
 				{
 					if (imm < 0)
 					{
-						InstrI(ins, ARM_SUB,AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm));
-						ins->immediate = (-ins->immediate) & 0xFF;
-					}
-					if (imm < -255)
-					{
-						new_ins = newInstrI(ARM_SUB, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
+						if (imm < -255)
+						{
 
-						ADD_LL_NEXT(new_ins, ins);
-					}
+							InstrI(ins, ARM_SUB, AL, REG_TEMP_GEN1, R1, REG_NOT_USED, (-imm));
 
-					if (imm > 255)
+							new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_GEN1, REG_TEMP_GEN1, REG_NOT_USED, (-imm)&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_GEN1);
+							ADD_LL_NEXT(new_ins, ins);
+
+						}
+						else
+						{
+							InstrI(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm));
+						}
+					}
+					else
 					{
-						new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
-						ins->immediate = ins->immediate & 0xFF;
-						ADD_LL_NEXT(new_ins, ins);
+						if (imm > 255)
+						{
+							InstrI(ins, ARM_ADD, AL, REG_TEMP_GEN1, R1, REG_NOT_USED, (imm&0xFF));
+
+							new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_GEN1, REG_TEMP_GEN1, REG_NOT_USED, ins->immediate&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_GEN1);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
+						}
 					}
 				}
 				break;
@@ -234,62 +317,93 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				{
 					if (imm < 0)
 					{
-						InstrI(ins, ARM_SUB,AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm));
-						ins->immediate = (-ins->immediate) & 0xFF;
-					}
-					if (imm < -255)
-					{
-						new_ins = newInstrI(ARM_SUB, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
+						InstrI(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm));
 
-						ADD_LL_NEXT(new_ins, ins);
+						if (imm < -255)
+						{
+							new_ins = newInstrI(ARM_SUB, AL, Rd1, Rd1, REG_NOT_USED, (-imm)&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+						}
 					}
-
-					if (imm > 255)
+					else
 					{
-						new_ins = newInstrI(ARM_ADD, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, ins->immediate&0xFF00);
-						ins->immediate = ins->immediate & 0xFF;
-						ADD_LL_NEXT(new_ins, ins);
+						if (imm > 255)
+						{
+							if (0 == R1){
+								InstrI(ins, ARM_MOV, AL, REG_TEMP_GEN1, REG_NOT_USED, REG_NOT_USED, (imm&0xFF));
+							}
+							else
+							{
+								InstrI(ins, ARM_ADD, AL, REG_TEMP_GEN1, R1, REG_NOT_USED, (imm&0xFF));
+							}
+
+							new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_GEN1, REG_TEMP_GEN1, REG_NOT_USED, imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_GEN1);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
+						}
+
 					}
 				}
 				break;
 			case SLTI: break;
 			case SLTIU: break;
 			case ANDI:
+
 				if (imm < 0)
 				{
-					new_ins = newInstrI(ARM_BIC, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (-imm)&0xFF);
-					ins->immediate = ins->immediate & 0xFF;
-					ADD_LL_NEXT(new_ins, ins);
+					InstrI(ins, ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (-imm)&0xff);
+
+					if (imm < 255)
+					{
+						new_ins = newInstrI(ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (-imm)&0xFF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+				else
+				{
+					InstrI(ins, ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (imm&0xff));
+
+					if (imm > 255)
+					{
+						new_ins = newInstrI(ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (imm)&0xFF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
 				}
 
-				if (imm < 255)
-				{
-					new_ins = newInstrI(ARM_BIC, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, (-imm)&0xFF00);
-					ADD_LL_NEXT(new_ins, ins);
-				}
+
 				break;
 			case ORI:
 				ins->immediate = ins->immediate&0xff;
 
 				if (imm < 0)
 				{
-					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, 0xFF000000);
-					ADD_LL_NEXT(new_ins, ins);
+					InstrI(ins, ARM_ORR, AL, Rd1, R1, REG_NOT_USED, 0xFF000000);
 
-					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, 0x00FF0000);
+					new_ins = newInstrI(ARM_ORR, AL, Rd1, R1, REG_NOT_USED, 0x00FF0000);
 					ADD_LL_NEXT(new_ins, ins);
 
 					if ((imm)&0x0000FF00)
-					{	new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->R1.regID, REG_NOT_USED, (imm)&0x0000FF00);
+					{	new_ins = newInstrI(ARM_ORR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+				else
+				{
+					InstrI(ins, ARM_ORR, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
+
+					if (imm > 255)
+					{
+						new_ins = newInstrI(ARM_ORR, AL, Rd1, R1, REG_NOT_USED, imm&0xFF00);
 						ADD_LL_NEXT(new_ins, ins);
 					}
 				}
 
-				if (imm > 255)
-				{
-					new_ins = newInstrI(ARM_ORR, AL, ins->Rd1.regID, ins->Rd1.regID, REG_NOT_USED, imm&0xFF00);
-					ADD_LL_NEXT(new_ins, ins);
-				}
 				break;
 			case XORI: break;
 			case LUI: break;

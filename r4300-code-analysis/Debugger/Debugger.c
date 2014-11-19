@@ -741,10 +741,10 @@ void Debugger_wrapper(size_t* regs)
 	if (!CMD_CMP(0, "quit"))
 	{
 		exit(0);
-		//return 0;
 	}
 	else if (!CMD_CMP(0, "continue"))
 	{
+		CurrentCodeSeg = NULL;
 		return 0;
 	}
 	else if (!CMD_CMP(0, "print"))

@@ -16,12 +16,13 @@
 
 #define I_OP "s%02u, s%02u, #%02d"
 #define OP_I(val) \
-		((val & 0x03E00000) >> 21), \
 		((val & 0x001F0000) >> 16), \
+		((val & 0x03E00000) >> 21), \
 		(int)(val<<16)/(1<<16)
+
 #define OP_UI(val) \
-		((val & 0x03E00000) >> 21), \
 		((val & 0x001F0000) >> 16), \
+		((val & 0x03E00000) >> 21), \
 		(int)(val&0xffff)
 
 

@@ -26,9 +26,11 @@ void cc_interrupt()
 	printf("cc_interrupt() called\n");
 }
 
-void mem_lookup(unsigned int addr)
+uint32_t mem_lookup(unsigned int addr)
 {
 	printf("mem_lookup(0x%08x) called\n",addr);
+
+	return 0x80000000 + addr;
 }
 
 void p_r_a(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3

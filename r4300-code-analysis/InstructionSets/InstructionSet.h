@@ -89,10 +89,10 @@
 // Configurable #defines if you want to change
 // which registers hold the emulation frame data or emulation flags
 
-#define REG_CC_FP			REG_HOST_R11		// The register used for Frame Pointer by compiler
+#define REG_CC_FP			REG_HOST_R11		// The register used for Frame Pointer by compiler	DO NOT CHANGE IF USING GCC
 #define REG_EMU_FP			REG_HOST_R10		// The 'FramePointer' used for MIPS register base
-#define REG_EMU_FLAGS		REG_HOST_R12		// Register to hold flags passed between segments
-#define REG_EMU_DEBUG1		REG_HOST_R4			// Register used for Debugging
+#define REG_EMU_FLAGS		REG_HOST_R2			// Register to hold flags passed between segments
+#define REG_EMU_DEBUG1		REG_HOST_R3			// Register used for Debugging
 
 // emulation flag bits
 #define REG_EMU_FLAG_DS		(0x00)
@@ -174,7 +174,7 @@ typedef enum _Instruction_e {
 	INVALID,
 	NO_OP,
 
-	INT_BRANCH,
+	INT_BRANCH,	// Intermediae Branch to the Instruction (->branchToThisInstruction)
 
 	SLL,	// Rd1 (rd) = R1 (rt) << imm5 				The contents of the low-order 32-bit word of GPR rt are shifted left, inserting zeroes into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
     SRL,	// Rd1 (rd) = R1 (rt) >> imm5				The contents of the low-order 32-bit word of GPR rt are shifted right, inserting zeros into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
@@ -572,9 +572,15 @@ typedef struct _Instruction
 
 struct _code_seg;
 
+Instruction_t* newInstrCopy(const Instruction_t* ins);
+
 Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
 
 Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm);
+
+Instruction_t* InstrS(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
+
+Instruction_t* InstrIntB(Instruction_t* ins, const Condition_e cond, const Instruction_t* find_ins);
 
 Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t offset, const uint32_t absolute);
 

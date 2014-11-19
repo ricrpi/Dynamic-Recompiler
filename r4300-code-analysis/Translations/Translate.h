@@ -75,7 +75,7 @@ typedef struct
 
 // -----------------------------------------------------------------
 
-void mem_lookup();
+uint32_t mem_lookup();
 void cc_interrupt();
 void p_r_a(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3
 		, uint32_t r4, uint32_t r5, uint32_t r6, uint32_t r7
@@ -100,6 +100,8 @@ void DebugRuntimePrintMIPS();
 Instruction_t* insertP_R_A(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond);
 
 Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress, uint32_t Rmask);
+
+Instruction_t* insertCall_To_C_Jump(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress, uint32_t Rmask, Instruction_t* ReturnIns);
 
 void Translate_init(code_seg_t* const codeSegment);
 
@@ -165,28 +167,47 @@ void Translate(code_seg_t* const codeSegment);
 static TranslationsMap Translations[] =
 {
 		{Translate_init,					"init"},					//
+
+		// Hardware related
+
 		{Translate_DelaySlot,				"DelaySlot"},				//
 		{Translate_CountRegister,			"CountRegister"},			//
+//		{Translate_Trap,					"Trap"},					// Not seen in DynaRec
+
+		// InstructionSet related Translations
+
 		{Translate_Constants,				"Constants"},				//
 		{Translate_ALU,						"ALU"},						//
 		{Translate_Generic,					"Generic"},					//
 		{Translate_FPU,						"FPU"},						//
-		{Translate_Trap,					"Trap"},					// Not seen in DynaRec
 		{Translate_Memory,					"Memory"},					//
-		{Translate_LoadStoreWriteBack, 		"LoadStoreWriteBack"},		//
+
+#if defined(USE_TRANSLATE_DEBUG)
+		{Translate_BreakAtEndSegment,		"BreakAtEnd"},
+#endif
+
+		{Translate_Branch,					"Branch"},					// Convert MIPS branches
+
 		{Translate_LoadCachedRegisters, 	"LoadCachedRegisters"},		//
 		{Translate_StoreCachedRegisters, 	"StoreCachedRegisters"},	//
+
+		{Translate_CleanUp,					"CleanUp"},					// must be after load/storeCachedRegisters
+
 #if defined(USE_TRANSLATE_DEBUG)
 		{Translate_Debug,					"Debug"},					// Provides Debug Hooks
 #endif
-		{Translate_CleanUp,					"CleanUp"},					// must be after load/storeCachedRegisters
-		{Translate_BreakAtEndSegment,		"BreakAtEnd"},
-		{Translate_Branch,					"Branch"},					// Convert MIPS branches
 
-		// translations after this point must not change segment length
+		// Assign arm registers
+
+		{Translate_Registers, 				"Registers"},				//
+
+		// Optimizations
+
+		{Translate_LoadStoreWriteBack, 		"LoadStoreWriteBack"},		//
+
+		// Translations after this point must NOT change segment length
 
 		{Translate_InterCode_Branch,		"Intermediate Branch"},
-		{Translate_Registers, 				"Registers"},				//
 		{Translate_Literals, 				"Literals"},				//
 		{Translate_Write, 					"Write"}					//
 };

@@ -35,6 +35,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 	regID_t R2;
 	int32_t	funcTempImm;
 	Instruction_t* new_ins;
+	Instruction_t* ins1, *ins2;
 
 	while (ins)
 	{
@@ -89,16 +90,16 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			funcTempImm = ins->immediate;
 
-			//test if raw address or virtual this could be 0x80 or 0xA0 for cached / non cached access
-			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, ins->R1.regID, REG_NOT_USED, 0x80 << 24);
+			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, R1, REG_NOT_USED, 0x80 << 24);
 
-			//Turn 0xA0 to 0x80
-			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_MEM1, ins->R1.regID, REG_NOT_USED, (0x20) << 24);
+			ins1 = new_ins = newInstr(INT_BRANCH, EQ, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 			ADD_LL_NEXT(new_ins, ins);
 
-			ins = insertP_R_A(codeSegment, ins, AL);
+			//Turn 0xA0 to 0x80
+			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_MEM1, R1, REG_NOT_USED, (0x20) << 24);
+			ADD_LL_NEXT(new_ins, ins);
 
-			// if address is raw (NE) then add base offset to get to host address
+			// get to host address if uMemoryBase != 0x80
 			if (uMemoryBase < 0x80)
 			{
 				new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (0x80 - uMemoryBase) << 24);
@@ -118,7 +119,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, R1, REG_TEMP_MEM1, funcTempImm&0xfff);
+				new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, R2, REG_TEMP_MEM1, funcTempImm&0xfff);
 				new_ins->U = 1;
 				ADD_LL_NEXT(new_ins, ins);
 			}
@@ -136,32 +137,32 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			Instruction_t* branchFrom,*branchTo;
-			branchFrom = new_ins = newEmptyInstr();
+			ins2 = new_ins = newInstr(INT_BRANCH, NE, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
+			new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1);
+			ins1->branchToThisInstruction = new_ins;
+
+			//If this is equal then we have a virtual address
+			//TODO not included imm
+			new_ins = newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, R1);
 			ADD_LL_NEXT(new_ins, ins);
 
-			// now lookup virtual address
-			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, 0);
+			ins = insertCall_To_C(codeSegment,ins, AL, (size_t)&mem_lookup, 0);
 
-			new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, R1, REG_HOST_R0, funcTempImm&0xfff);
+			new_ins = newInstr(ARM_STR, AL , REG_NOT_USED, R2, REG_HOST_R0);
 			ADD_LL_NEXT(new_ins, ins);
 
-			branchTo = new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+			new_ins 	= newInstrPOP(AL, REG_HOST_STM_EABI);
 			ADD_LL_NEXT(new_ins, ins);
 
-			//------------------------------------------------------------
+			ins2->branchToThisInstruction = ins->nextInstruction;
 
-			ins = insertP_R_A(codeSegment, ins, AL);
+			//===============================================================
 
-			//------------------------------------------------------------
-
-			InstrIntB(branchFrom, NE, branchTo->nextInstruction);
+			//ins = insertP_R_A(codeSegment, ins, AL);
 
 			// TODO we need to check memory changed is not in code space
 			break;
@@ -183,11 +184,14 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, R1, REG_NOT_USED, 0x80 << 24);
 
+			ins1 = new_ins = newInstr(INT_BRANCH, EQ, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
+			ADD_LL_NEXT(new_ins, ins);
+
 			//Turn 0xA0 to 0x80
 			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_MEM1, R1, REG_NOT_USED, (0x20) << 24);
 			ADD_LL_NEXT(new_ins, ins);
 
-			// if address is raw (NE) then add base offset to get to host address
+			// get to host address if uMemoryBase != 0x80
 			if (uMemoryBase < 0x80)
 			{
 				new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (0x80 - uMemoryBase) << 24);
@@ -225,21 +229,28 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			new_ins = newInstrB(NE, CALL_TO_C_INSTR_COUNT + 5, 0);
-			new_ins->U = 0;
+			ins2 = new_ins = newInstr(INT_BRANCH, NE, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
+			new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1);
+			ins1->branchToThisInstruction = new_ins;
+
+			//If this is equal then we have a virtual address
+			//TODO not included imm
+			new_ins = newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, R1);
 			ADD_LL_NEXT(new_ins, ins);
 
-			// now lookup virtual address
-			ins = insertCall_To_C(codeSegment, ins, EQ, (uint32_t)&mem_lookup, 0);
+			ins = insertCall_To_C(codeSegment,ins, AL, (size_t)&mem_lookup, 0);
 
-			new_ins 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+			new_ins = newInstr(ARM_LDR, AL , Rd1, REG_NOT_USED, REG_HOST_R0);
 			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins 	= newInstrPOP(AL, REG_HOST_STM_EABI);
+			ADD_LL_NEXT(new_ins, ins);
+
+			ins2->branchToThisInstruction = ins->nextInstruction;
 
 			break;
 		case LBU: break;

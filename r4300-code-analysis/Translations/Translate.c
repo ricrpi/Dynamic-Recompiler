@@ -40,6 +40,7 @@ Instruction_t* insertP_R_A(code_seg_t* const code_seg, Instruction_t* ins, const
 
 	addLiteral(code_seg, &base, &offset, (uint32_t)&p_r_a);
 
+	// we have to save r0 to r3 but as EAPI uses sp to point to arg 5 onwards we can't save all the registers in one go
 	new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
 	ADD_LL_NEXT(new_ins, ins);
 
@@ -94,20 +95,9 @@ Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, c
 	newInstruction 	= newInstrPUSH(AL, Rmask | REG_HOST_STM_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
-#if 1
-	// load function address from [fp + offset] into PC
 	newInstruction 	= newInstr(ARM_BX, cond, REG_NOT_USED, REG_TEMP_CALL2C, REG_NOT_USED);
 	newInstruction->Ln = 1;
 	ADD_LL_NEXT(newInstruction, ins);
-#else
-	//set lr
-	newInstruction 	= newInstr(ARM_MOV, AL, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	// load function address from [fp + offset] into PC
-	newInstruction 	= newInstr(ARM_MOV, cond, REG_HOST_PC, REG_NOT_USED, REG_TEMP_CALL2C);
-	ADD_LL_NEXT(newInstruction, ins);
-#endif
 
 	// pop lr
 	newInstruction 	= newInstrPOP(AL, Rmask | REG_HOST_STM_LR);
@@ -116,6 +106,36 @@ Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, c
 	return ins;
 }
 
+Instruction_t* insertCall_To_C_Jump(code_seg_t* const code_seg, Instruction_t* ins, const Condition_e cond, uint32_t functionAddress, uint32_t Rmask, Instruction_t* ReturnIns)
+{
+	Instruction_t* newInstruction;
+	regID_t base;
+	int32_t offset;
+
+	addLiteral(code_seg, &base, &offset, functionAddress);
+
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_TEMP_CALL2C, REG_NOT_USED, base, offset);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//push lr
+	newInstruction 	= newInstrPUSH(AL, Rmask | REG_HOST_STM_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	//set lr
+	newInstruction 	= newInstr(ARM_MOV, AL, REG_HOST_LR, REG_NOT_USED, REG_NOT_USED);
+	newInstruction->branchToThisInstruction = ReturnIns;
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// load function address from [fp + offset] into PC
+	newInstruction 	= newInstr(ARM_MOV, cond, REG_HOST_PC, REG_NOT_USED, REG_TEMP_CALL2C);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	// pop lr
+	newInstruction 	= newInstrPOP(AL, Rmask | REG_HOST_STM_LR);
+	ADD_LL_NEXT(newInstruction, ins);
+
+	return ins;
+}
 
 //=============================================================
 
@@ -474,39 +494,7 @@ void Translate_Generic(code_seg_t* const codeSegment)
 	}
 }
 
-void Translate_CleanUp(code_seg_t* const codeSegment)
-{
-	Instruction_t*ins;
-	ins = codeSegment->Intermcode;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
-	currentTranslation = "CleanUp";
-#endif
-
-	while (ins)
-	{
-		if (NO_OP == ins->instruction)
-		{
-			ins = InstrFree(codeSegment, ins);
-		}
-		else if (SLL == ins->instruction && ins->Rd1.regID == 0)	// MIPS NO_OP
-		{
-			ins = InstrFree(codeSegment, ins);
-		}
-		else if (LUI == ins->instruction)
-		{
-			ins = InstrFree(codeSegment, ins);
-		}
-		else if (CACHE == ins->instruction)
-		{
-			ins = InstrFree(codeSegment, ins);
-		}
-		else
-		{
-			ins = ins->nextInstruction;
-		}
-	}
-}
 
 void Translate_Write(code_seg_t* codeSegment)
 {

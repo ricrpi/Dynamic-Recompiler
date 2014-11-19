@@ -7,6 +7,7 @@ C_SRCS += \
 ../Translations/ALU.c \
 ../Translations/Branching.c \
 ../Translations/C_Interface.c \
+../Translations/CleanUp.c \
 ../Translations/Constants.c \
 ../Translations/CountReg.c \
 ../Translations/Debug.c \
@@ -23,6 +24,7 @@ OBJS += \
 ./Translations/ALU.o \
 ./Translations/Branching.o \
 ./Translations/C_Interface.o \
+./Translations/CleanUp.o \
 ./Translations/Constants.o \
 ./Translations/CountReg.o \
 ./Translations/Debug.o \
@@ -39,6 +41,7 @@ C_DEPS += \
 ./Translations/ALU.d \
 ./Translations/Branching.d \
 ./Translations/C_Interface.d \
+./Translations/CleanUp.d \
 ./Translations/Constants.d \
 ./Translations/CountReg.d \
 ./Translations/Debug.d \

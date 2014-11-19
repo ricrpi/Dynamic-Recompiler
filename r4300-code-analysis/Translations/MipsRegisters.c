@@ -12,12 +12,14 @@
 #define COUNTOF(x)	(sizeof(x)/sizeof(x[0]))
 
 static unsigned char RegsAvailable[] = {
+#if 0
 	0
 	, 1
 	, 2
 	, 3
+#endif
 #if (REG_EMU_DEBUG1 != REG_HOST_R4 && REG_EMU_FLAGS != REG_HOST_R4 && REG_EMU_FP != REG_HOST_R4 && REG_EMU_CC_FP != REG_HOST_R4)
-	, 4
+	4
 #endif
 #if (REG_EMU_DEBUG1 != REG_HOST_R5 && REG_EMU_FLAGS != REG_HOST_R5 && REG_EMU_FP != REG_HOST_R5 && REG_EMU_CC_FP != REG_HOST_R5)
 	, 5
@@ -72,6 +74,7 @@ static int32_t FindRegNextUpdated(const Instruction_t* const ins, const regID_t 
 	{
 		if ((in->Rd1.regID == Reg || in->Rd2.regID == Reg))
 			return -1;
+
 		in = in->nextInstruction;
 	}
 
@@ -128,13 +131,12 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins = codeSegment->Intermcode;
-	Instruction_t*prev_ins = NULL;
 
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "LoadCachedRegisters";
 #endif
 
-	Instruction_t*new_ins;
+	Instruction_t*new_ins, *copied_ins;
 
 	uint8_t RegLoaded[REG_TEMP];
 	memset(RegLoaded,0,sizeof(RegLoaded));
@@ -143,53 +145,35 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 	{
 		if (ins->R1.regID < REG_TEMP && !RegLoaded[ins->R1.regID])
 		{
-			new_ins = newInstrI(ARM_LDR, AL, ins->R1.regID, REG_NOT_USED, REG_EMU_FP, ins->R1.regID * 4);
-			new_ins->nextInstruction = ins;
+			copied_ins = newInstrCopy(ins);
+
+			ins = InstrI(ins, ARM_LDR, AL, ins->R1.regID, REG_NOT_USED, REG_EMU_FP, ins->R1.regID * 4);
+			ins->nextInstruction = copied_ins;
+			ins = copied_ins;
 
 			RegLoaded[ins->R1.regID] = 1;
-
-			if (!prev_ins)
-			{
-				codeSegment->Intermcode = new_ins;
-			}
-			else
-			{
-				prev_ins->nextInstruction = new_ins;
-			}
 		}
 
 		if (ins->R2.regID < REG_TEMP && !RegLoaded[ins->R2.regID])
 		{
+			copied_ins = newInstrCopy(ins);
+
 			new_ins = newInstrI(ARM_LDR, AL, ins->R2.regID, REG_NOT_USED, REG_EMU_FP, ins->R2.regID * 4);
-			new_ins->nextInstruction = ins;
+			new_ins->nextInstruction = copied_ins;
+			ins = copied_ins;
 
 			RegLoaded[ins->R2.regID] = 1;
-
-			if (!prev_ins)
-			{
-				codeSegment->Intermcode = new_ins;
-			}
-			else
-			{
-				prev_ins->nextInstruction = new_ins;
-			}
 		}
 
 		if (ins->R3.regID < REG_TEMP && !RegLoaded[ins->R3.regID])
 		{
+			copied_ins = newInstrCopy(ins);
+
 			new_ins = newInstrI(ARM_LDR, AL, ins->R3.regID, REG_NOT_USED, REG_EMU_FP, ins->R3.regID * 4);
-			new_ins->nextInstruction = ins;
+			new_ins->nextInstruction = copied_ins;
+			ins = copied_ins;
 
 			RegLoaded[ins->R3.regID] = 1;
-
-			if (!prev_ins)
-			{
-				codeSegment->Intermcode = new_ins;
-			}
-			else
-			{
-				prev_ins->nextInstruction = new_ins;
-			}
 		}
 
 		if (ins->Rd1.regID < REG_TEMP && !RegLoaded[ins->Rd1.regID])
@@ -197,7 +181,11 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			RegLoaded[ins->Rd1.regID] = 1;
 		}
 
-		prev_ins = ins;
+		if (ins->Rd2.regID < REG_TEMP && !RegLoaded[ins->Rd2.regID])
+		{
+			RegLoaded[ins->Rd2.regID] = 1;
+		}
+
 		ins = ins->nextInstruction;
 	}
 }

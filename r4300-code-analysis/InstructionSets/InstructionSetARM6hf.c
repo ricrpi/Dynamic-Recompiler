@@ -42,8 +42,16 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 			}
 		}
 
-		assert(rotate < 16);
-		assert(imm < 256);
+#if !NDEBUG
+	if (rotate >=16)
+	{
+		abort();
+	}
+	if (imm >=256)
+	{
+		abort();
+	}
+#endif
 		return (((16-rotate)&0xf) << 8) | (imm&0xFF);
 	}
 	else if (ins->R3.regID != REG_NOT_USED)
@@ -80,22 +88,14 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 
 	switch (ins->instruction)
 	{
-	case AND:
-	case ANDI:
 	case ARM_AND:
 		return ins->cond << 28 | ins->I << 25 | 0x0 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
-	case XOR:
-	case XORI:
 	case ARM_EOR:
 		return ins->cond << 28 | ins->I << 25 | 0x1 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
-	case SUB:
 	case ARM_SUB:
 		return ins->cond << 28 | ins->I << 25 | 0x2 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_RSB:
 		return ins->cond << 28 | ins->I << 25 | 0x3 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
-	case ADD:
-	case ADDI:
-	case ADDIU:
 	case ARM_ADD:
 		return ins->cond << 28 | ins->I << 25 | 0x4 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_ADC:
@@ -112,18 +112,8 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 		return ins->cond << 28 | ins->I << 25 | 0xA << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
 	case ARM_CMN:
 		return ins->cond << 28 | ins->I << 25 | 0xB << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
-	case ORI:
-	case OR:
 	case ARM_ORR:
 		return ins->cond << 28 | ins->I << 25 | 0xC << 21 | ins->S << 20 | R1 << 16 | ALU_OP2(ins);
-	case SLL:
-	case SRL:
-	case SRA:
-		return ins->cond << 28 | 0xD << 21 | ins->S << 20 | Rd1 << 12 | (ins->shift&0x1f) << 7 | ins->shiftType << 5 | R1;
-	case SLLV:
-	case SRAV:
-	case SRLV:
-		return ins->cond << 28 | 0xD << 21 | ins->S << 20 | Rd1 << 12 | (R2) << 8 | ins->shiftType << 5 | 1 << 4 | R1;
 	case ARM_MOV:
 		return ins->cond << 28 | ins->I << 25 | 0xD << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_BIC:
@@ -196,9 +186,6 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 		break;
 
 		//------- ARM Cannot handle -----------------
-
-	case JALR:
-		break;
 
 	default:
 		break;
