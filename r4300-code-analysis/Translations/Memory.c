@@ -262,7 +262,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			//new_ins = newInstr(NO_OP, AL, Rd1, REG_NOT_USED, REG_NOT_USED);
 			//ADD_LL_NEXT(new_ins, ins);
 
-			ins2->branchToThisInstruction = new_ins;
+			ins2->branchToThisInstruction = new_ins->nextInstruction;
 
 			break;
 		case LBU: break;
