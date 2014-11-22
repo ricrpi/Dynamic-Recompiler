@@ -145,16 +145,15 @@ static void printregs(mcontext_t* context, size_t* regs)
 	if (context)
 	{
 	#ifndef __i386
-			printf("\n\tr0 0x%08x\t r8  0x%08x\n", context->arm_r0, context->arm_r8);
-			printf("\tr1 0x%08x\t r9  0x%08x\n", context->arm_r1, context->arm_r9);
-			printf("\tr2 0x%08x\t r10 0x%08x\n", context->arm_r2, context->arm_r10);
-			printf("\tr3 0x%08x\t fp  0x%08x\n", context->arm_r3, context->arm_fp);
-			printf("\tr4 0x%08x\t ip  0x%08x\n", context->arm_r4, context->arm_ip);
-			printf("\tr5 0x%08x\t sp  0x%08x\n", context->arm_r5, context->arm_sp);
-			printf("\tr6 0x%08x\t lr  0x%08x\n", context->arm_r6, context->arm_lr);
-			printf("\tr7 0x%08x\t pc  0x%08x\n", context->arm_r7, context->arm_pc);
-			printf("\tcpsr 0x%08x\n", context->arm_cpsr);
-
+			printf("\n\tr0 0x%08lx\t r8  0x%08lx\n", context->arm_r0, context->arm_r8);
+			printf("\tr1 0x%08lx\t r9  0x%08lx\n", context->arm_r1, context->arm_r9);
+			printf("\tr2 0x%08lx\t r10 0x%08lx\n", context->arm_r2, context->arm_r10);
+			printf("\tr3 0x%08lx\t fp  0x%08lx\n", context->arm_r3, context->arm_fp);
+			printf("\tr4 0x%08lx\t ip  0x%08lx\n", context->arm_r4, context->arm_ip);
+			printf("\tr5 0x%08lx\t sp  0x%08lx\n", context->arm_r5, context->arm_sp);
+			printf("\tr6 0x%08lx\t lr  0x%08lx\n", context->arm_r6, context->arm_lr);
+			printf("\tr7 0x%08lx\t pc  0x%08lx\n", context->arm_r7, context->arm_pc);
+			printf("\tcpsr 0x%08lx\n", context->arm_cpsr);
 	#endif
 	}
 	else if (regs)
@@ -285,7 +284,13 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 				printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			}
 			else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
+			{
+				printf("0x%08x", (uint32_t)(addr + x));
+#if defined(SHOW_PRINT_ARM_VALUE)
+				printf("          ");
+#endif
 				printf("\t.word\t%12d (0x%08x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));
+			}
 			else
 				printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 		}

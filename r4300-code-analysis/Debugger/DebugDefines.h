@@ -26,9 +26,9 @@
 //#define SHOW_PRINT_INT_CONST
 
 //Print the raw Hex values when reading arm instructions (arm_decode)
-#define SHOW_PRINT_ARM_VALUE
+//#define SHOW_PRINT_ARM_VALUE
 
-#define SHOW_PRINT_MIPS_VALUE
+//#define SHOW_PRINT_MIPS_VALUE
 
 //Print when a segment is deleted
 #define SHOW_PRINT_SEGMENT_DELETE

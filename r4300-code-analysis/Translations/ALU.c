@@ -86,19 +86,19 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 
 				// 3. Work out lower shifted to upper
-				new_ins = newInstrIS(ARM_RSB, AL, REG_TEMP_GEN2, REG_NOT_USED, R2, 32);
+				new_ins = newInstrIS(ARM_RSB, AL, REG_TEMP_SCRATCH2, REG_NOT_USED, R2, 32);
 				ADD_LL_NEXT(new_ins, ins);
 
 				new_ins = newInstr(ARM_ORR, PL, Rd1 | REG_WIDE, REG_NOT_USED, R1);
 				new_ins->shiftType = LOGICAL_RIGHT;
-				new_ins->R3.regID = REG_TEMP_GEN2;
+				new_ins->R3.regID = REG_TEMP_SCRATCH2;
 				ADD_LL_NEXT(new_ins, ins);
 
 				// 4. Work out R1 << into Rd1 W (i.e. where R2 > 32) If this occurs then Step 1 and 2 didn't do anything
-				new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_GEN1, REG_NOT_USED, R1, 32);
+				new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_SCRATCH1, REG_NOT_USED, R1, 32);
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstr(ARM_ORR, PL, Rd1 | REG_WIDE, R1, REG_TEMP_GEN1);
+				new_ins = newInstr(ARM_ORR, PL, Rd1 | REG_WIDE, R1, REG_TEMP_SCRATCH1);
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
@@ -122,15 +122,15 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 
 				//Work out upper shifted to lower
-				new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_GEN1, REG_NOT_USED, ins->R1.regID, 32);
+				new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_SCRATCH1, REG_NOT_USED, ins->R1.regID, 32);
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstr(ARM_MOV, PL, REG_TEMP_GEN2, ins->R1.regID, REG_NOT_USED);
+				new_ins = newInstr(ARM_MOV, PL, REG_TEMP_SCRATCH2, ins->R1.regID, REG_NOT_USED);
 				new_ins->shiftType = LOGICAL_RIGHT;
-				new_ins->R3.regID = REG_TEMP_GEN1;
+				new_ins->R3.regID = REG_TEMP_SCRATCH1;
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstr(ARM_ORR, PL, ins->Rd1.regID| REG_WIDE, ins->Rd1.regID | REG_WIDE, REG_TEMP_GEN1);
+				new_ins = newInstr(ARM_ORR, PL, ins->Rd1.regID| REG_WIDE, ins->Rd1.regID | REG_WIDE, REG_TEMP_SCRATCH1);
 				ADD_LL_NEXT(new_ins, ins);
 				break;
 			case DSRAV: break;
@@ -161,49 +161,49 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				 */
 				{
 					// Count leading Zeros of N
-					Instr(ins, ARM_CLZ, AL, REG_TEMP_GEN3, R1, REG_NOT_USED);
+					Instr(ins, ARM_CLZ, AL, REG_TEMP_SCRATCH3, R1, REG_NOT_USED);
 
 					// Count leading Zeros of D
-					new_ins = newInstr(ARM_CLZ, AL, REG_TEMP_GEN2, R2, REG_NOT_USED);
+					new_ins = newInstr(ARM_CLZ, AL, REG_TEMP_SCRATCH2, R2, REG_NOT_USED);
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstr(ARM_MOV, AL, REG_TEMP_GEN4, REG_NOT_USED, R1);
+					new_ins = newInstr(ARM_MOV, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, R1);
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstr(ARM_SUB, AL, REG_TEMP_GEN3, REG_TEMP_GEN2, REG_TEMP_GEN3);
+					new_ins = newInstr(ARM_SUB, AL, REG_TEMP_SCRATCH3, REG_TEMP_GEN2, REG_TEMP_SCRATCH3);
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_GEN3, REG_TEMP_GEN3, REG_NOT_USED, 1);
+					new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH3, REG_TEMP_GEN3, REG_NOT_USED, 1);
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstrI(ARM_MOV, AL, REG_TEMP_GEN2, REG_NOT_USED, REG_NOT_USED, 0);
+					new_ins = newInstrI(ARM_MOV, AL, REG_TEMP_SCRATCH2, REG_NOT_USED, REG_NOT_USED, 0);
 					ADD_LL_NEXT(new_ins, ins);
 
 					new_ins = newInstrB(AL, 4, 0);
 					new_ins->I = 0;
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstr(ARM_CMP, AL, REG_NOT_USED, R1, REG_TEMP_GEN4);
+					new_ins = newInstr(ARM_CMP, AL, REG_NOT_USED, R1, REG_TEMP_SCRATCH0);
 					new_ins->R3.regID = REG_TEMP_GEN3;
 					new_ins->shiftType = LOGICAL_LEFT;
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstrI(ARM_ADC, AL, REG_TEMP_GEN2, REG_TEMP_GEN2, REG_TEMP_GEN2, 0);
+					new_ins = newInstrI(ARM_ADC, AL, REG_TEMP_SCRATCH2, REG_TEMP_SCRATCH2, REG_TEMP_SCRATCH2, 0);
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstr(ARM_SUB, CS, REG_TEMP_GEN4, REG_TEMP_GEN4, R2);
+					new_ins = newInstr(ARM_SUB, CS, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, R2);
 					new_ins->R3.regID = REG_TEMP_GEN3;
 					new_ins->shiftType = LOGICAL_LEFT;
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_GEN2, REG_NOT_USED, REG_NOT_USED, 1);
+					new_ins = newInstrIS(ARM_SUB, AL, REG_TEMP_SCRATCH2, REG_NOT_USED, REG_NOT_USED, 1);
 					ADD_LL_NEXT(new_ins, ins);
 
 					new_ins = newInstrB(PL, -4, 0);
 					new_ins->I = 0;
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_GEN4);
+					new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
@@ -223,8 +223,8 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				{
 					Instr(ins, ARM_AND, AL, Rd1, R1, R2);
 
-					new_ins = newInstr(ARM_AND, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
-					ADD_LL_NEXT(new_ins, ins);
+					//new_ins = newInstr(ARM_AND, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
+				//	ADD_LL_NEXT(new_ins, ins);
 				}break;
 			case OR:
 				{
@@ -280,12 +280,12 @@ void Translate_ALU(code_seg_t* const codeSegment)
 						if (imm < -255)
 						{
 
-							InstrI(ins, ARM_SUB, AL, REG_TEMP_GEN1, R1, REG_NOT_USED, (-imm));
+							InstrI(ins, ARM_SUB, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (-imm));
 
-							new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_GEN1, REG_TEMP_GEN1, REG_NOT_USED, (-imm)&0xFF00);
+							new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (-imm)&0xFF00);
 							ADD_LL_NEXT(new_ins, ins);
 
-							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_GEN1);
+							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
 							ADD_LL_NEXT(new_ins, ins);
 
 						}
@@ -298,12 +298,12 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					{
 						if (imm > 255)
 						{
-							InstrI(ins, ARM_ADD, AL, REG_TEMP_GEN1, R1, REG_NOT_USED, (imm&0xFF));
+							InstrI(ins, ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm&0xFF));
 
-							new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_GEN1, REG_TEMP_GEN1, REG_NOT_USED, ins->immediate&0xFF00);
+							new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, ins->immediate&0xFF00);
 							ADD_LL_NEXT(new_ins, ins);
 
-							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_GEN1);
+							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
 							ADD_LL_NEXT(new_ins, ins);
 						}
 						else
@@ -325,29 +325,32 @@ void Translate_ALU(code_seg_t* const codeSegment)
 							ADD_LL_NEXT(new_ins, ins);
 						}
 					}
-					else
+					else if (imm > 0)
 					{
 						if (imm > 255)
 						{
 							if (0 == R1){
-								InstrI(ins, ARM_MOV, AL, REG_TEMP_GEN1, REG_NOT_USED, REG_NOT_USED, (imm&0xFF));
+								InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (imm&0xFF));
+
+								new_ins = newInstrI(ARM_ADD, AL, Rd1, Rd1, REG_NOT_USED, imm&0xFF00);
+								ADD_LL_NEXT(new_ins, ins);
 							}
 							else
 							{
-								InstrI(ins, ARM_ADD, AL, REG_TEMP_GEN1, R1, REG_NOT_USED, (imm&0xFF));
+								InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
+
+								new_ins = newInstrI(ARM_ADD, AL, Rd1, Rd1, REG_NOT_USED, imm&0xFF00);
+								ADD_LL_NEXT(new_ins, ins);
 							}
-
-							new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_GEN1, REG_TEMP_GEN1, REG_NOT_USED, imm&0xFF00);
-							ADD_LL_NEXT(new_ins, ins);
-
-							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_GEN1);
-							ADD_LL_NEXT(new_ins, ins);
 						}
 						else
 						{
 							InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
 						}
-
+					}
+					else if (Rd1 == R1) // imm = 0
+					{
+						Instr(ins, NO_OP, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 					}
 				}
 				break;

@@ -92,21 +92,25 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, R1, REG_NOT_USED, 0x80 << 24);
 
+			// used to force loading of registers
+			ins1 = new_ins = newInstr(NO_OP, EQ, REG_NOT_USED, R1, R2);
+			ADD_LL_NEXT(new_ins, ins);
+
 			ins1 = new_ins = newInstr(INT_BRANCH, EQ, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 			ADD_LL_NEXT(new_ins, ins);
 
 			//Turn 0xA0 to 0x80
-			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_MEM1, R1, REG_NOT_USED, (0x20) << 24);
+			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (0x20) << 24);
 			ADD_LL_NEXT(new_ins, ins);
 
 			// get to host address if uMemoryBase != 0x80
 			if (uMemoryBase < 0x80)
 			{
-				new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (0x80 - uMemoryBase) << 24);
+				new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (0x80 - uMemoryBase) << 24);
 				ADD_LL_NEXT(new_ins, ins);
 			} else if (uMemoryBase > 0x80)
 			{
-				new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (uMemoryBase - 0x80) << 24);
+				new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (uMemoryBase - 0x80) << 24);
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
@@ -115,11 +119,11 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				//check immediate is not too large for ARM and if it is then add additional imm
 				if (funcTempImm > 0xFFF)
 				{
-					new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (funcTempImm)&0xf000);
+					new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (funcTempImm)&0xf000);
 					ADD_LL_NEXT(new_ins, ins);
 				}
-				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, R2, REG_TEMP_MEM1, funcTempImm&0xfff);
+				// now store the value at REG_TEMP_GEN1 ( This will be R2 + host base + funcTempImm&0xf000 )
+				new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, R2, REG_TEMP_SCRATCH0, funcTempImm&0xfff);
 				new_ins->U = 1;
 				ADD_LL_NEXT(new_ins, ins);
 			}
@@ -127,12 +131,12 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			{
 				if  (funcTempImm < -0xFFF)
 				{
-					new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (-funcTempImm)&0xf000);
+					new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (-funcTempImm)&0xf000);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 
-				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, R2, REG_TEMP_MEM1, (-funcTempImm)&0xfff);
+				// now store the value at REG_TEMP_GEN1 ( This will be R2 + host base + funcTempImm&0xf000 )
+				new_ins = newInstrI(ARM_STR, NE, REG_NOT_USED, R2, REG_TEMP_SCRATCH0, (-funcTempImm)&0xfff);
 				new_ins->U = 0;
 				ADD_LL_NEXT(new_ins, ins);
 			}
@@ -140,23 +144,26 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ins2 = new_ins = newInstr(INT_BRANCH, NE, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
-			ADD_LL_NEXT(new_ins, ins);
-
-			ins1->branchToThisInstruction = new_ins;
+			//new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
+			//ADD_LL_NEXT(new_ins, ins);
 
 			//If this is equal then we have a virtual address
 			//TODO not included imm
 			new_ins = newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, R1);
 			ADD_LL_NEXT(new_ins, ins);
 
-			ins = insertCall_To_C(codeSegment,ins, AL, (size_t)&mem_lookup, 0);
+			ins1->branchToThisInstruction = new_ins;
 
-			new_ins = newInstr(ARM_STR, AL , REG_NOT_USED, R2, REG_HOST_R0);
+			new_ins = newInstr(ARM_MOV, EQ, REG_HOST_R1, REG_NOT_USED, R2);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins 	= newInstrPOP(AL, REG_HOST_STM_EABI);
+			ins = insertCall_To_C(codeSegment,ins, EQ, (size_t)&virtual_address, 0);
+
+			new_ins = newInstr(ARM_STR, AL, REG_NOT_USED, R2, REG_HOST_R0);
 			ADD_LL_NEXT(new_ins, ins);
+
+			//new_ins 	= newInstrPOP(AL, REG_HOST_STM_EABI);
+			//ADD_LL_NEXT(new_ins, ins);
 
 			ins2->branchToThisInstruction = ins->nextInstruction;
 
@@ -184,21 +191,25 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			ins = InstrI(ins, ARM_TST, AL, REG_NOT_USED, R1, REG_NOT_USED, 0x80 << 24);
 
+			// used to force loading of registers
+			ins1 = new_ins = newInstr(NO_OP, EQ, REG_NOT_USED, R1, REG_NOT_USED);
+			ADD_LL_NEXT(new_ins, ins);
+
 			ins1 = new_ins = newInstr(INT_BRANCH, EQ, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 			ADD_LL_NEXT(new_ins, ins);
 
 			//Turn 0xA0 to 0x80
-			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_MEM1, R1, REG_NOT_USED, (0x20) << 24);
+			new_ins = newInstrI(ARM_BIC, NE, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (0x20) << 24);
 			ADD_LL_NEXT(new_ins, ins);
 
 			// get to host address if uMemoryBase != 0x80
 			if (uMemoryBase < 0x80)
 			{
-				new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (0x80 - uMemoryBase) << 24);
+				new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (0x80 - uMemoryBase) << 24);
 				ADD_LL_NEXT(new_ins, ins);
 			} else if (uMemoryBase > 0x80)
 			{
-				new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (uMemoryBase - 0x80) << 24);
+				new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (uMemoryBase - 0x80) << 24);
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
@@ -207,11 +218,11 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				//check immediate is not too large for ARM and if it is then add additional imm
 				if (funcTempImm > 0xFFF)
 				{
-					new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (funcTempImm)&0xf000);
+					new_ins = newInstrI(ARM_ADD, NE, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (funcTempImm)&0xf000);
 					ADD_LL_NEXT(new_ins, ins);
 				}
-				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_LDR, NE, Rd1, REG_NOT_USED, REG_TEMP_MEM1, funcTempImm&0xfff);
+				// now store the value at REG_TEMP_SCRATCH0 ( This will be R2 + host base + funcTempImm&0xf000 )
+				new_ins = newInstrI(ARM_LDR, NE, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0, funcTempImm&0xfff);
 				new_ins->U = 1;
 				ADD_LL_NEXT(new_ins, ins);
 			}
@@ -219,12 +230,12 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			{
 				if  (funcTempImm < -0xFFF)
 				{
-					new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_MEM1, REG_TEMP_MEM1, REG_NOT_USED, (-funcTempImm)&0xf000);
+					new_ins = newInstrI(ARM_SUB, NE, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (-funcTempImm)&0xf000);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 
-				// now store the value at REG_TEMP_MEM1 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_LDR, NE, Rd1, REG_NOT_USED, REG_TEMP_MEM1, (-funcTempImm)&0xfff);
+				// now store the value at REG_TEMP_SCRATCH0 ( This will be R2 + host base + funcTempImm&0xf000 )
+				new_ins = newInstrI(ARM_LDR, NE, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0, (-funcTempImm)&0xfff);
 				new_ins->U = 0;
 				ADD_LL_NEXT(new_ins, ins);
 			}
@@ -232,25 +243,26 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ins2 = new_ins = newInstr(INT_BRANCH, NE, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
-			ADD_LL_NEXT(new_ins, ins);
-
-			ins1->branchToThisInstruction = new_ins;
+			//new_ins 	= newInstrPUSH(AL, REG_HOST_STM_EABI);
+			//ADD_LL_NEXT(new_ins, ins);
 
 			//If this is equal then we have a virtual address
 			//TODO not included imm
 			new_ins = newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, R1);
 			ADD_LL_NEXT(new_ins, ins);
 
-			ins = insertCall_To_C(codeSegment,ins, AL, (size_t)&mem_lookup, 0);
+			ins1->branchToThisInstruction = new_ins;
+
+			ins = insertCall_To_C(codeSegment,ins, EQ, (size_t)&virtual_address, 0);
 
 			new_ins = newInstr(ARM_LDR, AL , Rd1, REG_NOT_USED, REG_HOST_R0);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins 	= newInstrPOP(AL, REG_HOST_STM_EABI);
-			ADD_LL_NEXT(new_ins, ins);
+			// Force delay of StoreCachedRegisters
+			//new_ins = newInstr(NO_OP, AL, Rd1, REG_NOT_USED, REG_NOT_USED);
+			//ADD_LL_NEXT(new_ins, ins);
 
-			ins2->branchToThisInstruction = ins->nextInstruction;
+			ins2->branchToThisInstruction = new_ins;
 
 			break;
 		case LBU: break;

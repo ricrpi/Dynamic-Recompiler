@@ -26,9 +26,9 @@ void cc_interrupt()
 	printf("cc_interrupt() called\n");
 }
 
-uint32_t mem_lookup(unsigned int addr)
+uint32_t virtual_address(unsigned int* addr)
 {
-	printf("mem_lookup(0x%08x) called\n",addr);
+	printf("virtual_address 0x%08x = 0x08x\n",(uint32_t)addr, *addr);
 
 	return 0x80000000 + addr;
 }
@@ -107,7 +107,7 @@ size_t branchUnknown(size_t address)
  * Emulation Returns:
  *  		R0 Host memory address
  *			Z=1 if !bDoDMAonInterrupt && last byte is 0x5, so run DMA?
- */
+ *//*
 code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru1 f)
 {
 	code_seg_t* 	code_seg 		= newSegment();
@@ -120,11 +120,11 @@ code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru
 	}
 
 	//Add the base and offset together
-	newInstruction 		= newInstr(ARM_ADD, AL, REG_TEMP_MEM1, REG_HOST_R0, REG_HOST_R1);
+	newInstruction 		= newInstr(ARM_ADD, AL, REG_TEMP_GEN1, REG_HOST_R0, REG_HOST_R1);
 	code_seg->Intermcode = ins = newInstruction;
 
 	//shift Right so that we have the final Byte
-	newInstruction 		= newInstr(SRL, AL, REG_TEMP_MEM2, REG_TEMP_MEM1, REG_NOT_USED);
+	newInstruction 		= newInstr(SRL, AL, REG_TEMP_MEM2, REG_TEMP_GEN1, REG_NOT_USED);
 	newInstruction->I = 1;
 	newInstruction->shift = 24;
 	ADD_LL_NEXT(newInstruction, ins);
@@ -135,7 +135,7 @@ code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//Move the address to R0
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, REG_TEMP_MEM1);
+	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, REG_TEMP_GEN1);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	// Return
@@ -148,7 +148,7 @@ code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//If so then clear bit 0x40
-	newInstruction 		= newInstrI(ARM_BIC, EQ, REG_HOST_R0, REG_TEMP_MEM1, REG_NOT_USED, 0x40);
+	newInstruction 		= newInstrI(ARM_BIC, EQ, REG_HOST_R0, REG_TEMP_GEN1, REG_NOT_USED, 0x40);
 	newInstruction->I = 1;
 	newInstruction->shift = 24;
 	newInstruction->shiftType = LOGICAL_LEFT;
@@ -178,7 +178,7 @@ code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru
 	Translate_Registers(code_seg);
 
 	return code_seg;
-}
+}*/
 
 
 #if defined(TEST_BRANCH_TO_C)
@@ -393,13 +393,13 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 	code_seg->Intermcode = ins = newInstruction;
 
 
-	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
-	ADD_LL_NEXT(newInstruction, ins);
+	//newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
+	//ADD_LL_NEXT(newInstruction, ins);
 
 	insertCall_To_C(code_seg, ins, AL, (size_t)&cc_interrupt, REG_HOST_STM_EABI);
 
-	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI);
-	ADD_LL_NEXT(newInstruction, ins);
+	//newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI);
+	//ADD_LL_NEXT(newInstruction, ins);
 
 	// Return
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);

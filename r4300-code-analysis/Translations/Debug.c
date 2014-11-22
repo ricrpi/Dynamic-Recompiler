@@ -51,13 +51,13 @@ void Translate_Debug(code_seg_t* codeSegment)
 
 	//load current segment Address
 	addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
-	codeSegment->Intermcode = new_ins = newInstrI(ARM_LDR_LIT, AL, REG_TEMP_DBG1, REG_NOT_USED, base, offset);
+	codeSegment->Intermcode = new_ins = newInstrI(ARM_LDR_LIT, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, base, offset);
 	new_ins->nextInstruction = ins;
 	ins = new_ins;
 
 	//load segmentData->dbgCurrentSegment address
 	addLiteral(codeSegment, &base, &offset, (uint32_t)&segmentData.dbgCurrentSegment);
-	new_ins 		= newInstrI(ARM_LDR_LIT, AL, REG_TEMP_DBG2, REG_NOT_USED, base, offset);
+	new_ins 		= newInstrI(ARM_LDR_LIT, AL, REG_TEMP_SCRATCH1, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(new_ins, ins);
 
 #if defined(USE_INSTRUCTION_COMMENTS)
@@ -65,14 +65,14 @@ void Translate_Debug(code_seg_t* codeSegment)
 #endif
 
 	//store
-	new_ins 		= newInstrI(ARM_STR, AL, REG_NOT_USED, REG_TEMP_DBG1, REG_TEMP_DBG2, 0);
+	new_ins 		= newInstrI(ARM_STR, AL, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH1, 0);
 	ADD_LL_NEXT(new_ins, ins);
 
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Call DebugRuntimePrintSegment()";
 #endif
 
-	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintSegment, REG_HOST_STM_EABI);
+	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintSegment, 0);
 
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Debug - Instruction count";

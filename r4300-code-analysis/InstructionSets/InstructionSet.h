@@ -52,17 +52,19 @@
 #define REG_LLBIT    		(REG_SPECIAL + 6)
 
 //Temorary Registers
-#define REG_TEMP_MEM1 		(REG_TEMP | 0x00)
-#define REG_TEMP_MEM2 		(REG_TEMP | 0x01)
-#define REG_TEMP_GEN1 		(REG_TEMP | 0x02)
-#define REG_TEMP_GEN2 		(REG_TEMP | 0x03)
-#define REG_TEMP_GEN3 		(REG_TEMP | 0x04)
-#define REG_TEMP_GEN4 		(REG_TEMP | 0x05)
-#define REG_TEMP_STR_CONST 	(REG_TEMP | 0x06)
-#define REG_TEMP_JR1		(REG_TEMP | 0x07)
+#define REG_TEMP_SCRATCH0	(REG_TEMP | 0x00)
+#define REG_TEMP_SCRATCH1	(REG_TEMP | 0x01)
+#define REG_TEMP_SCRATCH2	(REG_TEMP | 0x02)
+#define REG_TEMP_SCRATCH3	(REG_TEMP | 0x03)
+
+#define REG_TEMP_GEN1 		(REG_TEMP | 0x04)
+#define REG_TEMP_GEN2 		(REG_TEMP | 0x05)
+#define REG_TEMP_GEN3 		(REG_TEMP | 0x06)
+#define REG_TEMP_GEN4 		(REG_TEMP | 0x07)
 #define REG_TEMP_CALL2C		(REG_TEMP | 0x08)
-#define REG_TEMP_DBG1		(REG_TEMP | 0x09)
-#define REG_TEMP_DBG2		(REG_TEMP | 0x0A)
+
+#define REG_TEMP_DBG1		(REG_TEMP_GEN1)
+#define REG_TEMP_DBG2		(REG_TEMP_GEN1)
 
 //These are the HOST registers. Translation MUST not change them
 #define REG_HOST_FP			(REG_HOST | 0x0b)

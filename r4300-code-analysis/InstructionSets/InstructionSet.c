@@ -74,7 +74,7 @@ static void sprintf_reg_t(char* str, const reg_t r)
 	else                                 sprintf(str, "                      ");
 #else
 	if (r.regID == REG_NOT_USED)       	sprintf(str, "      ");
-	else if (r.regID == REG_EMU_FP)    	sprintf(str, "fp    ");
+	else if (r.regID == REG_EMU_FP)    	sprintf(str, "emufp ");
 	else if (r.regID == REG_HOST_SP)	sprintf(str, "sp    ");
 	else if (r.regID == REG_HOST_LR)	sprintf(str, "lr    ");
 	else if (r.regID == REG_HOST_PC)	sprintf(str, "pc    ");
@@ -174,6 +174,9 @@ Instruction_t* newInstrCopy(const Instruction_t* ins)
 {
 	Instruction_t* newInstr = (Instruction_t*)malloc(sizeof(Instruction_t));
 	memcpy(newInstr, ins, sizeof(Instruction_t));
+#if defined(USE_INSTRUCTION_COMMENTS)
+	newInstr->comment[0] = 0;
+#endif
 	return newInstr;
 }
 Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2)
@@ -654,7 +657,16 @@ Instruction_t* InstrFree(code_seg_t* const codeSegment, Instruction_t* ins)
 	}
 	else
 	{
-		while (in->nextInstruction != ins) in = in->nextInstruction;
+		while (in->nextInstruction != ins)
+		{
+			if (in->branchToThisInstruction == ins)
+			{
+				in->branchToThisInstruction = ins->nextInstruction;
+				assert(ins->nextInstruction);
+			}
+
+			in = in->nextInstruction;
+		}
 
 		in->nextInstruction = ins->nextInstruction;
 		free(ins);

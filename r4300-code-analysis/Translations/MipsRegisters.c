@@ -13,10 +13,10 @@
 
 static unsigned char RegsAvailable[] = {
 #if 0
-	0
-	, 1
-	, 2
-	, 3
+	//0,
+	1,
+	2,
+	3,
 #endif
 #if (REG_EMU_DEBUG1 != REG_HOST_R4 && REG_EMU_FLAGS != REG_HOST_R4 && REG_EMU_FP != REG_HOST_R4 && REG_EMU_CC_FP != REG_HOST_R4)
 	4
@@ -46,6 +46,8 @@ static unsigned char RegsAvailable[] = {
 	, 12
 #endif
 };
+
+static 	uint8_t RegLoaded[REG_TEMP];
 
 
 static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_t Reg)
@@ -128,20 +130,24 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 	}
 }
 
-void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
+/*
+static Instruction_t* LoadCachedRegistersInBranch(Instruction_t* const branchIns)
 {
-	Instruction_t*ins = codeSegment->Intermcode;
-
-#if defined(USE_INSTRUCTION_COMMENTS)
-	currentTranslation = "LoadCachedRegisters";
-#endif
-
+	Instruction_t*ins = branchIns;
+	Instruction_t* branchTgtIns = ins->branchToThisInstruction;
 	Instruction_t*new_ins, *copied_ins;
 
-	uint8_t RegLoaded[REG_TEMP];
-	memset(RegLoaded,0,sizeof(RegLoaded));
+	// test we are branching forward
+	while (ins && ins != branchTgtIns)
+	{
+		ins = ins->nextInstruction;
+	}
 
-	while (ins)
+	if (ins == NULL) abort();
+
+	ins = branchIns->nextInstruction;
+
+	while (ins && ins != branchTgtIns)
 	{
 		if (ins->R1.regID < REG_TEMP && !RegLoaded[ins->R1.regID])
 		{
@@ -188,20 +194,137 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 
 		ins = ins->nextInstruction;
 	}
+
+	return ins;
+}*/
+
+void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
+{
+	Instruction_t*ins = codeSegment->Intermcode;
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "LoadCachedRegisters";
+#endif
+
+	Instruction_t* copied_ins;
+
+	memset(RegLoaded,0,sizeof(RegLoaded));
+
+	while (ins)
+	{
+		regID_t R1 = ins->R1.regID;
+		regID_t R2 = ins->R2.regID;
+		regID_t R3 = ins->R3.regID;
+
+		if (R1 < REG_TEMP && !RegLoaded[R1])
+		{
+			copied_ins = newInstrCopy(ins);
+
+			ins = InstrI(ins, ARM_LDR, AL, R1, REG_NOT_USED, REG_EMU_FP, R1 * 4);
+#if defined (USE_INSTRUCTION_INIT_REGS)
+			ins->Rd1_init.regID = R1;
+#endif
+			ins->nextInstruction = copied_ins;
+
+			ins = copied_ins;
+
+			RegLoaded[R1] = 1;
+		}
+
+		if (R2 < REG_TEMP && !RegLoaded[R2])
+		{
+			copied_ins = newInstrCopy(ins);
+
+			ins = InstrI(ins, ARM_LDR, AL, R2, REG_NOT_USED, REG_EMU_FP, R2 * 4);
+#if defined (USE_INSTRUCTION_INIT_REGS)
+			ins->Rd1_init.regID = R2;
+#endif
+			ins->nextInstruction = copied_ins;
+			ins = copied_ins;
+
+			RegLoaded[R2] = 1;
+		}
+
+		if (R3 < REG_TEMP && !RegLoaded[R3])
+		{
+			copied_ins = newInstrCopy(ins);
+
+			ins = InstrI(ins, ARM_LDR, AL, R3, REG_NOT_USED, REG_EMU_FP, R3 * 4);
+#if defined (USE_INSTRUCTION_INIT_REGS)
+			ins->Rd1_init.regID = R3;
+#endif
+			ins->nextInstruction = copied_ins;
+			ins = copied_ins;
+
+			RegLoaded[R3] = 1;
+		}
+
+		if (ins->Rd1.regID < REG_TEMP && !RegLoaded[ins->Rd1.regID])
+		{
+			RegLoaded[ins->Rd1.regID] = 1;
+		}
+
+		if (ins->Rd2.regID < REG_TEMP && !RegLoaded[ins->Rd2.regID])
+		{
+			RegLoaded[ins->Rd2.regID] = 1;
+		}
+
+		ins = ins->nextInstruction;
+	}
+}
+
+static uint32_t pushpopRegister(Instruction_t* ins)
+{
+	// we need to find a register to push onto stack (or we could save it) so its available for use.
+	// When it is next used again then it will need to be loaded back in
+
+	// Find best register to push
+
+	int x;
+	int bestReg;
+	int bestRegCount = 0;
+	int regNextUsed[COUNTOF(RegsAvailable)];
+
+	for (x = 0; x < COUNTOF(RegsAvailable); x++)
+	{
+		regNextUsed[x] = FindRegNextUsedAgain(ins, RegsAvailable[x]);
+
+		if (regNextUsed[x] > bestRegCount)
+		{
+			bestRegCount = regNextUsed[x];
+			bestReg = x;
+		}
+	}
+
+	Instruction_t* in = ins;
+	Instruction_t* new_ins;
+
+	for (x = 0; x < bestRegCount; x++) in = in->nextInstruction;
+
+	new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, bestReg, REG_EMU_FP, bestReg * 4);
+	ADD_LL_NEXT(new_ins, ins);
+
+	new_ins = newInstrI(ARM_LDR, AL, bestReg, REG_NOT_USED, REG_EMU_FP, bestReg * 4);
+	ADD_LL_NEXT(new_ins, in);
+
+	printf("Pushing register r%d to REG_EMU_FP space. Will be loaded back in %d instructions\n", bestReg, bestRegCount);
+
+	return bestReg;
 }
 
 static void getNextRegister(Instruction_t* ins, uint32_t* uiCurrentRegisterIndex)
 {
 	uint32_t uiLastRegisterIndex = *uiCurrentRegisterIndex;
 
-	while ((FindRegNextUsedAgain(ins, REG_HOST + RegsAvailable[*uiCurrentRegisterIndex]) > 0))
+	while ((FindRegNextUsedAgain(ins, REG_HOST + RegsAvailable[*uiCurrentRegisterIndex]) >= 0))
 	{
 		(*uiCurrentRegisterIndex)++;
 		if (*uiCurrentRegisterIndex > COUNTOF(RegsAvailable)) *uiCurrentRegisterIndex = 0;
 
 		// Have we looped round all registers?
 		if (uiLastRegisterIndex == *uiCurrentRegisterIndex){
-			abort();
+			*uiCurrentRegisterIndex = pushpopRegister(ins);
+			return;
 		}
 	}
 }
@@ -235,11 +358,11 @@ void Translate_Registers(code_seg_t* const codeSegment)
 	ins = codeSegment->Intermcode;
 	while (ins)
 	{
-		if (ins->Rd1.regID != REG_NOT_USED && ins->Rd1.state == RS_REGISTER) counts[ins->Rd1.regID]++;
-		if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.state == RS_REGISTER) counts[ins->Rd2.regID]++;
-		if (ins->R1.regID != REG_NOT_USED && ins->R1.state == RS_REGISTER) counts[ins->R1.regID]++;
-		if (ins->R2.regID != REG_NOT_USED && ins->R2.state == RS_REGISTER) counts[ins->R2.regID]++;
-		if (ins->R3.regID != REG_NOT_USED && ins->R3.state == RS_REGISTER) counts[ins->R3.regID]++;
+		if (ins->Rd1.regID != REG_NOT_USED) counts[ins->Rd1.regID]++;
+		if (ins->Rd2.regID != REG_NOT_USED) counts[ins->Rd2.regID]++;
+		if (ins->R1.regID != REG_NOT_USED) counts[ins->R1.regID]++;
+		if (ins->R2.regID != REG_NOT_USED) counts[ins->R2.regID]++;
+		if (ins->R3.regID != REG_NOT_USED) counts[ins->R3.regID]++;
 
 		ins = ins->nextInstruction;
 	}
@@ -284,28 +407,63 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		while (ins)
 		{
 			if (ins->Rd1.regID != REG_NOT_USED  && ins->Rd1.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
-				getNextRegister(ins, &uiCurrentRegisterIndex);
+				if (ins->Rd1.regID < REG_TEMP || ins->Rd1.regID > REG_TEMP_SCRATCH3)
+				{
+					UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+					getNextRegister(ins, &uiCurrentRegisterIndex);
+				}
+				else
+				{
+					UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + ins->Rd1.regID - REG_TEMP, 0);
+				}
 			}
 
 			if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
-				getNextRegister(ins, &uiCurrentRegisterIndex);
+				if (ins->Rd2.regID < REG_TEMP || ins->Rd2.regID > REG_TEMP_SCRATCH3)
+				{
+					UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+					getNextRegister(ins, &uiCurrentRegisterIndex);
+				}
+				else
+				{
+					UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + ins->Rd2.regID - REG_TEMP, 0);
+				}
 			}
 
 			if (ins->R1.regID != REG_NOT_USED && ins->R1.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->R1.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
-				getNextRegister(ins, &uiCurrentRegisterIndex);
+				if (ins->R1.regID < REG_TEMP || ins->R1.regID > REG_TEMP_SCRATCH3)
+				{
+					UpdateRegWithReg(ins,ins->R1.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+					getNextRegister(ins, &uiCurrentRegisterIndex);
+				}
+				else
+				{
+					UpdateRegWithReg(ins,ins->R1.regID, REG_HOST + ins->R1.regID - REG_TEMP, 0);
+				}
 			}
 
 			if (ins->R2.regID != REG_NOT_USED && ins->R2.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->R2.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
-				getNextRegister(ins, &uiCurrentRegisterIndex);
+				if (ins->R2.regID < REG_TEMP || ins->R2.regID > REG_TEMP_SCRATCH3)
+				{
+					UpdateRegWithReg(ins,ins->R2.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+					getNextRegister(ins, &uiCurrentRegisterIndex);
+				}
+				else
+				{
+					UpdateRegWithReg(ins,ins->R2.regID, REG_HOST + ins->R2.regID - REG_TEMP, 0);
+				}
 			}
 
 			if (ins->R3.regID != REG_NOT_USED && ins->R3.regID < REG_HOST){
-				UpdateRegWithReg(ins,ins->R3.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
-				getNextRegister(ins, &uiCurrentRegisterIndex);
+				if (ins->R3.regID < REG_TEMP || ins->R3.regID > REG_TEMP_SCRATCH3)
+				{
+					UpdateRegWithReg(ins,ins->R3.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+					getNextRegister(ins, &uiCurrentRegisterIndex);
+				}
+				else
+				{
+					UpdateRegWithReg(ins,ins->R3.regID, REG_HOST + ins->R3.regID - REG_TEMP, 0);
+				}
 			}
 
 			ins = ins->nextInstruction;

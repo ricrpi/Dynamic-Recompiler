@@ -109,7 +109,7 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 				currentTranslation = "Call cc_interrupt()";
 			#endif
 
-			ins = insertCall_To_C(codeSegment, ins, PL, (uint32_t)cc_interrupt, REG_HOST_STM_EABI);
+			ins = insertCall_To_C(codeSegment, ins, PL, (uint32_t)cc_interrupt, 0);
 
 			return;
 		}
