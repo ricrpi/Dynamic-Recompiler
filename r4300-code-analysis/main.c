@@ -23,6 +23,12 @@
 
 extern code_segment_data_t segmentData;
 
+unsigned int SP_DMEM[0x1000/4*2];
+unsigned int *SP_IMEM = SP_DMEM+0x1000/4;
+unsigned char *SP_DMEMb = (unsigned char *)(SP_DMEM);
+unsigned char *SP_IMEMb = (unsigned char*)(SP_DMEM+0x1000/4);
+
+
 static void handler(int sig, siginfo_t *si, void *ptr)
 {
 	static int level 		= 0;
@@ -55,11 +61,36 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 	exit(0);
 }
 
+// Get the system type associated to a ROM country code.
+static m64p_system_type rom_country_code_to_system_type(unsigned short country_code)
+{
+    switch (country_code & 0xFF)
+    {
+        // PAL codes
+        case 0x44:
+        case 0x46:
+        case 0x49:
+        case 0x50:
+        case 0x53:
+        case 0x55:
+        case 0x58:
+        case 0x59:
+            return SYSTEM_PAL;
+
+        // NTSC codes
+        case 0x37:
+        case 0x41:
+        case 0x45:
+        case 0x4a:
+        default: // Fallback for unknown codes
+            return SYSTEM_NTSC;
+    }
+}
+
 void interrupt()
 {
 
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -123,6 +154,8 @@ int main(int argc, char* argv[])
 	swap_rom((unsigned char*)ROM_ADDRESS, &imagetype, romlength);
 
 	memcpy(&ROM_HEADER, (uint32_t*)ROM_ADDRESS, sizeof(m64p_rom_header));
+
+    ROM_PARAMS.systemtype = rom_country_code_to_system_type(ROM_HEADER.Country_code);
 
 	printf("Name: %s\n", ROM_HEADER.Name);
 	printf("Rom size: %ld bytes (or %ld Mb or %ld Megabits)\n", romlength, romlength/1024/1024, romlength/1024/1024*8);
