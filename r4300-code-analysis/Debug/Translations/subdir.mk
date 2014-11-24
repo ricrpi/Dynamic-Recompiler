@@ -13,10 +13,11 @@ C_SRCS += \
 ../Translations/Debug.c \
 ../Translations/DelaySlot.c \
 ../Translations/FPU.c \
+../Translations/Init.c \
 ../Translations/Literals.c \
 ../Translations/Memory.c \
-../Translations/MipsRegisters.c \
 ../Translations/OptimizeARM.c \
+../Translations/Registers.c \
 ../Translations/Translate.c \
 ../Translations/Trap.c 
 
@@ -30,10 +31,11 @@ OBJS += \
 ./Translations/Debug.o \
 ./Translations/DelaySlot.o \
 ./Translations/FPU.o \
+./Translations/Init.o \
 ./Translations/Literals.o \
 ./Translations/Memory.o \
-./Translations/MipsRegisters.o \
 ./Translations/OptimizeARM.o \
+./Translations/Registers.o \
 ./Translations/Translate.o \
 ./Translations/Trap.o 
 
@@ -47,10 +49,11 @@ C_DEPS += \
 ./Translations/Debug.d \
 ./Translations/DelaySlot.d \
 ./Translations/FPU.d \
+./Translations/Init.d \
 ./Translations/Literals.d \
 ./Translations/Memory.d \
-./Translations/MipsRegisters.d \
 ./Translations/OptimizeARM.d \
+./Translations/Registers.d \
 ./Translations/Translate.d \
 ./Translations/Trap.d 
 

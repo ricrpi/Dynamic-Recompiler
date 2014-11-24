@@ -13,6 +13,11 @@
 
 //-------------------------------------------------------------------
 
+//	used to change how registers are stored at REG_EMU_FP
+#define CACHE_REG_AS_64BIT 1
+
+//-------------------------------------------------------------------
+
 #define OPS_JUMP 			(0x01000)
 #define OPS_LINK 			(0x02000)
 #define OPS_BRANCH 			(0x04000)
@@ -26,15 +31,26 @@
 //Register IDs
 #define REG_NOT_USED 		(0xffff)
 #define REG_FP		 		(0x0020)
+
+#if CACHE_REG_AS_64BIT == 1
+#define REG_WIDE	 		(0x0001)			// 64-32 bit part of (register&0x3F).
+#else
 #define REG_WIDE	 		(0x0040)			// 64-32 bit part of (register&0x3F).
+#endif
+
 #define REG_CO		 		(0x0080)
 #define REG_SPECIAL	 		(REG_CO) + 32
 
 #define REG_TEMP			(0x0100)
 #define REG_HOST		 	(0x0200)
 
-
+#define REG_INDEX			(REG_CO + 0)
+#define REG_RANDOM			(REG_CO + 1)
+#define REG_ENTRYLO0		(REG_CO + 2)
+#define REG_ENTRYHI0		(REG_CO + 3)
 #define REG_CONTEXT  		(REG_CO + 4)
+#define REG_PAGEMASK		(REG_CO + 5)
+#define REG_WIRED			(REG_CO + 6)
 #define REG_BADVADDR 		(REG_CO + 8)
 #define REG_COUNT    		(REG_CO + 9)
 #define REG_ENTRYHI  		(REG_CO + 10)
@@ -42,8 +58,19 @@
 #define REG_STATUS   		(REG_CO + 12)
 #define REG_CAUSE    		(REG_CO + 13)
 #define REG_EPC		 		(REG_CO + 14)
+#define REG_PRID	 		(REG_CO + 15)
+#define REG_CONFIG		 	(REG_CO + 16)
+#define REG_LLADDR	 		(REG_CO + 17)
+#define REG_WATCHLO	 		(REG_CO + 18)
+#define REG_WATCHHI	 		(REG_CO + 19)
+#define REG_XCONTEXT 		(REG_CO + 20)
+#define REG_PERR	 		(REG_CO + 26)
+#define REG_CACHEERR 		(REG_CO + 27)
+#define REG_TAGLO	 		(REG_CO + 28)
+#define REG_TAGHI	 		(REG_CO + 29)
+#define REG_ERROREPC		(REG_CO + 30)
 
-// MIPS R4300 Special CPU Registers			// Value also forms the offset from FP when its at 0x8000 0000
+// MIPS R4300 Special CPU Registers
 #define REG_PC       		(REG_SPECIAL + 1)
 #define REG_FCR0	 		(REG_SPECIAL + 2)
 #define REG_FCR31    		(REG_SPECIAL + 3)
@@ -66,7 +93,7 @@
 #define REG_TEMP_DBG1		(REG_TEMP_GEN1)
 #define REG_TEMP_DBG2		(REG_TEMP_GEN1)
 
-//These are the HOST registers. Translation MUST not change them
+//These are the HOST registers. Translation MUST not change registers equal to them
 #define REG_HOST_FP			(REG_HOST | 0x0b)
 #define REG_HOST_SP	 		(REG_HOST | 0x0d)
 #define REG_HOST_LR	 		(REG_HOST | 0x0e)

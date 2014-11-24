@@ -8,3 +8,7 @@
 /rom.d
 /CodeSegments.d
 /CodeSegments.o
+/r4300.d
+/r4300.o
+/tlb.d
+/tlb.o

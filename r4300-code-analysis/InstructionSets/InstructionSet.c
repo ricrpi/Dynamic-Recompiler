@@ -70,7 +70,14 @@ static void sprintf_reg_t(char* str, const reg_t r)
 	else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str,"f%-3dw%-18s", r.regID - (REG_WIDE|REG_FP), 	cnst);
 	else if (r.regID >= REG_WIDE)        sprintf(str, "r%-3dw%-18s", r.regID - REG_WIDE, 			cnst);
 	else if (r.regID >= REG_FP)          sprintf(str, "f%-3d %-18s", r.regID - REG_FP, 			cnst);
-	else if (r.regID >= 0)               sprintf(str, "r%-3d %-18s", r.regID, 						cnst);
+	else if (r.regID >= 0)
+	{
+#if CACHE_REG_AS_64BIT == 1
+		sprintf(str, "r%-3d %-18s", r.regID/2, 						cnst);
+#else
+		sprintf(str, "r%-3d %-18s", r.regID, 						cnst);
+#endif
+		}
 	else                                 sprintf(str, "                      ");
 #else
 	if (r.regID == REG_NOT_USED)       	sprintf(str, "      ");
@@ -94,10 +101,22 @@ static void sprintf_reg_t(char* str, const reg_t r)
 	else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d  ", r.regID - REG_HOST);
 	else if (r.regID >= REG_TEMP)		 sprintf(str, "t%-3d  ", r.regID - REG_TEMP);
 	else if (r.regID >= REG_CO)          sprintf(str, "c%-3d  ", r.regID - REG_CO);
-	else if (r.regID >= (REG_WIDE|REG_FP))sprintf(str,"f%-3d  ", r.regID - (REG_WIDE|REG_FP));
-	else if (r.regID >= REG_WIDE)        sprintf(str, "r%-3dw ", r.regID - REG_WIDE);
-	else if (r.regID >= REG_FP)          sprintf(str, "f%-3d  ", r.regID - REG_FP);
-	else if (r.regID >= 0)               sprintf(str, "r%-3d  ", r.regID);
+	else if (r.regID >= 0)
+	{
+		char f = 'r';
+		char w = ' ';
+
+		if (r.regID & REG_WIDE) w = 'w';
+		if (r.regID & REG_FP) 	f = 'f';
+
+#if CACHE_REG_AS_64BIT == 1
+		if (r.regID < REG_TEMP)
+			sprintf(str, "%c%-3d%c ", f, (r.regID&~(REG_WIDE|REG_FP))/2, w);
+		else
+#endif
+		sprintf(str, "%c%-3d%c ", f, r.regID&~(REG_WIDE|REG_FP), w);
+
+	}
 	else                                 sprintf(str, "      ");
 #endif
 }

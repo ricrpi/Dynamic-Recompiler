@@ -23,26 +23,18 @@
 #ifndef __ROM_H__
 #define __ROM_H__
 
+#include "m64p_types.h"
 /* ROM Loading and Saving functions */
 
-typedef struct
+typedef struct _rom_params
 {
-	unsigned char init_PI_BSB_DOM1_LAT_REG;  /* 0x00 */
-	unsigned char init_PI_BSB_DOM1_PGS_REG;  /* 0x01 */
-	unsigned char init_PI_BSB_DOM1_PWD_REG;  /* 0x02 */
-	unsigned char init_PI_BSB_DOM1_PGS_REG2; /* 0x03 */
-	unsigned int ClockRate;                  /* 0x04 */
-	unsigned int PC;                         /* 0x08 */
-	unsigned int Release;                    /* 0x0C */
-	unsigned int CRC1;                       /* 0x10 */
-	unsigned int CRC2;                       /* 0x14 */
-	unsigned int Unknown[2];                 /* 0x18 */
-	unsigned char Name[20];                  /* 0x20 */
-	unsigned int unknown;                    /* 0x34 */
-	unsigned int Manufacturer_ID;            /* 0x38 */
-	unsigned short Cartridge_ID;             /* 0x3C - Game serial number  */
-	unsigned short Country_code;             /* 0x3E */
-} m64p_rom_header;
+   m64p_system_type systemtype;
+   int vilimit;
+   int aidacrate;
+   char headername[21];  /* ROM Name as in the header, removing trailing whitespace */
+} rom_params;
+
+extern rom_params        ROM_PARAMS;
 
 /* Supported rom compressiontypes. */
 enum 
