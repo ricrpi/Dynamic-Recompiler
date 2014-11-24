@@ -6,7 +6,9 @@
  */
 
 #include "rom.h"
+#include "m64p_types.h"
 
+rom_params        ROM_PARAMS;
 
 /* If rom is a .v64 or .n64 image, byteswap or wordswap loadlength amount of
  * rom data to native .z64 before forwarding. Makes sure that data extraction
