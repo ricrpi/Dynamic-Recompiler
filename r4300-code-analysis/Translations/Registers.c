@@ -50,6 +50,23 @@ static unsigned char RegsAvailable[] = {
 static 	uint8_t RegLoaded[REG_TEMP];
 
 
+uint32_t RegMemByteOffset(regID_t reg)
+{
+	if (reg < REG_CO)
+	{
+		uint32_t offset = 0;	// number of 32bits
+
+		if (reg&REG_WIDE) offset += 1;
+		if (reg&REG_FP) offset += 32*2;
+
+		offset += ((reg & ~(REG_WIDE|REG_FP)) * 2);
+
+		return offset*4;
+	}
+	else
+		return reg*4;
+}
+
 static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_t Reg)
 {
 	const Instruction_t* in = ins->nextInstruction;
@@ -59,7 +76,7 @@ static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_
 	{
 		if (in->R1.regID == Reg || in->R2.regID == Reg || in->R3.regID == Reg)
 			return x;
-		if (x && (in->Rd1.regID == Reg || in->Rd2.regID == Reg))					//might overwrite itself
+		if (x && in->cond == AL && (in->Rd1.regID == Reg || in->Rd2.regID == Reg))					//might overwrite itself
 			return -1;
 		x++;
 		in = in->nextInstruction;
@@ -74,7 +91,7 @@ static int32_t FindRegNextUpdated(const Instruction_t* const ins, const regID_t 
 
 	while (in)
 	{
-		if ((in->Rd1.regID == Reg || in->Rd2.regID == Reg))
+		if (in->cond == AL && (in->Rd1.regID == Reg || in->Rd2.regID == Reg))
 			return -1;
 
 		in = in->nextInstruction;
@@ -91,6 +108,8 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 	if (!x) x = 0xffffffff;
 
 #if defined(SHOW_REG_TRANSLATION_MAP)
+	printf("===========================================================\n");
+
 	if (RegFrom >= REG_HOST)
 	{
 		if (RegTo >= REG_HOST) 	printf("Reg host %3d => host %3d\n", RegFrom-REG_HOST, RegTo-REG_HOST);
@@ -128,75 +147,17 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 		x--;
 		in = in->nextInstruction;
 	}
+
+#if 0
+	Instr_print(ins,1);
+	in = ins->nextInstruction;
+	while(in->nextInstruction)
+	{
+		Instr_print(in,0);
+		in = in->nextInstruction;
+	}
+#endif
 }
-
-/*
-static Instruction_t* LoadCachedRegistersInBranch(Instruction_t* const branchIns)
-{
-	Instruction_t*ins = branchIns;
-	Instruction_t* branchTgtIns = ins->branchToThisInstruction;
-	Instruction_t*new_ins, *copied_ins;
-
-	// test we are branching forward
-	while (ins && ins != branchTgtIns)
-	{
-		ins = ins->nextInstruction;
-	}
-
-	if (ins == NULL) abort();
-
-	ins = branchIns->nextInstruction;
-
-	while (ins && ins != branchTgtIns)
-	{
-		if (ins->R1.regID < REG_TEMP && !RegLoaded[ins->R1.regID])
-		{
-			copied_ins = newInstrCopy(ins);
-
-			ins = InstrI(ins, ARM_LDR, AL, ins->R1.regID, REG_NOT_USED, REG_EMU_FP, ins->R1.regID * 4);
-			ins->nextInstruction = copied_ins;
-			ins = copied_ins;
-
-			RegLoaded[ins->R1.regID] = 1;
-		}
-
-		if (ins->R2.regID < REG_TEMP && !RegLoaded[ins->R2.regID])
-		{
-			copied_ins = newInstrCopy(ins);
-
-			new_ins = newInstrI(ARM_LDR, AL, ins->R2.regID, REG_NOT_USED, REG_EMU_FP, ins->R2.regID * 4);
-			new_ins->nextInstruction = copied_ins;
-			ins = copied_ins;
-
-			RegLoaded[ins->R2.regID] = 1;
-		}
-
-		if (ins->R3.regID < REG_TEMP && !RegLoaded[ins->R3.regID])
-		{
-			copied_ins = newInstrCopy(ins);
-
-			new_ins = newInstrI(ARM_LDR, AL, ins->R3.regID, REG_NOT_USED, REG_EMU_FP, ins->R3.regID * 4);
-			new_ins->nextInstruction = copied_ins;
-			ins = copied_ins;
-
-			RegLoaded[ins->R3.regID] = 1;
-		}
-
-		if (ins->Rd1.regID < REG_TEMP && !RegLoaded[ins->Rd1.regID])
-		{
-			RegLoaded[ins->Rd1.regID] = 1;
-		}
-
-		if (ins->Rd2.regID < REG_TEMP && !RegLoaded[ins->Rd2.regID])
-		{
-			RegLoaded[ins->Rd2.regID] = 1;
-		}
-
-		ins = ins->nextInstruction;
-	}
-
-	return ins;
-}*/
 
 void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 {
@@ -220,7 +181,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 		{
 			copied_ins = newInstrCopy(ins);
 
-			ins = InstrI(ins, ARM_LDR, AL, R1, REG_NOT_USED, REG_EMU_FP, R1 * 4);
+			ins = InstrI(ins, ARM_LDR, AL, R1, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R1));
 #if defined (USE_INSTRUCTION_INIT_REGS)
 			ins->Rd1_init.regID = R1;
 #endif
@@ -235,7 +196,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 		{
 			copied_ins = newInstrCopy(ins);
 
-			ins = InstrI(ins, ARM_LDR, AL, R2, REG_NOT_USED, REG_EMU_FP, R2 * 4);
+			ins = InstrI(ins, ARM_LDR, AL, R2, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R2));
 #if defined (USE_INSTRUCTION_INIT_REGS)
 			ins->Rd1_init.regID = R2;
 #endif
@@ -249,7 +210,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 		{
 			copied_ins = newInstrCopy(ins);
 
-			ins = InstrI(ins, ARM_LDR, AL, R3, REG_NOT_USED, REG_EMU_FP, R3 * 4);
+			ins = InstrI(ins, ARM_LDR, AL, R3, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R3));
 #if defined (USE_INSTRUCTION_INIT_REGS)
 			ins->Rd1_init.regID = R3;
 #endif
@@ -276,7 +237,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 static uint32_t pushpopRegister(Instruction_t* ins)
 {
 	// we need to find a register to push onto stack (or we could save it) so its available for use.
-	// When it is next used again then it will need to be loaded back in
+	// When it is next used again then it will need to be loaded back pBestRegNextUsedIns
 
 	// Find best register to push
 
@@ -296,18 +257,20 @@ static uint32_t pushpopRegister(Instruction_t* ins)
 		}
 	}
 
-	Instruction_t* in = ins;
+	Instruction_t* pBestRegNextUsedIns = ins;
 	Instruction_t* new_ins;
 
-	for (x = 0; x < bestRegCount; x++) in = in->nextInstruction;
+	for (x = 0; x < bestRegCount; x++) pBestRegNextUsedIns = pBestRegNextUsedIns->nextInstruction;
 
-	new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, bestReg, REG_EMU_FP, bestReg * 4);
+	new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, bestReg, REG_EMU_FP, RegMemByteOffset(bestReg));
 	ADD_LL_NEXT(new_ins, ins);
 
-	new_ins = newInstrI(ARM_LDR, AL, bestReg, REG_NOT_USED, REG_EMU_FP, bestReg * 4);
-	ADD_LL_NEXT(new_ins, in);
+	new_ins = newInstrI(ARM_LDR, AL, bestReg, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(bestReg));
+	ADD_LL_NEXT(new_ins, pBestRegNextUsedIns);
 
-	printf("Pushing register r%d to REG_EMU_FP space. Will be loaded back in %d instructions\n", bestReg, bestRegCount);
+	printf("Pushing register r%d to REG_EMU_FP space. Will be loaded back pBestRegNextUsedIns %d instructions\n", bestReg, bestRegCount);
+
+	abort(); // Only because this has not bee tested yet
 
 	return bestReg;
 }
@@ -315,8 +278,9 @@ static uint32_t pushpopRegister(Instruction_t* ins)
 static void getNextRegister(Instruction_t* ins, uint32_t* uiCurrentRegisterIndex)
 {
 	uint32_t uiLastRegisterIndex = *uiCurrentRegisterIndex;
+	int a;
 
-	while ((FindRegNextUsedAgain(ins, REG_HOST + RegsAvailable[*uiCurrentRegisterIndex]) >= 0))
+	while ((a = FindRegNextUsedAgain(ins, REG_HOST + RegsAvailable[*uiCurrentRegisterIndex]) >= 0))
 	{
 		(*uiCurrentRegisterIndex)++;
 		if (*uiCurrentRegisterIndex > COUNTOF(RegsAvailable)) *uiCurrentRegisterIndex = 0;
@@ -521,7 +485,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 
 				if (nextUsed == -2)
 				{
-					new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, ins->Rd1.regID, REG_EMU_FP, ins->Rd1.regID * 4);
+					new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, ins->Rd1.regID, REG_EMU_FP, RegMemByteOffset(ins->Rd1.regID));
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				if (nextUsed == -1) // Register will be over-written before next use so don't bother saving
@@ -537,7 +501,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 
 				if (nextUsed == -2)
 				{
-					new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, ins->Rd2.regID, REG_EMU_FP, ins->Rd2.regID * 4);
+					new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, ins->Rd2.regID, REG_EMU_FP, RegMemByteOffset(ins->Rd2.regID));
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				if (nextUsed == -1) // Register will be over-written before next use so don't bother saving

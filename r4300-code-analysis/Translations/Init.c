@@ -18,20 +18,10 @@ void Translate_init(code_seg_t* const codeSegment)
 	//now build new Intermediate code
 	for (x=0; x < codeSegment->MIPScodeLen; x++)
 	{
-		// Filter out No-ops
-		//if (0 != *(codeSegment->MIPScode + x))
-		{
-			newInstruction = newEmptyInstr();
+		newInstruction = newEmptyInstr();
 
-			mips_decode(*(codeSegment->MIPScode + x), newInstruction);
+		mips_decode(*(codeSegment->MIPScode + x), newInstruction);
 
-#if CACHE_REG_AS_64BIT == 1
-			if (newInstruction->Rd1.regID < REG_CO) newInstruction->Rd1.regID *= 2;
-			if (newInstruction->Rd2.regID < REG_CO) newInstruction->Rd2.regID *= 2;
-			if (newInstruction->R1.regID < REG_CO) newInstruction->R1.regID *= 2;
-			if (newInstruction->R2.regID < REG_CO) newInstruction->R2.regID *= 2;
-			if (newInstruction->R3.regID < REG_CO) newInstruction->R3.regID *= 2;
-#endif
 
 #if defined(USE_INSTRUCTION_INIT_REGS)
 		memcpy(&newInstruction->Rd1_init,&newInstruction->Rd1, sizeof(reg_t));
@@ -42,20 +32,18 @@ void Translate_init(code_seg_t* const codeSegment)
 #endif
 
 #if defined(USE_INSTRUCTION_COMMENTS)
-	sprintf_mips(newInstruction->comment, (uint32_t)(codeSegment->MIPScode + x), *(codeSegment->MIPScode + x));
+		sprintf_mips(newInstruction->comment, (uint32_t)(codeSegment->MIPScode + x), *(codeSegment->MIPScode + x));
 #endif
-			if (NULL == prevInstruction)
-			{
-				codeSegment->Intermcode = newInstruction;
+		if (NULL == prevInstruction)
+		{
+			codeSegment->Intermcode = newInstruction;
 
-			}
-			else
-			{
-				prevInstruction->nextInstruction = newInstruction;
-			}
-			prevInstruction = newInstruction;
 		}
-
+		else
+		{
+			prevInstruction->nextInstruction = newInstruction;
+		}
+		prevInstruction = newInstruction;
 	}
 
 	return;

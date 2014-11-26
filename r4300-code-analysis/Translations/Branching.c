@@ -11,32 +11,24 @@
 #include "memory.h"
 
 
-static void getTgtAddress(code_seg_t* const codeSegment, uint32_t instructionCount, int32_t offset, size_t* tgt_address, uint8_t* branchAbsolute)
+static void getTgtAddress(code_seg_t* const codeSegment, int32_t offset, size_t* tgt_address)
 {
-	code_seg_t* 	BranchToSeg = getSegmentAt(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset);
+	code_seg_t* 	BranchToSeg = getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset));
 
 	if (BranchToSeg)
 	{
-		if (BranchToSeg == codeSegment)	//loops to self
-		{
-			*tgt_address = -instructionCount -1;
-			*branchAbsolute = 0;
-		}
-		else if (BranchToSeg->ARMEntryPoint)
+		if (BranchToSeg->ARMEntryPoint)
 		{
 			*tgt_address = (size_t)BranchToSeg->ARMEntryPoint;
-			*branchAbsolute = 1;
 		}
 		else
 		{
 			*tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
-			*branchAbsolute = 1;
 		}
 	}
 	else // No segment Found
 	{
 		*tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
-		*branchAbsolute = 1;
 	}
 }
 
@@ -140,11 +132,18 @@ void Translate_Branch(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 
-				getTgtAddress(codeSegment, instructionCount, offset, &tgt_address, &branchAbsolute);
+				//if segment loops on its self
+				if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
+				{
+					new_ins = newInstrIntB(EQ, codeSegment->Intermcode);
+				}
+				else
+				{
+					getTgtAddress(codeSegment,offset, &tgt_address);
+					new_ins = newInstrB(EQ, tgt_address, 1);
+				}
 
-				new_ins = newInstrB(EQ, tgt_address, branchAbsolute);
 				if (instruction & OPS_LINK) new_ins->Ln = 1;
-
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
@@ -168,11 +167,18 @@ void Translate_Branch(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 
-				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);
+				//if segment loops on its self
+				if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
+				{
+					new_ins = newInstrIntB(NE, codeSegment->Intermcode);
+				}
+				else
+				{
+					getTgtAddress(codeSegment,offset, &tgt_address);
+					new_ins = newInstrB(NE, tgt_address, 1);
+				}
 
-				new_ins = newInstrB(NE, tgt_address, branchAbsolute);
 				if (instruction & OPS_LINK) new_ins->Ln = 1;
-
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
@@ -182,9 +188,9 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 				offset = ins->offset;
 
-				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);
+				getTgtAddress(codeSegment,offset, &tgt_address);
 
-				new_ins = newInstrB(AL, tgt_address, branchAbsolute);
+				new_ins = newInstrB(AL, tgt_address, 1);
 				if (instruction & OPS_LINK) new_ins->Ln = 1;
 				ADD_LL_NEXT(new_ins, ins);
 				break;
@@ -224,12 +230,20 @@ void Translate_Branch(code_seg_t* const codeSegment)
 					//ADD_LL_NEXT(new_ins, ins);
 				}
 
-				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);
+				//if segment loops on its self
+				if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
+				{
+					new_ins = newInstrIntB(MI, codeSegment->Intermcode);
+				}
+				else
+				{
+					getTgtAddress(codeSegment, offset, &tgt_address);
+					new_ins = newInstrB(MI, tgt_address, 1);
+				}
 
-				new_ins = newInstrB(MI, tgt_address, branchAbsolute);
 				if (instruction & OPS_LINK) new_ins->Ln = 1;
-
 				ADD_LL_NEXT(new_ins, ins);
+
 
 				break;
 
@@ -245,11 +259,18 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				new_ins = newInstrI(ARM_CMP, PL, REG_NOT_USED, R1 , REG_NOT_USED, 0); // if not minus
 				ADD_LL_NEXT(new_ins, ins);
 
-				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);
+				//if segment loops on its self
+				if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
+				{
+					new_ins = newInstrIntB(GEZ, codeSegment->Intermcode);
+				}
+				else
+				{
+					getTgtAddress(codeSegment,offset, &tgt_address);
+					new_ins = newInstrB(GEZ, tgt_address, 1);
+				}
 
-				new_ins = newInstrB(GEZ, tgt_address, branchAbsolute);
 				if (instruction & OPS_LINK) new_ins->Ln = 1;
-
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
@@ -264,11 +285,18 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, R1 , REG_NOT_USED, 0); // if upper 64 bit is EQ then check lower
 				ADD_LL_NEXT(new_ins, ins);
 
-				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);
+				//if segment loops on its self
+				if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
+				{
+					new_ins = newInstrIntB(LEZ, codeSegment->Intermcode);
+				}
+				else
+				{
+					getTgtAddress(codeSegment, offset, &tgt_address);
+					new_ins = newInstrB(LEZ, tgt_address, branchAbsolute);
+				}
 
-				new_ins = newInstrB(LEZ, tgt_address, branchAbsolute);
 				if (instruction & OPS_LINK) new_ins->Ln = 1;
-
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
@@ -283,11 +311,18 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				new_ins = newInstrI(ARM_CMP, EQ, REG_NOT_USED, R1 , REG_NOT_USED, 0); // upper is 0 what about lower
 				ADD_LL_NEXT(new_ins, ins);
 
-				getTgtAddress(codeSegment,instructionCount, offset, &tgt_address, &branchAbsolute);
+				//if segment loops on its self
+				if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
+				{
+					new_ins = newInstrIntB(HI, codeSegment->Intermcode);
+				}
+				else
+				{
+					getTgtAddress(codeSegment, offset, &tgt_address);
+					new_ins = newInstrB(HI, tgt_address, branchAbsolute);
+				}
 
-				new_ins = newInstrB(HI, tgt_address, branchAbsolute);
 				if (instruction & OPS_LINK) new_ins->Ln = 1;
-
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;

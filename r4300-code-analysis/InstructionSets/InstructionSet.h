@@ -13,8 +13,6 @@
 
 //-------------------------------------------------------------------
 
-//	used to change how registers are stored at REG_EMU_FP
-#define CACHE_REG_AS_64BIT 1
 
 //-------------------------------------------------------------------
 
@@ -32,11 +30,8 @@
 #define REG_NOT_USED 		(0xffff)
 #define REG_FP		 		(0x0020)
 
-#if CACHE_REG_AS_64BIT == 1
-#define REG_WIDE	 		(0x0001)			// 64-32 bit part of (register&0x3F).
-#else
+
 #define REG_WIDE	 		(0x0040)			// 64-32 bit part of (register&0x3F).
-#endif
 
 #define REG_CO		 		(0x0080)
 #define REG_SPECIAL	 		(REG_CO) + 32
@@ -537,7 +532,8 @@ typedef enum
 	LTZ = MI,
 	GEZ = PL,
 	LEZ = LE,
-	GTZ	= GT
+	GTZ	= GT,
+	AL_B = NV + 1
 } Condition_e;
 
 typedef struct _Instruction

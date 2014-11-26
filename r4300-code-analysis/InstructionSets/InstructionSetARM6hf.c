@@ -80,6 +80,9 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 	if (ins->R2.regID != REG_NOT_USED)  R2  = ins->R2.regID  & ~REG_HOST;
 	if (ins->R3.regID != REG_NOT_USED)  R3  = ins->R3.regID  & ~REG_HOST;
 
+	Condition_e cond = ins->cond;
+	if (cond > NV) cond = AL;
+
 	assert(R3 < 16);
 	assert(R2 < 16);
 	assert(R1 < 16);
@@ -89,87 +92,87 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 	switch (ins->instruction)
 	{
 	case ARM_AND:
-		return ins->cond << 28 | ins->I << 25 | 0x0 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x0 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_EOR:
-		return ins->cond << 28 | ins->I << 25 | 0x1 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x1 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_SUB:
-		return ins->cond << 28 | ins->I << 25 | 0x2 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x2 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_RSB:
-		return ins->cond << 28 | ins->I << 25 | 0x3 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x3 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_ADD:
-		return ins->cond << 28 | ins->I << 25 | 0x4 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x4 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_ADC:
-		return ins->cond << 28 | ins->I << 25 | 0x5 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x5 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_SBC:
-		return ins->cond << 28 | ins->I << 25 | 0x6 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x6 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_RSC:
-		return ins->cond << 28 | ins->I << 25 | 0x7 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x7 << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_TST:
-		return ins->cond << 28 | ins->I << 25 | 0x8 << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x8 << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
 	case ARM_TEQ:
-		return ins->cond << 28 | ins->I << 25 | 0x9 << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0x9 << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
 	case ARM_CMP:
-		return ins->cond << 28 | ins->I << 25 | 0xA << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0xA << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
 	case ARM_CMN:
-		return ins->cond << 28 | ins->I << 25 | 0xB << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0xB << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
 	case ARM_ORR:
-		return ins->cond << 28 | ins->I << 25 | 0xC << 21 | ins->S << 20 | R1 << 16 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0xC << 21 | ins->S << 20 | R1 << 16 | ALU_OP2(ins);
 	case ARM_MOV:
-		return ins->cond << 28 | ins->I << 25 | 0xD << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0xD << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_BIC:
-		return ins->cond << 28 | ins->I << 25 | 0xE << 21 | ins->S << 20 | R1 << 16  | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0xE << 21 | ins->S << 20 | R1 << 16  | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_MVN:
-		return ins->cond << 28 | ins->I << 25 | 0xF << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0xF << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_BFC:
 		abort();
-		return ins->cond << 28 | 0x3E << 21 | 0x1F; // TODO
+		return cond << 28 | 0x3E << 21 | 0x1F; // TODO
 	case ARM_BFI:
 		abort();
-		return ins->cond << 28 | 0x3E << 21 | 0x1 << 4 | R1; // TODO
+		return cond << 28 | 0x3E << 21 | 0x1 << 4 | R1; // TODO
 	case ARM_CLZ:
 		return 0x16F0F10 | ins->S << 20 | Rd1 << 12 | R1;
 
 	case ARM_LDM:
-		return ins->cond << 28 | 1 << 27 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | 1 << 20 | R1 << 16 | ins->Rmask;
+		return cond << 28 | 1 << 27 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | 1 << 20 | R1 << 16 | ins->Rmask;
 	case ARM_STM:
-		return ins->cond << 28 | 1 << 27 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | R1 << 16 | ins->Rmask;
+		return cond << 28 | 1 << 27 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | R1 << 16 | ins->Rmask;
 
 	case ARM_LDR:
 		if (ins->I)
-			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
+			return cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
 		else
-			return ins->cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
+			return cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
 	case ARM_STR:
 		if (ins->I)
-			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->immediate&0xFFF);
+			return cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->immediate&0xFFF);
 		else
-			return ins->cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
+			return cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
 	case ARM_LDRD:
 		if (ins->I)
-			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate&0xF0) << 4) | 0xd0 | (ins->immediate&0xF);
+			return cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate&0xF0) << 4) | 0xd0 | (ins->immediate&0xF);
 		else
-			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xd0 | (R2&0xf);
+			return cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xd0 | (R2&0xf);
 	case ARM_STRD:
 		if (ins->I)
-			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate&0xF0) << 4) | 0xf0 | (ins->immediate&0xF);
+			return cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate&0xF0) << 4) | 0xf0 | (ins->immediate&0xF);
 		else
-			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xf0 | (R2&0xf);
+			return cond << 28 | ins->PR << 24 | ins->U << 23 | ins->W << 21 | Rd1 << 16 | R1 << 12 | 0xf0 | (R2&0xf);
 
 	case ARM_LDR_LIT:
-			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
+			return cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
 	case ARM_STR_LIT:
-			return ins->cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->immediate&0xFFF);
+			return cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 0 << 20 | R2 << 16 | R1 << 12 | (ins->immediate&0xFFF);
 	case ARM_LDRD_LIT:
-			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate>>4)&0xf) | 0xd0 | (ins->immediate&0xf);
+			return cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate>>4)&0xf) | 0xd0 | (ins->immediate&0xf);
 	case ARM_STRD_LIT:
-			return ins->cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate>>4)&0xf) | 0xf0 | (ins->immediate&0xf);
+			return cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate>>4)&0xf) | 0xf0 | (ins->immediate&0xf);
 	case ARM_B:
 		if (ins->I)
-			return ins->cond << 28 | 0xA << 24 | ins->Ln << 24 | (((ins->offset - addr )/4 - ARM_BRANCH_OFFSET)&0xffffff);
+			return cond << 28 | 0xA << 24 | ins->Ln << 24 | (((ins->offset - addr )/4 - ARM_BRANCH_OFFSET)&0xffffff);
 		else
-			return ins->cond << 28 | 0xA << 24 | ins->Ln << 24 | ((ins->offset - ARM_BRANCH_OFFSET)&0xffffff);
+			return cond << 28 | 0xA << 24 | ins->Ln << 24 | ((ins->offset - ARM_BRANCH_OFFSET)&0xffffff);
 	case ARM_BX:
-		return ins->cond << 28 | 0x12fff10 | ins->Ln << 5 | R1;
+		return cond << 28 | 0x12fff10 | ins->Ln << 5 | R1;
 
 	//case JR:
 		//assert(ins->I == 0);

@@ -88,14 +88,14 @@ Instruction_t* insertCall_To_C(code_seg_t* const code_seg, Instruction_t* ins, c
 
 	addLiteral(code_seg, &base, &offset, functionAddress);
 
-	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, base, offset);
+	newInstruction 		= newInstrI(ARM_LDR_LIT, AL, REG_TEMP_CALL2C, REG_NOT_USED, base, offset);
 	ADD_LL_NEXT(newInstruction, ins);
 
 	//push lr
 	newInstruction 	= newInstrPUSH(AL, Rmask | REG_HOST_STM_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
-	newInstruction 	= newInstr(ARM_BX, cond, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_NOT_USED);
+	newInstruction 	= newInstr(ARM_BX, cond, REG_NOT_USED, REG_TEMP_CALL2C, REG_NOT_USED);
 	newInstruction->Ln = 1;
 	ADD_LL_NEXT(newInstruction, ins);
 

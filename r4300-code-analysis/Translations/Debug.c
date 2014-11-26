@@ -44,6 +44,9 @@ void Translate_Debug(code_seg_t* codeSegment)
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Debug - Load Segment ID";
 #endif
+
+
+#if defined(USE_TRANSLATE_DEBUG_SET_CURRENT_SEG)
 	regID_t base;
 	int32_t offset;
 
@@ -63,6 +66,7 @@ void Translate_Debug(code_seg_t* codeSegment)
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Debug - Store Segment ID";
 #endif
+#endif
 
 	//store
 	new_ins 		= newInstrI(ARM_STR, AL, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH1, 0);
@@ -78,6 +82,7 @@ void Translate_Debug(code_seg_t* codeSegment)
 	currentTranslation = "Debug - Instruction count";
 #endif
 
+#if defined(USE_TRANSLATE_DEBUG_LINE_NUMBERS)
 	int x=0;
 	while (ins->nextInstruction->nextInstruction)
 	{
@@ -87,4 +92,5 @@ void Translate_Debug(code_seg_t* codeSegment)
 		x++;
 		ins = ins->nextInstruction;
 	}
+#endif
 }

@@ -96,6 +96,8 @@ code_seg_t* Generate_MIPS_Trap(code_segment_data_t* seg_data);
 
 // -----------------------------------------------------------------
 
+uint32_t RegMemByteOffset(regID_t reg);
+
 void DebugRuntimePrintSegment();
 
 void DebugRuntimePrintMIPS();
@@ -185,7 +187,7 @@ static TranslationsMap Translations[] =
 		{Translate_FPU,						"FPU"},						//
 		{Translate_Memory,					"Memory"},					//
 
-#if defined(USE_TRANSLATE_DEBUG)
+#if defined(USE_TRANSLATE_DEBUG_BREAK_AT_END)
 		{Translate_BreakAtEndSegment,		"BreakAtEnd"},
 #endif
 

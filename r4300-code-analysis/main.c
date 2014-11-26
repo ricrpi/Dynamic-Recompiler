@@ -20,6 +20,7 @@
 #include "Debugger.h"
 #include <signal.h>
 #include <sys/ucontext.h>
+#include "m64p_types.h"
 
 extern code_segment_data_t segmentData;
 
@@ -28,6 +29,8 @@ unsigned int *SP_IMEM = SP_DMEM+0x1000/4;
 unsigned char *SP_DMEMb = (unsigned char *)(SP_DMEM);
 unsigned char *SP_IMEMb = (unsigned char*)(SP_DMEM+0x1000/4);
 
+void r4300_reset_hard(void);
+void r4300_reset_soft(void);
 
 static void handler(int sig, siginfo_t *si, void *ptr)
 {
@@ -268,6 +271,8 @@ int main(int argc, char* argv[])
 	printf("----------------------------\n");
 #endif
 
+	r4300_reset_hard();
+	r4300_reset_soft();
 	printf("\nFinished processing ROM\n");
 
 	while (Debugger_start(&segmentData, NULL, NULL));

@@ -33,7 +33,8 @@ const static char* const arm_cond[] = {
 "gt",
 "le",
 "",
-"nv"
+"nv",
+""		// for AL_B where instruction is AL but is still conditional due to intra segment branching
 };
 
 void printf_arm(const uint32_t addr, const uint32_t word);

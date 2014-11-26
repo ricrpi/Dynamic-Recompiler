@@ -72,12 +72,8 @@ static void sprintf_reg_t(char* str, const reg_t r)
 	else if (r.regID >= REG_FP)          sprintf(str, "f%-3d %-18s", r.regID - REG_FP, 			cnst);
 	else if (r.regID >= 0)
 	{
-#if CACHE_REG_AS_64BIT == 1
-		sprintf(str, "r%-3d %-18s", r.regID/2, 						cnst);
-#else
 		sprintf(str, "r%-3d %-18s", r.regID, 						cnst);
-#endif
-		}
+	}
 	else                                 sprintf(str, "                      ");
 #else
 	if (r.regID == REG_NOT_USED)       	sprintf(str, "      ");
@@ -109,13 +105,7 @@ static void sprintf_reg_t(char* str, const reg_t r)
 		if (r.regID & REG_WIDE) w = 'w';
 		if (r.regID & REG_FP) 	f = 'f';
 
-#if CACHE_REG_AS_64BIT == 1
-		if (r.regID < REG_TEMP)
-			sprintf(str, "%c%-3d%c ", f, (r.regID&~(REG_WIDE|REG_FP))/2, w);
-		else
-#endif
 		sprintf(str, "%c%-3d%c ", f, r.regID&~(REG_WIDE|REG_FP), w);
-
 	}
 	else                                 sprintf(str, "      ");
 #endif
@@ -207,6 +197,7 @@ Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condit
 	ins->R2.regID    = R2;
 
 	ins->I = 0;
+	ins->S = 0;
 
 	switch (ins_e)
 	{
@@ -248,6 +239,7 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 	ins->R2.regID    = R2;
 
 	ins->I = 1;
+	ins->S = 0;
 
 	switch (ins_e)
 	{

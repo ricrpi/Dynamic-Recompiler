@@ -689,8 +689,8 @@ void DebugRuntimePrintMIPS()
 	for (x=0; x < 16; x++)
 	{
 		printf( "\tr%-2d 0x%08x%08x\tr%-2d 0x%08x%08x\n"
-				,  0 + x, *(uint32_t*)(MMAP_FP_BASE + (REG_WIDE +  0 + x) * 4), *(uint32_t*)(MMAP_FP_BASE + ( 0 + x) * 4)
-				, 16 + x, *(uint32_t*)(MMAP_FP_BASE + (REG_WIDE + 16 + x) * 4), *(uint32_t*)(MMAP_FP_BASE + (16 + x) * 4));
+				,  0 + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_WIDE)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x))
+				, 16 + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_WIDE)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x)));
 	}
 
 	printf("\n");
@@ -698,9 +698,8 @@ void DebugRuntimePrintMIPS()
 	for (x=0; x < 16; x++)
 	{
 		printf( "\tf%-2d 0x%08x%08x\tf%-2d 0x%08x%08x\n"
-				,  0 + x, *(uint32_t*)(MMAP_FP_BASE + (REG_FP + REG_WIDE +  0 + x) * 4), *(uint32_t*)(MMAP_FP_BASE + (REG_FP +  0 + x) * 4)
-				, 16 + x, *(uint32_t*)(MMAP_FP_BASE + (REG_FP + REG_WIDE + 16 + x) * 4), *(uint32_t*)(MMAP_FP_BASE + (REG_FP + 16 + x) * 4)
-				);
+						,  0 + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_FP))
+						, 16 + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x+REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_FP)));
 	}
 
 	printf("\n\tBadVaddr 0x%08x  PC     0x%08x\n"
