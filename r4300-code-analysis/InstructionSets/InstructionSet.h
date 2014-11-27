@@ -9,6 +9,7 @@
 #define INSTRUCTIONSET_H_
 
 #include <stdint.h>
+#include <stddef.h>
 #include "DebugDefines.h"
 
 //-------------------------------------------------------------------
@@ -586,6 +587,8 @@ typedef struct _Instruction
 	uint8_t S:1;			// Set condition flags
 	uint8_t U:1;			// Up/Down, set for inc, clear for decrement
 	uint8_t W:1;			// Writeback bit set to write to base register
+
+	size_t outputAddress;
 
 #if defined(USE_INSTRUCTION_COMMENTS)
 	#define COMMENT_LENGTH (200)

@@ -520,7 +520,7 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 	if (heading)
 	{
 		#if defined(USE_INSTRUCTION_COMMENTS)
-			printf("\t");
+			printf("           \t");
 		#endif
 
 #if defined(USE_INSTRUCTION_INIT_REGS)
@@ -569,11 +569,25 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 	#if defined(USE_INSTRUCTION_COMMENTS)
 		if (ins->comment[0] == '0')
 		{
-			printf("\n%s\t", ins->comment);
+			if (ins->outputAddress)
+			{
+				printf("\n%s0x%08x \t", ins->comment, ins->outputAddress);
+			}
+			else
+			{
+				printf("\n%s           \t", ins->comment);
+			}
 		}
 		else
 		{
-			printf("\t");
+			if (ins->outputAddress)
+			{
+				printf("0x%08x \t", ins->outputAddress);
+			}
+			else
+			{
+				printf("           \t");
+			}
 		}
 	#endif
 

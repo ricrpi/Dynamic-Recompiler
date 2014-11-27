@@ -28,7 +28,14 @@ void cc_interrupt()
 
 uint32_t virtual_address(unsigned int* addr)
 {
-	printf("virtual_address 0x%08x = 0x08x\n",(uint32_t)addr, *addr);
+	if (!addr)
+	{
+		printf("virtual_address (nil)\n");
+	}
+	else
+	{
+		printf("virtual_address 0x%08x = 0x08x\n",(uint32_t)addr, *addr);
+	}
 
 	return 0x80000000 + addr;
 }

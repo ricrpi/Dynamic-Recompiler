@@ -647,7 +647,7 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 			Translations[x].function(CurrentCodeSeg);
 		}
 
-		if (x < COUNTOF(Translations)-1)
+		if (x < COUNTOF(Translations))
 		{
 			CodeSeg_print(CurrentCodeSeg);
 		}

@@ -778,6 +778,7 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	while (ins)
 	{
 		*out = arm_encode(ins, (size_t)out);
+		ins->outputAddress = (size_t)out;
 		codeSeg->ARMcodeLen++;
 		out++;
 		ins = ins->nextInstruction;
