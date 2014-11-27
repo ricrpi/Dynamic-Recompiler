@@ -42,6 +42,7 @@
 // Use the translation that adds debugging markers
 #define USE_TRANSLATE_DEBUG						// think this must be active for branch unknowns to work!
 #define USE_TRANSLATE_DEBUG_SET_CURRENT_SEG		// think this must be active for branch unknowns to work!
+#define USE_TRANSLATE_DEBUG_PRINT_SEGMENT
 //#define USE_TRANSLATE_DEBUG_BREAK_AT_END
 //#define USE_TRANSLATE_DEBUG_LINE_NUMBERS
 

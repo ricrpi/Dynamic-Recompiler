@@ -76,7 +76,7 @@ static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_
 	{
 		if (in->R1.regID == Reg || in->R2.regID == Reg || in->R3.regID == Reg)
 			return x;
-		if (x && in->cond == AL && (in->Rd1.regID == Reg || in->Rd2.regID == Reg))					//might overwrite itself
+		if (x && (in->Rd1.regID == Reg || in->Rd2.regID == Reg))					//might overwrite itself
 			return -1;
 		x++;
 		in = in->nextInstruction;
@@ -262,13 +262,13 @@ static uint32_t pushpopRegister(Instruction_t* ins)
 
 	for (x = 0; x < bestRegCount; x++) pBestRegNextUsedIns = pBestRegNextUsedIns->nextInstruction;
 
-	new_ins = newInstrI(ARM_STR, AL, REG_NOT_USED, bestReg, REG_EMU_FP, RegMemByteOffset(bestReg));
+	new_ins = newInstrPUSH(AL, 1 << bestReg);
 	ADD_LL_NEXT(new_ins, ins);
 
-	new_ins = newInstrI(ARM_LDR, AL, bestReg, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(bestReg));
+	new_ins = newInstrPOP(AL, 1 << bestReg);
 	ADD_LL_NEXT(new_ins, pBestRegNextUsedIns);
 
-	printf("Pushing register r%d to REG_EMU_FP space. Will be loaded back pBestRegNextUsedIns %d instructions\n", bestReg, bestRegCount);
+	printf("Pushing register h%d to REG_EMU_FP space. Will be loaded back pBestRegNextUsedIns %d instructions\n", bestReg, bestRegCount);
 
 	abort(); // Only because this has not bee tested yet
 

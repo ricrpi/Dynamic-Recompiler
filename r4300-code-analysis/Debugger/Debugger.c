@@ -679,7 +679,7 @@ void DebugRuntimePrintSegment()
 {
 	printf("Current Segment 0x%08x\n\n", (uint32_t)segmentData.dbgCurrentSegment);
 
-	DebugRuntimePrintMIPS();
+	//DebugRuntimePrintMIPS();
 }
 
 void DebugRuntimePrintMIPS()

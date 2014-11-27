@@ -76,7 +76,9 @@ void Translate_Debug(code_seg_t* codeSegment)
 	currentTranslation = "Call DebugRuntimePrintSegment()";
 #endif
 
+#if defined(USE_TRANSLATE_DEBUG_PRINT_SEGMENT)
 	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintSegment, 0);
+#endif
 
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Debug - Instruction count";
