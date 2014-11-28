@@ -70,6 +70,13 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 	}
 }
 
+#define assert2(expr)							\
+  if (!(expr)){\
+	  __assert_fail (__STRING(expr), __FILE__, __LINE__, __ASSERT_FUNCTION);\
+	  Instr_print(ins, 1);   }
+
+
+
 uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 {
 	uint8_t Rd1=0, Rd2=0, R1=0, R2=0, R3=0;
@@ -83,10 +90,10 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 	Condition_e cond = ins->cond;
 	if (cond > NV) cond = AL;
 
-	assert(R3 < 16);
-	assert(R2 < 16);
-	assert(R1 < 16);
-	assert(Rd2 < 16);
+	assert2(R3 < 16);
+	assert2(R2 < 16);
+	assert2(R1 < 16);
+	assert2(Rd2 < 16);
 	assert(Rd1 < 16);
 
 	switch (ins->instruction)

@@ -677,7 +677,14 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 
 void DebugRuntimePrintSegment()
 {
-	printf("Current Segment 0x%08x\n\n", (uint32_t)segmentData.dbgCurrentSegment);
+	static code_seg_t* lastCurrentSegment = NULL;
+
+	//Only print out when the current segment changes
+	if (lastCurrentSegment != segmentData.dbgCurrentSegment)
+	{
+		printf("Current Segment 0x%08x\n", (uint32_t)segmentData.dbgCurrentSegment);
+		lastCurrentSegment = segmentData.dbgCurrentSegment;
+	}
 
 	//DebugRuntimePrintMIPS();
 }
