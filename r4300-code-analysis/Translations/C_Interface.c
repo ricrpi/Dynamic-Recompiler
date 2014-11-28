@@ -24,23 +24,26 @@ uint32_t bMemoryInlineLookup= 0;
 void cc_interrupt()
 {
 	uint32_t* regCause = (uint32_t*)(MMAP_FP_BASE) + REG_CAUSE;
-	uint32_t* dmaPIlen1 = (uint32_t*)(MMAP_FP_BASE) + 3;
-	uint32_t* dmaPIlen2 = (uint32_t*)(MMAP_FP_BASE) + 4;
+	uint32_t* dmaPI = (uint32_t*)(MMAP_FP_BASE) ;
+
 
 	*regCause |= 0x8000;
 
 	printf("cc_interrupt() called\n");
 
-	if (*dmaPIlen1)
+	if (*(dmaPI+2))
 	{
-		printf("PI DMA 1 detected\n");
-		*dmaPIlen1 = 0;
+		printf("PI DMA 'RAM to Cartridge' detected\n");
+		memcpy((void*)*(dmaPI+1),(void*)*(dmaPI+0),*(dmaPI+2));
+		*(dmaPI+3) = 0;
 	}
 
-	if (*dmaPIlen2)
+	if (*(dmaPI+3))
 	{
-		printf("PI DMA 2 detected\n");
-		*dmaPIlen2 = 0;
+
+		printf("PI DMA 'Cartridge to RAM' detected\n");
+		memcpy((void*)*(dmaPI+0),(void*)*(dmaPI+1),*(dmaPI+3));
+		*(dmaPI+3) = 0;
 	}
 
 
@@ -87,7 +90,7 @@ void p_r_a(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3
  */
 size_t branchUnknown(size_t address)
 {
-	code_seg_t* code_seg 	= segmentData.dbgCurrentSegment;
+	volatile code_seg_t* code_seg 	= segmentData.dbgCurrentSegment;
 	uint32_t* 	out 		= code_seg->ARMcode + code_seg->ARMcodeLen -1;
 
 	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", address, (uint32_t)code_seg);
@@ -415,18 +418,16 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 
 	seg_data->dbgCurrentSegment = code_seg;
 
+
 	// need to test if interrupts are enabled (Status Register bit 0)
 	newInstruction 		= newInstrI(ARM_TST, AL, REG_NOT_USED, REG_STATUS, REG_NOT_USED, 0x01);
 	code_seg->Intermcode = ins = newInstruction;
 
+#if defined (USE_INSTRUCTION_COMMENTS)
+	sprintf(newInstruction->comment, "Generate_ISR() segment 0x%08x\n", code_seg);
+#endif
 
-	//newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI);
-	//ADD_LL_NEXT(newInstruction, ins);
-
-	insertCall_To_C(code_seg, ins, AL, (size_t)&cc_interrupt, REG_HOST_STM_EABI);
-
-	//newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI);
-	//ADD_LL_NEXT(newInstruction, ins);
+	ins = insertCall_To_C(code_seg, ins, AL, (size_t)&cc_interrupt, REG_HOST_STM_EABI);
 
 	// Return
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
@@ -435,6 +436,7 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 #if defined(USE_TRANSLATE_DEBUG)
 	Translate_Debug(code_seg);
 #endif
+
 	Translate_Registers(code_seg);
 
 	return code_seg;
@@ -456,7 +458,11 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_R0);
 	code_seg->Intermcode = ins = newInstruction;
 
-	insertCall_To_C(code_seg,ins, AL, (uint32_t)&branchUnknown, REG_HOST_STM_R1_3);
+#if defined (USE_INSTRUCTION_COMMENTS)
+	sprintf(newInstruction->comment, "Generate_BranchUnknown() segment 0x%08x\n", code_seg);
+#endif
+
+	ins = insertCall_To_C(code_seg, ins, AL, (uint32_t)&branchUnknown, REG_HOST_STM_R1_3);
 
 	// Now jump to the compiled code
 	newInstruction 		= newInstrI(ARM_SUB, AL, REG_HOST_PC, REG_HOST_R0, REG_NOT_USED, 0);
