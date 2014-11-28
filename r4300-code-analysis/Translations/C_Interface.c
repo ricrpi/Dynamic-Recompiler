@@ -34,7 +34,7 @@ void cc_interrupt()
 	if (*(dmaPI+2))
 	{
 		printf("PI DMA 'RAM to Cartridge' detected\n");
-		memcpy((void*)(*(dmaPI+1),(void*)*(dmaPI+0),*(dmaPI+2));
+		memcpy((void*)*(dmaPI+1),(void*)*(dmaPI+0),*(dmaPI+2));
 		*(dmaPI+3) = 0;
 	}
 
@@ -468,7 +468,7 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrI(ARM_SUB, AL, REG_HOST_PC, REG_HOST_R0, REG_NOT_USED, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
-#if defined(USE_TRANSLATE_DEBUG)
+#if 0 && defined(USE_TRANSLATE_DEBUG)
 	Translate_Debug(code_seg);
 #endif
 
