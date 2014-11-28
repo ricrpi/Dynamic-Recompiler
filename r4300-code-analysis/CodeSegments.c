@@ -21,6 +21,7 @@
 code_segment_data_t segmentData;
 //static uint8_t* CodeSegBounds;
 static uint32_t GlobalLiteralCount = 0;
+uint32_t showPrintSegmentDelete = 0;
 
 
 int32_t UpdateCodeBlockValidity(code_seg_t** const Block, const uint32_t* const address, const uint32_t length, const uint32_t upperAddress);
@@ -372,9 +373,17 @@ uint32_t delSegment(code_seg_t* codeSegment)
 {
 	uint32_t ret = 0;
 
-#if defined(SHOW_PRINT_SEGMENT_DELETE)
-	printf("deleting Segment 0x%08x\n", (uint32_t)codeSegment);
+#if SHOW_PRINT_SEGMENT_DELETE == 2
+	{
+#elif SHOW_PRINT_SEGMENT_DELETE == 1
+	if (showPrintSegmentDelete)
+	{
+#else
+	if (0)
+	{
 #endif
+	printf("deleting Segment 0x%08x\n", (uint32_t)codeSegment);
+	}
 
 	freeIntermediateInstructions(codeSegment);	// free memory used for Intermediate Instructions
 	freeLiterals(codeSegment);					// free memory used by literals

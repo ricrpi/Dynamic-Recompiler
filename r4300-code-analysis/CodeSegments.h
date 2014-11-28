@@ -127,6 +127,9 @@ typedef struct _code_segment_data
 
 //-------------------------------------------------------------------
 
+extern uint32_t showPrintSegmentDelete;
+
+
 /*
  * Function to create a newSegment
  */

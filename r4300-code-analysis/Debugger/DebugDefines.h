@@ -19,8 +19,19 @@
 
 // ========= Extra Debugging Information ==============================
 
+/* useage:
+ * 			0	Never
+ * 			1	Runtime Configurable
+ * 			2	Always
+*/
 // Print the register map when registers re-assigned (TranslateRegiters())
-//#define SHOW_REG_TRANSLATION_MAP
+#define SHOW_REG_TRANSLATION_MAP			(1)
+#define SHOW_REG_TRANSLATION_MAP_PROGRESS	(1)
+
+//Print when a segment is deleted
+#define SHOW_PRINT_SEGMENT_DELETE			(1)
+
+// ========================================================
 
 // Print the constants in intermediate code
 //#define SHOW_PRINT_INT_CONST
@@ -30,8 +41,7 @@
 
 //#define SHOW_PRINT_MIPS_VALUE
 
-//Print when a segment is deleted
-#define SHOW_PRINT_SEGMENT_DELETE
+
 
 // Print MIPS code / Translation step for each intermediate instruction
 #define USE_INSTRUCTION_COMMENTS

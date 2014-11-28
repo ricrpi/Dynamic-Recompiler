@@ -73,6 +73,8 @@ typedef struct
 	char* name;
 }TranslationsMap;
 
+extern uint32_t showRegTranslationMap;
+extern uint32_t showRegTranslationMapProgress;
 // -----------------------------------------------------------------
 
 uint32_t virtual_address(unsigned int* addr);

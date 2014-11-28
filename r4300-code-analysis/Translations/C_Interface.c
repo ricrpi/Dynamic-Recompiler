@@ -23,7 +23,27 @@ uint32_t bMemoryInlineLookup= 0;
 
 void cc_interrupt()
 {
+	uint32_t* regCause = (uint32_t*)(MMAP_FP_BASE) + REG_CAUSE;
+	uint32_t* dmaPIlen1 = (uint32_t*)(MMAP_FP_BASE) + 3;
+	uint32_t* dmaPIlen2 = (uint32_t*)(MMAP_FP_BASE) + 4;
+
+	*regCause |= 0x8000;
+
 	printf("cc_interrupt() called\n");
+
+	if (*dmaPIlen1)
+	{
+		printf("PI DMA 1 detected\n");
+		*dmaPIlen1 = 0;
+	}
+
+	if (*dmaPIlen2)
+	{
+		printf("PI DMA 2 detected\n");
+		*dmaPIlen2 = 0;
+	}
+
+
 }
 
 uint32_t virtual_address(unsigned int* addr)

@@ -51,7 +51,8 @@
 					"\thelp                              Prints this Help page\n"\
 					HELP_PRINT "\n"\
 					HELP_TRANS "\n"\
-					HELP_SEG "\n"
+					HELP_SEG "\n"\
+					"set [parameter] [value]\n"
 
 void Debugger_wrapper();
 

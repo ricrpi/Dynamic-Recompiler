@@ -316,6 +316,7 @@ Instruction_t* InstrS(Instruction_t* ins, const Instruction_e ins_e, const Condi
 Instruction_t* InstrIntB(Instruction_t* ins, const Condition_e cond, const Instruction_t* find_ins)
 {
 	ins->instruction = INT_BRANCH;
+	ins->cond = cond;
 	ins->branchToThisInstruction = (Instruction_t*)find_ins;
 	return ins;
 }
@@ -524,19 +525,17 @@ void Instr_print(const Instruction_t* const ins, uint8_t heading)
 		#endif
 
 #if defined(USE_INSTRUCTION_INIT_REGS)
-#if defined(SHOW_PRINT_INT_CONST)
+	#if defined(SHOW_PRINT_INT_CONST)
 		printf("command   Rd1                     Rd2                     R1                      R2                      R3                       A B I Ln PR S U W immediate                 shift\n");
-		#else
-
+	#else
 		printf("command   Rd1         Rd2         R1          R2          R3           A B I Ln PR S U W immediate                 shift\n");
-		#endif
+	#endif
 #else
-		#if defined(SHOW_PRINT_INT_CONST)
+	#if defined(SHOW_PRINT_INT_CONST)
 		printf("command   Rd1                     Rd2                     R1                      R2                      R3                       A B I Ln PR S U W immediate                 shift\n");
-		#else
-
+	#else
 		printf("command   Rd1   Rd2   R1    R2    R3     A B I Ln PR S U W immediate                 shift\n");
-		#endif
+	#endif
 #endif
 	}
 

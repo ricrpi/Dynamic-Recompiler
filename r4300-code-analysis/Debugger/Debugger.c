@@ -10,7 +10,7 @@
 #include "Translate.h"
 #include "memory.h"
 
-#define LINE_LEN 400
+#define LINE_LEN 500
 //#define HISTORY_LEN 5
 
 #define MIN(x, y)	(x < y? x : y)
@@ -18,7 +18,7 @@
 #define CMD_CMP(X, TXT) (strncasecmp(userInput[X], TXT, strlen(userInput[X])))
 
 
-static char userInput[20][20];
+static char userInput[20][40];
 //static char cmdHistory[HISTORY_LEN][LINE_LEN];
 
 static code_seg_t* CurrentCodeSeg = NULL;
@@ -758,6 +758,44 @@ void Debugger_wrapper(size_t* regs)
 	else if (!CMD_CMP(0, "segment"))
 	{
 		Debugger_seg(segmentData);
+	}
+	else if (!CMD_CMP(0, "set"))
+	{
+		if (strlen(userInput[1]) > 0
+				&& strlen(userInput[2]) > 0)
+		{
+			char* tailPointer;
+			uint64_t v = strtoul(userInput[2], &tailPointer, 0);
+
+			if (!CMD_CMP(1, "showPrintSegmentDelete"))
+			{
+				showPrintSegmentDelete = (uint32_t)v;
+				printf("showPrintSegmentDelete = %u\n", (uint32_t)v);
+			}
+			else if (!CMD_CMP(1, "showRegTranslationMap"))
+			{
+				showRegTranslationMap = (uint32_t)v;
+				printf("showRegTranslationMap = %u\n", (uint32_t)v);
+			}
+			else if (!CMD_CMP(1, "showRegTranslationMapProgress"))
+			{
+				showRegTranslationMapProgress = (uint32_t)v;
+				printf("showRegTranslationMapProgress = %u\n", (uint32_t)v);
+			}
+			else
+			{
+				printf("invalid parameter\n");
+			}
+		}
+		else
+		{
+			printf("usage:\n"
+					"\tshowPrintSegmentDelete        0 or 1\n"
+					"\tshowRegTranslationMap         0 or 1\n"
+					"\tshowRegTranslationMapProgress 0 or 1\n"
+
+					);
+		}
 	}
 	else if (!CMD_CMP(0, "translate"))
 	{
