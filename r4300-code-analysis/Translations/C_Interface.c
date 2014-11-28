@@ -24,7 +24,7 @@ uint32_t bMemoryInlineLookup= 0;
 void cc_interrupt()
 {
 	uint32_t* regCause = (uint32_t*)(MMAP_FP_BASE) + REG_CAUSE;
-	uint32_t* dmaPI = (uint32_t*)(MMAP_FP_BASE) ;
+	uint32_t* dmaPI = (uint32_t*)(MMAP_PI) ;
 
 
 	*regCause |= 0x8000;
@@ -34,7 +34,7 @@ void cc_interrupt()
 	if (*(dmaPI+2))
 	{
 		printf("PI DMA 'RAM to Cartridge' detected\n");
-		memcpy((void*)*(dmaPI+1),(void*)*(dmaPI+0),*(dmaPI+2));
+		memcpy((void*)(*(dmaPI+1),(void*)*(dmaPI+0),*(dmaPI+2));
 		*(dmaPI+3) = 0;
 	}
 
