@@ -16,10 +16,10 @@ C_SRCS += \
 ../Translations/Init.c \
 ../Translations/Literals.c \
 ../Translations/Memory.c \
+../Translations/Misc.c \
 ../Translations/OptimizeARM.c \
 ../Translations/Registers.c \
-../Translations/Translate.c \
-../Translations/Trap.c 
+../Translations/Translate.c 
 
 OBJS += \
 ./Translations/ALU.o \
@@ -34,10 +34,10 @@ OBJS += \
 ./Translations/Init.o \
 ./Translations/Literals.o \
 ./Translations/Memory.o \
+./Translations/Misc.o \
 ./Translations/OptimizeARM.o \
 ./Translations/Registers.o \
-./Translations/Translate.o \
-./Translations/Trap.o 
+./Translations/Translate.o 
 
 C_DEPS += \
 ./Translations/ALU.d \
@@ -52,10 +52,10 @@ C_DEPS += \
 ./Translations/Init.d \
 ./Translations/Literals.d \
 ./Translations/Memory.d \
+./Translations/Misc.d \
 ./Translations/OptimizeARM.d \
 ./Translations/Registers.d \
-./Translations/Translate.d \
-./Translations/Trap.d 
+./Translations/Translate.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

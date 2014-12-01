@@ -205,20 +205,22 @@ void Translate_ALU(code_seg_t* const codeSegment)
 
 					new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
 					ADD_LL_NEXT(new_ins, ins);
+
+					TRANSLATE_ABORT();
 				}
 				break;
-			case DIVU: break;
-			case DMULT: break;
-			case DMULTU: break;
-			case DDIV: break;
-			case DDIVU: break;
-			case ADD:
+			case DIVU:
+			case DMULT:
+			case DMULTU:
+			case DDIV:
+			case DDIVU:
+				TRANSLATE_ABORT();
+				break;
+			case ADD:	// TRAP
+			case ADDU:
 				{
 					Instr(ins, ARM_ADD, AL, Rd1, R1, R2);
 				} break;
-			case ADDU: break;
-			case SUB: break;
-			case SUBU: break;
 			case AND:
 				{
 					Instr(ins, ARM_AND, AL, Rd1, R1, R2);
@@ -242,77 +244,57 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
-			case NOR: break;
-			case SLT: break;
-			case SLTU: break;
-			case DADD:
+			case NOR:
+				TRANSLATE_ABORT();
+				break;
+			case SLT:
+				Instr(ins, ARM_CMP, AL, REG_NOT_USED, R1, R2);
+
+				new_ins = newInstrI(ARM_MOV, LT, Rd1, REG_NOT_USED, REG_NOT_USED, 1);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_MOV, GE, Rd1, REG_NOT_USED, REG_NOT_USED, 0);
+				ADD_LL_NEXT(new_ins, ins);
+				break;
+			case SLTU:
+				Instr(ins, ARM_CMP, AL, REG_NOT_USED, R1, R2);
+
+				new_ins = newInstrI(ARM_MOV, CC, Rd1, REG_NOT_USED, REG_NOT_USED, 1);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_MOV, CS, Rd1, REG_NOT_USED, REG_NOT_USED, 0);
+				ADD_LL_NEXT(new_ins, ins);
+				break;
+			case DADD:	// TRAP
+			case DADDU:
 				{
 					InstrS(ins, ARM_ADD, AL, Rd1, R1, R2);
+
 					new_ins = newInstr(ARM_ADC, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
-			case DADDU: break;
-			case DSUB: break;
-			case DSUBU: break;
-			case TGE: break;
-			case TGEU: break;
-			case TLT: break;
-			case TLTU: break;
-			case TEQ: break;
-			case TNE: break;
-			case DSLL: break;
-			case DSRL: break;
-			case DSRA: break;
-			case DSLL32: break;
-			case DSRL32: break;
-			case DSRA32: break;
-			case TGEI: break;
-			case TGEIU: break;
-			case TLTI: break;
-			case TLTIU: break;
-			case TEQI: break;
-			case TNEI: break;
-			case ADDI:	// TRAP
-				{
-					if (imm < 0)
-					{
-						if (imm < -255)
-						{
-
-							InstrI(ins, ARM_SUB, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (-imm));
-
-							new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (-imm)&0xFF00);
-							ADD_LL_NEXT(new_ins, ins);
-
-							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
-							ADD_LL_NEXT(new_ins, ins);
-
-						}
-						else
-						{
-							InstrI(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm));
-						}
-					}
-					else
-					{
-						if (imm > 255)
-						{
-							InstrI(ins, ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm&0xFF));
-
-							new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, ins->immediate&0xFF00);
-							ADD_LL_NEXT(new_ins, ins);
-
-							new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
-							ADD_LL_NEXT(new_ins, ins);
-						}
-						else
-						{
-							InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
-						}
-					}
-				}
+			case TGE:
+			case TGEU:
+			case TLT:
+			case TLTU:
+			case TEQ:
+			case TNE:
+			case DSLL:
+			case DSRL:
+			case DSRA:
+			case DSLL32:
+			case DSRL32:
+			case DSRA32:
+			case TGEI:
+			case TGEIU:
+			case TLTI:
+			case TLTIU:
+			case TEQI:
+			case TNEI:
+				TRANSLATE_ABORT();
 				break;
+			case ADDI:	// TRAP
 			case ADDIU:
 				{
 					if (imm < 0)
@@ -354,10 +336,71 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					}
 				}
 				break;
-			case SLTI: break;
-			case SLTIU: break;
-			case ANDI:
+			case SLTI:
+				if (imm < 0)	//TODO no idea if this is right
+				{
+					InstrI(ins, ARM_MVN, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, REG_NOT_USED, (imm)&0xff);
 
+					if (imm < 255)
+					{
+						new_ins = newInstrI(ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm)&0xFF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+				else
+				{
+					InstrI(ins, ARM_MOV, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, REG_NOT_USED, (imm)&0xff);
+
+					if (imm > 255)
+					{
+						new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, REG_NOT_USED, (imm)&0xFF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+
+				new_ins = newInstr(ARM_CMP, AL, REG_NOT_USED, R1, REG_TEMP_SCRATCH0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_MOV, LT, Rd1, REG_NOT_USED, REG_NOT_USED, 1);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_MOV, GE, Rd1, REG_NOT_USED, REG_NOT_USED, 0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				break;
+			case SLTIU:
+				if (imm < 0)	//TODO no idea if this is right
+				{
+					InstrI(ins, ARM_MVN, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, REG_NOT_USED, (imm)&0xff);
+
+					if (imm < 255)
+					{
+						new_ins = newInstrI(ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm)&0xFF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+				else
+				{
+					InstrI(ins, ARM_MOV, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, REG_NOT_USED, (imm)&0xff);
+
+					if (imm > 255)
+					{
+						new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, REG_NOT_USED, (imm)&0xFF00);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+
+				new_ins = newInstr(ARM_CMP, AL, REG_NOT_USED, R1, REG_TEMP_SCRATCH0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_MOV, CC, Rd1, REG_NOT_USED, REG_NOT_USED, 1);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_MOV, CS, Rd1, REG_NOT_USED, REG_NOT_USED, 0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				break;
+			case ANDI:
 				if (imm < 0)
 				{
 					InstrI(ins, ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (-imm)&0xff);
@@ -378,8 +421,6 @@ void Translate_ALU(code_seg_t* const codeSegment)
 						ADD_LL_NEXT(new_ins, ins);
 					}
 				}
-
-
 				break;
 			case ORI:
 				ins->immediate = ins->immediate&0xff;
@@ -410,7 +451,6 @@ void Translate_ALU(code_seg_t* const codeSegment)
 						ADD_LL_NEXT(new_ins, ins);
 					}
 				}
-
 				break;
 			case XORI:
 				ins->immediate = ins->immediate&0xff;
@@ -441,155 +481,10 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					}
 				}
 				break;
-			case LUI: break;
-			case MFC0: break;
-			case MTC0: break;
-			case TLBR: break;
-			case TLBWI: break;
-			case TLBWR: break;
-			case TLBP: break;
-			case ERET: break;
-			case MFC1: break;
-			case DMFC1: break;
-			case CFC1: break;
-			case MTC1: break;
-			case DMTC1: break;
-			case CTC1: break;
-			case BC1F: break;
-			case BC1T: break;
-			case BC1FL: break;
-			case BC1TL: break;
-			case ADD_S: break;
-			case SUB_S: break;
-			case MUL_S: break;
-			case DIV_S: break;
-			case SQRT_S: break;
-			case ABS_S: break;
-			case MOV_S: break;
-			case NEG_S: break;
-			case ROUND_L_S: break;
-			case TRUNC_L_S: break;
-			case CEIL_L_S: break;
-			case FLOOR_L_S: break;
-			case ROUND_W_S: break;
-			case TRUNC_W_S: break;
-			case CEIL_W_S: break;
-			case FLOOR_W_S: break;
-			case CVT_D_S: break;
-			case CVT_W_S: break;
-			case CVT_L_S: break;
-			case C_F_S: break;
-			case C_UN_S: break;
-			case C_EQ_S: break;
-			case C_UEQ_S: break;
-			case C_OLT_S: break;
-			case C_ULT_S: break;
-			case C_OLE_S: break;
-			case C_ULE_S: break;
-			case C_SF_S: break;
-			case C_NGLE_S: break;
-			case C_SEQ_S: break;
-			case C_NGL_S: break;
-			case C_LT_S: break;
-			case C_NGE_S: break;
-			case C_LE_S: break;
-			case C_NGT_S: break;
-			case ADD_D: break;
-			case SUB_D: break;
-			case MUL_D: break;
-			case DIV_D: break;
-			case SQRT_D: break;
-			case ABS_D: break;
-			case MOV_D: break;
-			case NEG_D: break;
-			case ROUND_L_D: break;
-			case TRUNC_L_D: break;
-			case CEIL_L_D: break;
-			case FLOOR_L_D: break;
-			case ROUND_W_D: break;
-			case TRUNC_W_D: break;
-			case CEIL_W_D: break;
-			case FLOOR_W_D: break;
-			case CVT_S_D: break;
-			case CVT_W_D: break;
-			case CVT_L_D: break;
-			case C_F_D: break;
-			case C_UN_D: break;
-			case C_EQ_D: break;
-			case C_UEQ_D: break;
-			case C_OLT_D: break;
-			case C_ULT_D: break;
-			case C_OLE_D: break;
-			case C_ULE_D: break;
-			case C_SF_D: break;
-			case C_NGLE_D: break;
-			case C_SEQ_D: break;
-			case C_NGL_D: break;
-			case C_LT_D: break;
-			case C_NGE_D: break;
-			case C_LE_D: break;
-			case C_NGT_D: break;
-			case CVT_S_W: break;
-			case CVT_D_W: break;
-			case CVT_S_L: break;
-			case CVT_D_L: break;
-			case DADDI: break;
-			case DADDIU: break;
-			case CACHE: break;
-			case LL: break;
-			case LWC1: break;
-			case LLD: break;
-			case LDC1: break;
-			case LD: break;
-			case SC: break;
-			case SWC1: break;
-			case SCD: break;
-			case SDC1: break;
-			case SD: break;
-
-			case J: break;
-			case JR: break;
-			case JAL: break;
-			case JALR: break;
-
-			case BLTZ: break;
-			case BGEZ: break;
-			case BEQ: break;
-			case BNE: break;
-			case BLEZ: break;
-			case BGTZ: break;
-
-			case BLTZL: break;
-			case BGEZL: break;
-			case BEQL: break;
-			case BNEL: break;
-			case BLEZL: break;
-			case BGTZL: break;
-
-			case BLTZAL: break;
-			case BGEZAL: break;
-			case BLTZALL: break;
-			case BGEZALL: break;
-
-			case SB: break;
-			case SH: break;
-			case SWL: break;
-			case SW: break;
-			case SDL: break;
-			case SDR: break;
-			case SWR: break;
-
-			case LDL: break;
-			case LDR: break;
-			case LB: break;
-			case LH: break;
-			case LWL: break;
-			case LW: break;
-			case LBU: break;
-			case LHU: break;
-			case LWR: break;
-			case LWU: break;
-
+			case DADDI:
+			case DADDIU:
+				TRANSLATE_ABORT();
+					break;
 		default: break;
 		}
 

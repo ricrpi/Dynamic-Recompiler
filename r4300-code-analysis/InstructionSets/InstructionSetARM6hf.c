@@ -71,11 +71,9 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 }
 
 #define assert2(expr)							\
-  if (!(expr)){\
-	  __assert_fail (__STRING(expr), __FILE__, __LINE__, __ASSERT_FUNCTION);\
-	  Instr_print(ins, 1);   }
-
-
+  if (!(expr)){									\
+	  Instr_print(ins, 1);						\
+	  __assert_fail (__STRING(expr), __FILE__, __LINE__, __ASSERT_FUNCTION);}
 
 uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 {
@@ -190,10 +188,6 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 
 	case LITERAL:
 		return ins->immediate;
-	case SYSCALL:
-	case BREAK:
-	case SYNC:
-		break;
 
 		//------- ARM Cannot handle -----------------
 

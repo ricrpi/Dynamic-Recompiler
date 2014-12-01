@@ -3,12 +3,17 @@
 #define TRANSLATE_H_
 
 #include "InstructionSet.h"
+#include "InstructionSet_ascii.h"
 #include "CodeSegments.h"
 #include "DebugDefines.h"
 #include "assert.h"
 #include "stdio.h"
 #include "stdlib.h"
 
+#if defined(ABORT_UNKNOWN_TRANSLATE)
+#define TRANSLATE_ABORT()	\
+	printf("Cannot translate instruction '%s'\n", Instruction_ascii[STRIP(ins->instruction)]); abort()
+#endif
 
 #define COUNTOF(x)	(sizeof(x)/sizeof(x[0]))
 

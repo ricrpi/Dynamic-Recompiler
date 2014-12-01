@@ -22,7 +22,6 @@ void Translate_init(code_seg_t* const codeSegment)
 
 		mips_decode(*(codeSegment->MIPScode + x), newInstruction);
 
-
 #if defined(USE_INSTRUCTION_INIT_REGS)
 		memcpy(&newInstruction->Rd1_init,&newInstruction->Rd1, sizeof(reg_t));
 		memcpy(&newInstruction->Rd2_init,&newInstruction->Rd2, sizeof(reg_t));

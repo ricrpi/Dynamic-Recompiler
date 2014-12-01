@@ -5,31 +5,23 @@ A standalone dynamic recompiler / analysis tool for R4300 (N64 roms).
 Currently it can load N64 roms, analyze the MIPS instructions and 
 generate some ARMv6 code.
 
-
 Tasks to complete:
 
-v Fix Register number translations.
+- Finish 'Branch to Uncompiled' code/DR code. 
+  Currently branches to C code to compile blocks but fails.
 
-- Check ARM encode immediate shifting
+- Build MIPS TRAP code/DR code. 
 
-- Build 32-bit translation.
-
-- Fix COUNT translation when COUNT is updated in code. 
-
-- Build 'Branch to Uncompiled' code/DR code.
-
-- Build cc_interrupt() code/DR code.
-
-- Build MIPS TRAP code/DR code.
-
-- Build Virtual address lookup and TLB code/DR code.
+- Build Virtual address lookup and TLB code/DR code. 
+  Stub created so that Load/Store translations can be written.
 
 - Finish translations of standard instructions.
 
 - Finish ARM decompiler
 
-- Add MIPS FPU instructions. The Mupen64plus demo file does not use most of 
-  the available FPU functions but these heavn't been written yet.
+- Add MIPS FPU instructions. 
+  The Mupen64plus demo file does not use most of the available FPU functions 
+   but these heavn't been written yet.
 
 - Refactor badly named variables. 
 

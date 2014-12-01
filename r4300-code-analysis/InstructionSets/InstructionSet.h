@@ -66,13 +66,17 @@
 #define REG_TAGHI	 		(REG_CO + 29)
 #define REG_ERROREPC		(REG_CO + 30)
 
+#define Compare				(*((volatile uint32_t*)(MMAP_FP_BASE) + REG_COMPARE))
+#define Cause 				(*((volatile uint32_t*)(MMAP_FP_BASE) + REG_CAUSE))
+#define Status				(*((volatile uint32_t*)(MMAP_FP_BASE) + REG_STATUS))
+
 // MIPS R4300 Special CPU Registers
-#define REG_PC       		(REG_SPECIAL + 1)
-#define REG_FCR0	 		(REG_SPECIAL + 2)
-#define REG_FCR31    		(REG_SPECIAL + 3)
-#define REG_MULTHI  		(REG_SPECIAL + 4)
-#define REG_MULTLO   		(REG_SPECIAL + 5)
-#define REG_LLBIT    		(REG_SPECIAL + 6)
+#define REG_PC       		(REG_SPECIAL + 0)	// 64 bit
+#define REG_FCR0	 		(REG_SPECIAL + 2)   // 32 bit
+#define REG_FCR31    		(REG_SPECIAL + 3)   // 32 bit
+#define REG_MULTHI  		(REG_SPECIAL + 4)	// 64 bit
+#define REG_MULTLO   		(REG_SPECIAL + 6)	// 64 bit
+#define REG_LLBIT    		(REG_SPECIAL + 8)	//  1 bit
 
 //Temorary Registers
 #define REG_TEMP_SCRATCH0	(REG_TEMP | 0x00)
@@ -524,7 +528,7 @@ typedef enum
 	VC, 	// V = 0			No Overflow
 	HI, 	// C = 1 && Z = 0 	Unsigned Higher
 	LS,		// C = 0 || Z = 1 	Unsigned Lower or equal
-	GE,		// N = V 			Signed Greater
+	GE,		// N = V 			Signed Greater or equal
 	LT,		// N != V 			Signed less than
 	GT,		// Z = 0 && N = V 	Signed greater then
 	LE,		// Z = 1 || N! = V	Signed less than or equal

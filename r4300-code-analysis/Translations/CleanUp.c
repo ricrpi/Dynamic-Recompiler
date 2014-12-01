@@ -34,16 +34,28 @@ void Translate_CleanUp(code_seg_t* const codeSegment)
 		{
 			ins = InstrFree(codeSegment, ins);
 		}
-		/*else if (ins->instruction == ARM_ADD
-				&& ins->Rd1 == ins->R1
-				&& ins->R2 == REG_NOT_USED
-				&& ins->immediate == 0)
+		else if (SYSCALL == ins->instruction)
 		{
 			ins = InstrFree(codeSegment, ins);
-		}*/
+		}
+		else if (BREAK == ins->instruction)
+		{
+			ins = InstrFree(codeSegment, ins);
+		}
+		else if (SYNC == ins->instruction)
+		{
+			ins = InstrFree(codeSegment, ins);
+		}
 		else
 		{
 			ins = ins->nextInstruction;
 		}
+			/*
+			case TLBR: break;
+			case TLBWI: break;
+			case TLBWR: break;
+			case TLBP: break;
+
+			*/
 	}
 }

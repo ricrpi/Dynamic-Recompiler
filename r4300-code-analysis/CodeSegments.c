@@ -21,10 +21,11 @@
 code_segment_data_t segmentData;
 //static uint8_t* CodeSegBounds;
 static uint32_t GlobalLiteralCount = 0;
-uint32_t showPrintSegmentDelete = 0;
+uint32_t showPrintSegmentDelete = 1;
 
 
 int32_t UpdateCodeBlockValidity(code_seg_t** const Block, const uint32_t* const address, const uint32_t length, const uint32_t upperAddress);
+
 //==================================================================
 
 #if 0
@@ -54,12 +55,14 @@ static void invalidateBranch(code_seg_t* codeSegment)
 
 	uint32_t* 		out 			= codeSegment->ARMcode + codeSegment->ARMcodeLen -1;
 	size_t 			targetAddress 	= *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
-	Instruction_t 	ins;
+	Instruction_t	ins;
 
-	printf("invalidateBranch(0x%08x)\n", (uint32_t)codeSegment);
+	printf("invalidateBranch(0x%08x) at 0x%08x\n", (uint32_t)codeSegment, (uint32_t)out);
+	printf_arm((uint32_t)out, *out);
 
 	//Get MIPS condition code for branch
 	mips_decode(*(codeSegment->MIPScode + codeSegment->MIPScodeLen -1), &ins);
+	Instr_print(&ins, 1);
 
 	//Set instruction to ARM_BRANCH for new target
 	InstrB(&ins, ins.cond, targetAddress, 1);

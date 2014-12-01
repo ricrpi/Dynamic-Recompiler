@@ -374,9 +374,8 @@ void Translate_Branch(code_seg_t* const codeSegment)
 		case BC1T:
 		case BC1FL:
 		case BC1TL:
-			printf("Cannot handle this type of branch '%s' yet in Translate.c:%d\n", Instruction_ascii[STRIP(ins->instruction)], __LINE__);
-
-				break;
+			TRANSLATE_ABORT();
+			break;
 
 		default:
 			break;

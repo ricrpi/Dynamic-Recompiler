@@ -1,13 +1,20 @@
-#?/usr/bin/sh
+#!/bin/sh
 
 READING=0
+
+FOLDER="InstructionSets"
 OUTPUT="InstructionSet_ascii.h"
+INPUT="InstructionSet.h"
 ENUM_DECL="_Instruction_e"
 
 #set -x
 set -e
 
+cd $FOLDER
+
 echo "#include \"InstructionSet.h\"" > $OUTPUT
+echo "#ifndef INSTRUCTIONSET_ASCC" >> $OUTPUT
+echo "#define INSTRUCTIONSET_ASCC" >> $OUTPUT
 echo "static const char* Instruction_ascii[sizeof_mips_op_t+1] = {" >> $OUTPUT
 
 while read line 
@@ -46,5 +53,7 @@ while read line
 				echo "$ENUM"		>> $OUTPUT
 			fi			
 		fi
-	done < "InstructionSet.h"
+	done < $INPUT
 echo "};" >> $OUTPUT
+
+echo "#endif" >> $OUTPUT

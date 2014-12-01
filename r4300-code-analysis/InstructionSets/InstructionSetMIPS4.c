@@ -1452,7 +1452,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 		ins->instruction =  SLTIU;
 		ins->R1.regID = M_Rs(uiMIPSword);
 		ins->Rd1.regID = M_Rt(uiMIPSword);
-		ins->immediate = IMMU(uiMIPSword, 16);
+		ins->immediate = IMM(uiMIPSword, 16);
 		ins->I = 1;
 		return 0; 	// I
 	case 0x0C:

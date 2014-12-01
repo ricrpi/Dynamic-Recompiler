@@ -1,11 +1,13 @@
 #include "InstructionSet.h"
+#ifndef INSTRUCTIONSET_ASCC
+#define INSTRUCTIONSET_ASCC
 static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "UNKNOWN",
 "LITERAL",
 "INVALID",
 "NO_OP",
 
-"_BRANCH",
+"INT_BRANCH",	 //  Intermediae Branch to the Instruction (->branchToThisInstruction)
 
 "SLL",	 //  Rd1 (rd) = R1 (rt) << imm5 				The contents of the low-order 32-bit word of GPR rt are shifted left, inserting zeroes into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
 "SRL",	 //  Rd1 (rd) = R1 (rt) >> imm5				The contents of the low-order 32-bit word of GPR rt are shifted right, inserting zeros into the emptied bits; the word result is placed in GPR rd. The bit shift count is specified by sa. If rd is a 64-bit register, the result word is sign-extended.
@@ -71,25 +73,25 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "ORI",	 //  Rd1 (rt) = R1 (rs) | imm16 		To do a bitwise logical OR with a constant.
 "XORI",	 //  Rd1 (rt) = R1 (rs) ^ imm16 		Combine the contents of GPR rs and the 16-bit zero-extended immediate in a bitwise logical exclusive OR operation and place the result into GPR rt.
 "LUI",	 //  Rd1 (rt) = imm16 << 16 			The 16-bit immediate is shifted left 16 bits and concatenated with 16 bits of low-order zeros. The 32-bit result is sign-extended and placed into GPR rt.
-"MFC0",
-"MTC0",
+"MFC0",	 //  Rd1 = R1
+"MTC0",	 //  Rd1 = R1
 "TLBR",
 "TLBWI",
 "TLBWR",
 "TLBP",
-"ERET",
+"ERET",		 //  Return from Exception
 "MFC1",
 "DMFC1",
-"CFC1",	 //  Rd1 (rt) = R1 (fs)				Copy FPU fs into rt
+"CFC1",		 //  Rd1 (rt) = R1 (fs)				Copy FPU fs into rt
 "MTC1",
 "DMTC1",
-"CTC1",	 //  Rd1 (fs) = R1 (rt)				Copy from GPR rt to a FPU control register fs
-"BC1F",
+"CTC1",		 //  Rd1 (fs) = R1 (rt)				Copy from GPR rt to a FPU control register fs
+"BC1F",		 //  Branch on FP false
 "BC1T",
 "BC1FL",
 "BC1TL",
-"ADD_S",
-"SUB_S",
+"ADD_S",		 //  Rd1 (fd) = R1 (fs) + R2 (ft)
+"SUB_S",		 //  Rd1 (fd) = R1 (fs) - R2 (ft)
 "MUL_S",
 "DIV_S",
 "SQRT_S",
@@ -107,24 +109,24 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "CVT_D_S",		 //  Rd1 (fd) = convert( R1 (fs) )		The value in FPR fs in format fmt is converted to a value in double floating-point format rounded according to the current rounding mode in FCSR. The result is placed in FPR fd.
 "CVT_W_S",
 "CVT_L_S",
-"C_F_S",
-"C_UN_S",
-"C_EQ_S",
-"C_UEQ_S",
-"C_OLT_S",
-"C_ULT_S",
-"C_OLE_S",
-"C_ULE_S",
-"C_SF_S",
-"C_NGLE_S",
-"C_SEQ_S",
-"C_NGL_S",
-"C_LT_S",
-"C_NGE_S",
-"C_LE_S",
-"C_NGT_S",
-"ADD_D",
-"SUB_D",
+"C_F_S",		 //  FP Compare	False
+"C_UN_S",		 //  FP Compare	Unordered
+"C_EQ_S",		 //  FP Compare	Equal
+"C_UEQ_S",	 //  FP Compare	Unordered or Equal
+"C_OLT_S",	 //  FP Compare	Ordered or Less Than
+"C_ULT_S",	 //  FP Compare	Unordered or Less Than
+"C_OLE_S",	 //  FP Compare	Ordered or Less Than or Equal
+"C_ULE_S",	 //  FP Compare	Unordered or Less Than or Equal
+"C_SF_S",		 //  FP Compare	Signaling False
+"C_NGLE_S",	 //  FP Compare	Not Greater than or Less Than or Equal
+"C_SEQ_S",	 //  FP Compare	Signaling Equal
+"C_NGL_S",	 //  FP Compare	Not Greater Than or Less Than
+"C_LT_S",		 //  FP Compare	Less Than
+"C_NGE_S",	 //  FP Compare	Not Greater Than or Equal
+"C_LE_S",		 //  FP Compare	Less Than or Equal
+"C_NGT_S",	 //  FP Compare	Not Greater Than
+"ADD_D",		 //  Rd1 (fd) = R1 (fs) + R2 (ft)
+"SUB_D",		 //  Rd1 (fd) = R1 (fs) - R2 (ft)
 "MUL_D",
 "DIV_D",
 "SQRT_D",
@@ -251,31 +253,31 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "revsh",
 "and",		 //  R1 (Rd) = R2 (Rn) & Op2
 "b",
-"bx",		 //   lr=pc-4, pc = R1
+"bx",			 //  lr = pc-4, pc = R1 (Rm)
 "eor",
-"sub",		 //  Rd` (Rd) = R1 - Op2
+"sub",		 //  Rd1 (Rd) = R1 - Op2
 "rsb",		 //  Rd1 (Rd) = Op2 - R1
 "add",		 //  Rd1 (Rd) = R1 (Rn) + Op2
 "adc",		 //  Rd1 (Rd) = R1 (Rn) + Op2 + Carry
 "asr",		 //  Rd1 (Rd) = R1 (Rn) >> #<imm>
 "sbc",		 //  Rd1 (Rd) = R1 (Rn) + Op2 + Carry
 "rsc",
-"tst",		 //  Rn & Op2
-"teq",		 //  Rn ^ Op2
-"cmp",		 //  Rn - Op2
-"cmn",		 //  Rn + Op2
+"tst",		 //  R1 (Rn) & Op2
+"teq",		 //  R1 (Rn) ^ Op2
+"cmp",		 //  R1 (Rn) - Op2
+"cmn",		 //  R1 (Rn) + Op2
 "orr",		 //  Rd1 (Rd) = R1 (Rn) | Op2
 "mov",		 //  Rd1 (Rd) = Op2
 "bic",		 //  Rd1 (Rd) = R1 (Rn) AND ~Op2
 "mvn",		 //  Rd1 (Rd) = ~Op2
-"ldr",		 //  R1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
+"ldr",		 //  Rd1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
 "str",		 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
 "ldrd",		 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
 "strd",		 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
-"ldr_lit",	 //  Rd1 (Rt) = memory[ R2 (Rn) + imm ]
-"str_lit",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
-"ldrd_lit",	 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
-"strd_lit",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+"ldr",	 //  Rd1 (Rt) = memory[ R2 (Rn) + imm ]
+"str",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+"ldrd",	 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
+"strd",	 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
 "ldm",		 //  Rmask (<registers>) = memory [ Rn ], if (W) Rn +-= count of registers  (+ if U, - if ~U)
 "stm",		 //  memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
 
@@ -309,3 +311,4 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 "vstm64",
 "sizeof_mips_op_t"
 };
+#endif

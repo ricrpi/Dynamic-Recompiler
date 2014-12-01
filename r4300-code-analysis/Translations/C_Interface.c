@@ -23,11 +23,9 @@ uint32_t bMemoryInlineLookup= 0;
 
 void cc_interrupt()
 {
-	uint32_t* regCause = (uint32_t*)(MMAP_FP_BASE) + REG_CAUSE;
 	uint32_t* dmaPI = (uint32_t*)(MMAP_PI) ;
 
-
-	*regCause |= 0x8000;
+	Cause |= 0x8000;
 
 	printf("cc_interrupt() called\n");
 
@@ -96,6 +94,9 @@ size_t branchUnknown(size_t address)
 	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", address, (uint32_t)code_seg);
 
 	code_seg_t* tgtSeg = getSegmentAt(address);
+
+	printf("tgtSeg = 0x08x\n", tgtSeg);
+
 	if (NULL != tgtSeg)
 	{
 		if (NULL == tgtSeg->ARMEntryPoint) Translate(tgtSeg);
@@ -126,90 +127,6 @@ size_t branchUnknown(size_t address)
 	// 3.
 	return targetAddress;
 }
-
-/*
- * Function to generate Emulation-time code for calculating the Hosts memory address to use.
- *
- * Emulation Args:
- * 			R0 base
- * 			R1 offset
- *
- * Emulation Returns:
- *  		R0 Host memory address
- *			Z=1 if !bDoDMAonInterrupt && last byte is 0x5, so run DMA?
- *//*
-code_seg_t* Generate_MemoryTranslationCode(code_segment_data_t* seg_data, pfu1ru1 f)
-{
-	code_seg_t* 	code_seg 		= newSegment();
-	Instruction_t* 	newInstruction;
-	Instruction_t* 	ins 			= NULL;
-
-	if (bMemoryInlineLookup){
-		printf("Generate_MemoryTranslationCode() and bMemoryInlineLookup\n");
-		return NULL;
-	}
-
-	//Add the base and offset together
-	newInstruction 		= newInstr(ARM_ADD, AL, REG_TEMP_GEN1, REG_HOST_R0, REG_HOST_R1);
-	code_seg->Intermcode = ins = newInstruction;
-
-	//shift Right so that we have the final Byte
-	newInstruction 		= newInstr(SRL, AL, REG_TEMP_MEM2, REG_TEMP_GEN1, REG_NOT_USED);
-	newInstruction->I = 1;
-	newInstruction->shift = 24;
-	ADD_LL_NEXT(newInstruction, ins);
-
-	//If the final Byte is 0x80 then all is good
-	newInstruction 		= newInstrI(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0x80);
-	newInstruction->I = 1;
-	ADD_LL_NEXT(newInstruction, ins);
-
-	//Move the address to R0
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_R0, REG_NOT_USED, REG_TEMP_GEN1);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	//Else is the final byte 0xA0?
-	newInstruction 		= newInstrI(ARM_CMP, AL, REG_NOT_USED, REG_TEMP_MEM2, REG_NOT_USED, 0xA0);
-	newInstruction->I = 1;
-	ADD_LL_NEXT(newInstruction, ins);
-
-	//If so then clear bit 0x40
-	newInstruction 		= newInstrI(ARM_BIC, EQ, REG_HOST_R0, REG_TEMP_GEN1, REG_NOT_USED, 0x40);
-	newInstruction->I = 1;
-	newInstruction->shift = 24;
-	newInstruction->shiftType = LOGICAL_LEFT;
-	ADD_LL_NEXT(newInstruction, ins);
-
-	// Return
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	//The address must be Virtual
-
-	newInstruction 		= newInstrPUSH(AL, REG_HOST_STM_EABI | REG_HOST_STM_LR);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	//TODO call C function for Lookup?
-	newInstruction 		= newInstr(ARM_MOV, EQ, REG_HOST_LR, REG_NOT_USED, REG_HOST_PC);
-	//The literal !!!
-	newInstruction 		= newInstr(ARM_LDR_LIT, EQ, REG_HOST_PC, REG_HOST_PC, REG_NOT_USED);
-
-	newInstruction 		= newInstrPOP(AL, REG_HOST_STM_EABI| REG_HOST_STM_LR);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	//Return
-	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
-	ADD_LL_NEXT(newInstruction, ins);
-
-	Translate_Registers(code_seg);
-
-	return code_seg;
-}*/
-
 
 #if defined(TEST_BRANCH_TO_C)
 uint32_t test_callCode(uint32_t r0)

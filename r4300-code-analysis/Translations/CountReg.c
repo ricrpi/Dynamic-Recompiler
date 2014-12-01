@@ -96,16 +96,6 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 			newInstruction = newInstrIS(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff);
 			ADD_LL_NEXT(newInstruction, ins);
 
-
-			#if defined(USE_INSTRUCTION_COMMENTS)
-				currentTranslation = "Update REG_CAUSE";
-			#endif
-
-			// moved to cc_interrupt
-			// We need to set IP7 of the Cause Register and call cc_interrupt()
-			//newInstruction = newInstrI(ARM_ORR, PL, REG_CAUSE, REG_CAUSE, REG_NOT_USED, 0x8000);
-			//ADD_LL_NEXT(newInstruction, ins);
-
 			#if defined(USE_INSTRUCTION_COMMENTS)
 				currentTranslation = "Call cc_interrupt()";
 			#endif

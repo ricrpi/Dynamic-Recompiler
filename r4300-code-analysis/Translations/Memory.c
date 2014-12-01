@@ -90,51 +90,22 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 		switch (ins->instruction)
 		{
-		case MFHI: break;
-		case MTHI: break;
-		case MFLO: break;
-		case MTLO: break;
-
-		case MULT: break;
-		case MULTU: break;
-		case DIV: break;
-		case DIVU: break;
-		case DMULT: break;
-		case DMULTU: break;
-		case DDIV: break;
-		case DDIVU: break;
-
-		case SLT: break;
-		case SLTU: break;
-
-		case LUI: break;
-		case MFC0: break;
-		case MTC0: break;
-
-		case MFC1: break;
-		case DMFC1: break;
-		case CFC1: break;
-		case MTC1: break;
-		case DMTC1: break;
-		case CTC1: break;
-
-		case LL: break;
-		case LWC1: break;
-		case LLD: break;
-		case LDC1: break;
-		case LD: break;
-		case SC: break;
-		case SWC1: break;
-		case SCD: break;
-		case SDC1: break;
-		case SD: break;
-
+		case LL:
+		case LWC1:
+		case LLD:
+		case LDC1:
+		case LD:
+		case SC:
+		case SWC1:
+		case SCD:
+		case SDC1:
+		case SD:
 		case SB:
-			ins = insertCheckAddressRaw(ins, R1);
-
+			//ins = insertCheckAddressRaw(ins, R1);
+		case SH:
+		case SWL:
+			TRANSLATE_ABORT();
 			break;
-		case SH: break;
-		case SWL: break;
 		case SW:
 			ins = insertCheckAddressRaw(ins, R1);
 
@@ -210,15 +181,16 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			// TODO we need to check memory changed is not in code space
 			break;
-		case SDL: break;
-		case SDR: break;
-		case SWR: break;
-
-		case LDL: break;
-		case LDR: break;
-		case LB: break;
-		case LH: break;
-		case LWL: break;
+		case SDL:
+		case SDR:
+		case SWR:
+		case LDL:
+		case LDR:
+		case LB:
+		case LH:
+		case LWL:
+			TRANSLATE_ABORT();
+			break;
 		case LW:
 			ins = insertCheckAddressRaw(ins, R1);
 
@@ -288,10 +260,12 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ins2->branchToThisInstruction = new_ins;
 
 			break;
-		case LBU: break;
-		case LHU: break;
-		case LWR: break;
-		case LWU: break;
+		case LBU:
+		case LHU:
+		case LWR:
+		case LWU:
+			TRANSLATE_ABORT();
+			break;
 		default: break;
 		}
 
