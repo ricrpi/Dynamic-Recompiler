@@ -732,7 +732,7 @@ Instruction_t* InstrFree(code_seg_t* const codeSegment, Instruction_t* ins)
 			while (in)
 			{
 				//Make a note of the instruction before the one to be deleted
-				if (in == ins) prev = in;
+				if (in->nextInstruction == ins) prev = in;
 
 				//need to fix any intra-segment branches that point to instruction to be deleted
 				if (in->branchToThisInstruction == ins)
