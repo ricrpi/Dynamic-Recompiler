@@ -643,7 +643,7 @@ Instruction_t* newInstrPOP(const Condition_e cond, const uint32_t Rmask);
 
 void CodeSeg_print(const struct _code_seg * const codeSegment);
 
-void Instr_print(const Instruction_t* const ins, uint8_t heading);
+void printf_Intermediate(const Instruction_t* const ins, uint8_t heading);
 
 void Intermediate_Literals_print(const struct _code_seg * const codeSegment);
 

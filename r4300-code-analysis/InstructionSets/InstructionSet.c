@@ -551,14 +551,14 @@ void CodeSeg_print(const code_seg_t* const codeSegment)
 
 	while (ins && x< 1000)
 	{
-		Instr_print(ins, !x );
+		printf_Intermediate(ins, !x );
 
 		ins = ins->nextInstruction;
 		x++;
 	}
 }
 
-void Instr_print(const Instruction_t* const ins, uint8_t heading)
+void printf_Intermediate(const Instruction_t* const ins, uint8_t heading)
 {
 
 	if (heading)

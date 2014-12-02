@@ -55,20 +55,22 @@ static void invalidateBranch(code_seg_t* codeSegment)
 
 	uint32_t* 		out 			= (uint32_t*)codeSegment->ARMcode + codeSegment->ARMcodeLen -1;
 	size_t 			targetAddress 	= *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
-	Instruction_t	ins;
+	Instruction_t*	ins = newEmptyInstr();
 
 	printf("invalidateBranch(0x%08x) at 0x%08x\n", (uint32_t)codeSegment, (uint32_t)out);
 	printf_arm((uint32_t)out, *out);
 
 	//Get MIPS condition code for branch
-	mips_decode(*(codeSegment->MIPScode + codeSegment->MIPScodeLen -1), &ins);
-	Instr_print(&ins, 1);
+	mips_decode(*(codeSegment->MIPScode + codeSegment->MIPScodeLen -1), ins);
+	printf_Intermediate(ins, 1);
 
 	//Set instruction to ARM_BRANCH for new target
-	InstrB(&ins, ins.cond, targetAddress, 1);
+	InstrB(ins, ins->cond, targetAddress, 1);
 
 	//emit the arm code
-	*out = arm_encode(&ins, (size_t)out);
+	*out = arm_encode(ins, (size_t)out);
+
+	InstrFree(codeSegment, ins);
 }
 
 //================== Searching ========================================
@@ -119,19 +121,19 @@ static literal_t* newLiteral(const uint32_t value)
 
 static void freeLiterals(code_seg_t* codeSegment)
 {
-	literal_t *prev;
+	literal_t *current;
 	literal_t *next;
 
 	//remove any existing literals
 	if (codeSegment->literals)
 	{
-		prev = codeSegment->literals;
+		current = codeSegment->literals;
 
-		while (prev)
+		while (current)
 		{
-			next = prev->next;
-			free(prev);
-			prev = next;
+			next = current->next;
+			free(current);
+			current = next;
 		}
 	}
 	codeSegment->literals = NULL;
@@ -385,7 +387,7 @@ uint32_t delSegment(code_seg_t* codeSegment)
 	if (0)
 	{
 #endif
-	printf("deleting Segment 0x%08x\n", (uint32_t)codeSegment);
+	printf("deleting Segment 0x%08x for mips code at 0x%08x\n", (uint32_t)codeSegment, (uint32_t)codeSegment->MIPScode);
 	}
 
 	freeIntermediateInstructions(codeSegment);	// free memory used for Intermediate Instructions

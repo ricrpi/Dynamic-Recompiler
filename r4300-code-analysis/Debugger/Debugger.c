@@ -358,7 +358,8 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 		}
 		else if (strlen(userInput[2]))
 		{
-			count = Mstrtoul(userInput[2], &tailPointer, 0);
+			addr = Mstrtoul(userInput[2], &tailPointer, 0);
+			count = 1;
 		}
 
 		for (x=0; x< count; x++)
@@ -739,6 +740,45 @@ void Debugger_wrapper(size_t* regs)
 	while (Debugger_start(&segmentData, 0, regs));
 }
 
+void Debugger_set(const code_segment_data_t* const segmentData)
+{
+	if (strlen(userInput[1]) > 0
+			&& strlen(userInput[2]) > 0)
+	{
+		char* tailPointer;
+		uint64_t v = strtoul(userInput[2], &tailPointer, 0);
+
+		if (!CMD_CMP(1, "showPrintSegmentDelete"))
+		{
+			showPrintSegmentDelete = (uint32_t)v;
+			printf("showPrintSegmentDelete = %u\n", (uint32_t)v);
+		}
+		else if (!CMD_CMP(1, "showRegTranslationMap"))
+		{
+			showRegTranslationMap = (uint32_t)v;
+			printf("showRegTranslationMap = %u\n", (uint32_t)v);
+		}
+		else if (!CMD_CMP(1, "showRegTranslationMapProgress"))
+		{
+			showRegTranslationMapProgress = (uint32_t)v;
+			printf("showRegTranslationMapProgress = %u\n", (uint32_t)v);
+		}
+		else
+		{
+			printf("invalid parameter\n");
+		}
+	}
+	else
+	{
+		printf("usage:\n"
+				"\tshowPrintSegmentDelete        0 or 1\n"
+				"\tshowRegTranslationMap         0 or 1\n"
+				"\tshowRegTranslationMapProgress 0 or 1\n"
+
+				);
+	}
+}
+
  int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context, size_t* regs)
 {
 	//find segment
@@ -768,41 +808,7 @@ void Debugger_wrapper(size_t* regs)
 	}
 	else if (!CMD_CMP(0, "set"))
 	{
-		if (strlen(userInput[1]) > 0
-				&& strlen(userInput[2]) > 0)
-		{
-			char* tailPointer;
-			uint64_t v = strtoul(userInput[2], &tailPointer, 0);
-
-			if (!CMD_CMP(1, "showPrintSegmentDelete"))
-			{
-				showPrintSegmentDelete = (uint32_t)v;
-				printf("showPrintSegmentDelete = %u\n", (uint32_t)v);
-			}
-			else if (!CMD_CMP(1, "showRegTranslationMap"))
-			{
-				showRegTranslationMap = (uint32_t)v;
-				printf("showRegTranslationMap = %u\n", (uint32_t)v);
-			}
-			else if (!CMD_CMP(1, "showRegTranslationMapProgress"))
-			{
-				showRegTranslationMapProgress = (uint32_t)v;
-				printf("showRegTranslationMapProgress = %u\n", (uint32_t)v);
-			}
-			else
-			{
-				printf("invalid parameter\n");
-			}
-		}
-		else
-		{
-			printf("usage:\n"
-					"\tshowPrintSegmentDelete        0 or 1\n"
-					"\tshowRegTranslationMap         0 or 1\n"
-					"\tshowRegTranslationMapProgress 0 or 1\n"
-
-					);
-		}
+		Debugger_set(segmentData);
 	}
 	else if (!CMD_CMP(0, "translate"))
 	{

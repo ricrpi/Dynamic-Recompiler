@@ -167,11 +167,11 @@ static void UpdateRegWithReg(Instruction_t* const ins, const regID_t RegFrom, co
 	if (0)
 	{
 #endif
-		Instr_print(ins,1);
+		printf_Intermediate(ins,1);
 		in = ins->nextInstruction;
 		while(in->nextInstruction)
 		{
-			Instr_print(in,0);
+			printf_Intermediate(in,0);
 			in = in->nextInstruction;
 		}
 

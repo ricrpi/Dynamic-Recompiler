@@ -97,7 +97,7 @@ size_t branchUnknown(size_t address)
 
 	code_seg_t* tgtSeg = getSegmentAt(address);
 
-	printf("tgtSeg = 0x08%x\n", tgtSeg);
+	printf("tgtSeg = 0x%08x\n", tgtSeg);
 
 	// 1. Need to generate the ARM assembler for target code_segment. Use 'addr' and code Seg map.
 	// 2. Then we need to patch the code_segment branch we came from. Do we need it to be a link?

@@ -18,6 +18,12 @@
 #include <string.h>
 #include "memory.h"
 
+#define assert2(expr)							\
+  if (!(expr)){									\
+	  printf_Intermediate(ins, 1);				\
+	  __assert_fail (__STRING(expr), __FILE__, __LINE__, __ASSERT_FUNCTION);}
+
+
 static uint32_t ALU_OP2(const Instruction_t* ins)
 {
 	uint32_t imm = (uint32_t)ins->immediate;
@@ -56,24 +62,19 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 	}
 	else if (ins->R3.regID != REG_NOT_USED)
 	{
-		assert(ins->shiftType < 4);
-		assert((ins->R3.regID &~REG_HOST) < 16);
-		assert((ins->R2.regID & ~REG_HOST) < 16);
+		assert2(ins->shiftType < 4);
+		assert2((ins->R3.regID &~REG_HOST) < 16);
+		assert2((ins->R2.regID & ~REG_HOST) < 16);
 		return (ins->R3.regID & ~REG_HOST) << 8 | ins->shiftType << 5 | 1 << 4 | (ins->R2.regID & ~REG_HOST);
 	}
 	else
 	{
-		assert(ins->shift < 32);
-		assert(ins->shiftType < 4);
-		assert((ins->R2.regID & ~REG_HOST) < 16);
+		assert2(ins->shift < 32);
+		assert2(ins->shiftType < 4);
+		assert2((ins->R2.regID & ~REG_HOST) < 16);
 		return ins->shift << 7 | ins->shiftType << 5 | (ins->R2.regID & ~REG_HOST);
 	}
 }
-
-#define assert2(expr)							\
-  if (!(expr)){									\
-	  Instr_print(ins, 1);						\
-	  __assert_fail (__STRING(expr), __FILE__, __LINE__, __ASSERT_FUNCTION);}
 
 uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 {
@@ -92,7 +93,7 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 	assert2(R2 < 16);
 	assert2(R1 < 16);
 	assert2(Rd2 < 16);
-	assert(Rd1 < 16);
+	assert2(Rd1 < 16);
 
 	switch (ins->instruction)
 	{
@@ -197,7 +198,7 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 
 	printf("Could not encode '%s'\n", Instruction_ascii[STRIP(ins->instruction)]);
 
-	Instr_print(ins, 1);
+	printf_Intermediate(ins, 1);
 
 #if defined (ABORT_ARM_ENCODE)
 	abort();
