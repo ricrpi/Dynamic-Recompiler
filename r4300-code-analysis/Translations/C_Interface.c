@@ -90,33 +90,37 @@ size_t branchUnknown(size_t address)
 {
 	volatile code_seg_t* code_seg 	= segmentData.dbgCurrentSegment;
 	uint32_t* 	out 		= code_seg->ARMcode + code_seg->ARMcodeLen -1;
+	Instruction_t 	ins;
+	size_t targetAddress;
 
 	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", address, (uint32_t)code_seg);
 
 	code_seg_t* tgtSeg = getSegmentAt(address);
 
-	printf("tgtSeg = 0x08x\n", tgtSeg);
+	printf("tgtSeg = 0x08%x\n", tgtSeg);
 
-	if (NULL != tgtSeg)
-	{
-		if (NULL == tgtSeg->ARMEntryPoint) Translate(tgtSeg);
- 		return (size_t)tgtSeg->ARMEntryPoint;
-	}
 	// 1. Need to generate the ARM assembler for target code_segment. Use 'addr' and code Seg map.
 	// 2. Then we need to patch the code_segment branch we came from. Do we need it to be a link?
 	// 3. return the address to branch to.
 
 	// 1.
-	CompileCodeAt((uint32_t*)address);
+	if (NULL != tgtSeg)
+	{
+		printf("Translating pre-existing CodeSegment\n");
+		if (NULL == tgtSeg->ARMEntryPoint) Translate(tgtSeg);
+
+		targetAddress = (size_t)tgtSeg->ARMEntryPoint;
+	}
+	else
+	{
+		printf("Creating new CodeSegment for 0x%08x\n", address);
+		CompileCodeAt((uint32_t*)address);
+		targetAddress = (size_t)getSegmentAt(address)->ARMEntryPoint;
+	}
 
 	// 2.
-	Instruction_t 	ins;
-
 	//Get MIPS condition code for branch
 	mips_decode(*(code_seg->MIPScode + code_seg->MIPScodeLen -1), &ins);
-
-	//now we can get the target Code Segment ARM Entry Point
-	size_t targetAddress = (size_t)getSegmentAt(address)->ARMEntryPoint;
 
 	//Set instruction to ARM_BRANCH for new target
 	InstrB(&ins, ins.cond, targetAddress, 1);

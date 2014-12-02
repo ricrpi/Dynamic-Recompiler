@@ -53,7 +53,7 @@ static void invalidateBranch(code_seg_t* codeSegment)
 {
 	if (NULL == codeSegment->ARMEntryPoint) return;
 
-	uint32_t* 		out 			= codeSegment->ARMcode + codeSegment->ARMcodeLen -1;
+	uint32_t* 		out 			= (uint32_t*)codeSegment->ARMcode + codeSegment->ARMcodeLen -1;
 	size_t 			targetAddress 	= *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
 	Instruction_t	ins;
 

@@ -245,7 +245,10 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				}
 				break;
 			case NOR:
-				TRANSLATE_ABORT();
+				Instr(ins, ARM_MVN, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, R2);
+
+				new_ins = newInstr(ARM_ORR, AL, Rd1, REG_TEMP_SCRATCH0, R2);
+				ADD_LL_NEXT(new_ins, ins);
 				break;
 			case SLT:
 				Instr(ins, ARM_CMP, AL, REG_NOT_USED, R1, R2);
@@ -280,12 +283,74 @@ void Translate_ALU(code_seg_t* const codeSegment)
 			case TLTU:
 			case TEQ:
 			case TNE:
+				TRANSLATE_ABORT();
+				break;
 			case DSLL:
+				{
+					assert(imm < 32);
+
+					InstrI(ins, ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1| REG_WIDE, imm);
+					new_ins->shiftType = LOGICAL_LEFT;
+
+					new_ins = newInstr(ARM_ORR, AL, Rd1 | REG_WIDE, Rd1 | REG_WIDE, R1, 32 - imm);
+					new_ins->shiftType = LOGICAL_RIGHT;
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = new_InstrI(ARM_MOV, AL, Rd1 , REG_NOT_USED, R1, imm);
+					ins->shiftType = LOGICAL_LEFT;
+					ADD_LL_NEXT(new_ins, ins);
+				}break;
 			case DSRL:
+				{
+					assert(imm < 32);
+
+					InstrI(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1, imm);
+					ins->shiftType = LOGICAL_RIGHT;
+
+					new_ins = newInstr(ARM_ORR, AL, Rd1 , Rd1 , R1| REG_WIDE, 32 - imm);
+					new_ins->shiftType = LOGICAL_LEFT;
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1| REG_WIDE, imm);
+					new_ins->shiftType = LOGICAL_RIGHT;
+					ADD_LL_NEXT(new_ins, ins);
+				}break;
 			case DSRA:
+				{
+					assert(imm < 32);
+
+					InstrI(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1, imm);
+					ins->shiftType = LOGICAL_RIGHT;
+
+					new_ins = newInstr(ARM_ORR, AL, Rd1 , Rd1 , R1| REG_WIDE, 32 - imm);
+					new_ins->shiftType = LOGICAL_LEFT;
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrI(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1| REG_WIDE, imm);
+					new_ins->shiftType = ARITHMETIC_RIGHT;
+					ADD_LL_NEXT(new_ins, ins);
+				}break;
 			case DSLL32:
+				{
+					InstrI(ins, ARM_MOV, AL, Rd1 |REG_WIDE , REG_NOT_USED, R1, imm);
+					ins->shiftType = LOGICAL_LEFT;
+				}
+				break;
 			case DSRL32:
+				{
+					InstrI(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1|REG_WIDE , imm);
+					ins->shiftType = LOGICAL_RIGHT;
+				}
+				break;
 			case DSRA32:
+				{
+					InstrIS(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1|REG_WIDE , imm);
+					ins->shiftType = ARITHMETIC_RIGHT;
+
+					new_ins = newInstrI(ARM_MVN, MI, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+				break;
 			case TGEI:
 			case TGEIU:
 			case TLTI:
