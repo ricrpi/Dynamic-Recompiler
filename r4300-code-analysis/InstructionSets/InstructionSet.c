@@ -313,6 +313,49 @@ Instruction_t* InstrS(Instruction_t* ins, const Instruction_e ins_e, const Condi
 		return ins;
 }
 
+Instruction_t* InstrIS(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
+{
+	ins->instruction = ins_e;
+	ins->cond        = cond;
+	ins->immediate   = imm;
+	ins->Rd1.regID   = Rd1;
+	ins->R1.regID    = R1;
+	ins->R2.regID    = R2;
+
+	ins->I = 1;
+	ins->S = 1;
+
+	switch (ins_e)
+	{
+	case SLL:
+	case SLLV:
+		ins-> shiftType = LOGICAL_LEFT; break;
+	case SRL:
+	case SRLV:
+		ins-> shiftType = LOGICAL_RIGHT; break;
+
+	case ARM_MOV:
+	case ARM_MVN:
+		assert(R1 == REG_NOT_USED); break;
+
+	case ARM_LDR:
+	case ARM_STR:
+	case ARM_LDR_LIT:
+	case ARM_STR_LIT:
+		if (imm < 0)
+		{
+			ins->immediate = -ins->immediate;
+			ins->U = 0;
+		}
+		break;
+	case ARM_B:
+		ins->I = 0; break;
+	default: break;
+	}
+
+	return ins;
+}
+
 Instruction_t* InstrIntB(Instruction_t* ins, const Condition_e cond, const Instruction_t* find_ins)
 {
 	ins->instruction = INT_BRANCH;

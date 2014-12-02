@@ -612,6 +612,8 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 
 Instruction_t* InstrS(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2);
 
+Instruction_t* InstrIS(Instruction_t* ins, const Instruction_e ins_e, const Condition_e cond, const regID_t Rd1, const regID_t R1, const regID_t R2, const int32_t imm)
+
 Instruction_t* InstrIntB(Instruction_t* ins, const Condition_e cond, const Instruction_t* find_ins);
 
 Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t offset, const uint32_t absolute);
