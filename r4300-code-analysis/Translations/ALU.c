@@ -292,11 +292,11 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					InstrI(ins, ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1| REG_WIDE, imm);
 					new_ins->shiftType = LOGICAL_LEFT;
 
-					new_ins = newInstr(ARM_ORR, AL, Rd1 | REG_WIDE, Rd1 | REG_WIDE, R1, 32 - imm);
+					new_ins = newInstrI(ARM_ORR, AL, Rd1 | REG_WIDE, Rd1 | REG_WIDE, R1, 32 - imm);
 					new_ins->shiftType = LOGICAL_RIGHT;
 					ADD_LL_NEXT(new_ins, ins);
 
-					new_ins = new_InstrI(ARM_MOV, AL, Rd1 , REG_NOT_USED, R1, imm);
+					new_ins = newInstrI(ARM_MOV, AL, Rd1 , REG_NOT_USED, R1, imm);
 					ins->shiftType = LOGICAL_LEFT;
 					ADD_LL_NEXT(new_ins, ins);
 				}break;
@@ -307,7 +307,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					InstrI(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1, imm);
 					ins->shiftType = LOGICAL_RIGHT;
 
-					new_ins = newInstr(ARM_ORR, AL, Rd1 , Rd1 , R1| REG_WIDE, 32 - imm);
+					new_ins = newInstrI(ARM_ORR, AL, Rd1 , Rd1 , R1| REG_WIDE, 32 - imm);
 					new_ins->shiftType = LOGICAL_LEFT;
 					ADD_LL_NEXT(new_ins, ins);
 
@@ -322,7 +322,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					InstrI(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1, imm);
 					ins->shiftType = LOGICAL_RIGHT;
 
-					new_ins = newInstr(ARM_ORR, AL, Rd1 , Rd1 , R1| REG_WIDE, 32 - imm);
+					new_ins = newInstrI(ARM_ORR, AL, Rd1 , Rd1 , R1| REG_WIDE, 32 - imm);
 					new_ins->shiftType = LOGICAL_LEFT;
 					ADD_LL_NEXT(new_ins, ins);
 
