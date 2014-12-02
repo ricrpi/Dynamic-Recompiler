@@ -70,7 +70,7 @@ static void invalidateBranch(code_seg_t* codeSegment)
 	//emit the arm code
 	*out = arm_encode(ins, (size_t)out);
 
-	InstrFree(codeSegment, ins);
+	InstrFree(NULL, ins);
 }
 
 //================== Searching ========================================

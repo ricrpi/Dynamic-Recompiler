@@ -714,29 +714,44 @@ void Intermediate_Literals_print(const code_seg_t* const codeSegment)
 
 Instruction_t* InstrFree(code_seg_t* const codeSegment, Instruction_t* ins)
 {
-	Instruction_t* in = codeSegment->Intermcode;
+	if (codeSegment)
+	{
+		Instruction_t* in = codeSegment->Intermcode;
 
-	if (in == ins)
-	{
-		codeSegment->Intermcode = codeSegment->Intermcode->nextInstruction;
-		free(in);
-		return codeSegment->Intermcode;
-	}
-	else
-	{
-		while (in->nextInstruction != ins)
+		Instruction_t* prev = NULL;
+		if (in == ins)
 		{
-			if (in->branchToThisInstruction == ins)
+			codeSegment->Intermcode = codeSegment->Intermcode->nextInstruction;
+
+			free(in);
+			return codeSegment->Intermcode;
+		}
+		else
+		{
+			//Search for instruction before one to be deleted
+			while (in)
 			{
-				in->branchToThisInstruction = ins->nextInstruction;
-				assert(ins->nextInstruction);
+				//Make a note of the instruction before the one to be deleted
+				if (in == ins) prev = in;
+
+				//need to fix any intra-segment branches that point to instruction to be deleted
+				if (in->branchToThisInstruction == ins)
+				{
+					in->branchToThisInstruction = ins->nextInstruction;
+					assert(ins->nextInstruction);
+				}
+
+				in = in->nextInstruction;
 			}
 
-			in = in->nextInstruction;
-		}
+			// if we have the previous instruction then point its next to instruction after one to be deleted.
+			if (prev) prev->nextInstruction = ins->nextInstruction;
 
-		in->nextInstruction = ins->nextInstruction;
-		free(ins);
-		return in->nextInstruction;
+			free(ins);
+			return prev->nextInstruction;
+		}
 	}
+
+	free(ins);
+	return NULL;
 }
