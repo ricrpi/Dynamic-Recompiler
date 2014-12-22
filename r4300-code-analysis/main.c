@@ -97,12 +97,6 @@ void interrupt()
 
 int main(int argc, char* argv[])
 {
-	if (argc <= 1)
-	{
-		printf("Please specify a file\n");
-		return 1;
-	}
-
 	struct sigaction sa;
 
 	sa.sa_flags = SA_SIGINFO | SA_NODEFER;
@@ -114,7 +108,11 @@ int main(int argc, char* argv[])
 
 	printf("R4300 Recompiler\n\nOpening %s\n",argv[1]);
 
-	FILE *fPtr = fopen(argv[1], "rb");
+	FILE *fPtr;
+
+	if (argc <= 1) fPtr = fopen("../m64p_test_rom.v64", "rb");
+	else fPtr = fopen(argv[1], "rb");
+
 	if (fPtr == NULL) return 2;
 
 	long romlength = 0;
