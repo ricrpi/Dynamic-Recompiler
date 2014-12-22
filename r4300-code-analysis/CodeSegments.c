@@ -57,7 +57,9 @@ static void invalidateBranch(code_seg_t* codeSegment)
 	size_t 			targetAddress 	= *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
 	Instruction_t*	ins = newEmptyInstr();
 
+#ifdef SHOW_CALLER
 	printf("invalidateBranch(0x%08x) at 0x%08x\n", (uint32_t)codeSegment, (uint32_t)out);
+#endif
 	printf_arm((uint32_t)out, *out);
 
 	//Get MIPS condition code for branch
@@ -216,8 +218,14 @@ static caller_t* newCaller(const code_seg_t* const caller)
 	caller_t *newCaller;
 	newCaller = malloc(sizeof(caller_t));
 
+	asert(caller);
+
 	newCaller->codeSeg = (code_seg_t*)caller;
 
+
+#ifdef SHOW_CALLER
+	printf("newCaller(%p)\n", caller);
+#endif
 	return newCaller;
 }
 
@@ -228,9 +236,15 @@ static void updateCallers(code_seg_t* const codeSegment)
 	if (codeSegment->callers)
 	{
 		caller = codeSegment->callers;
+#ifdef SHOW_CALLER
+	printf("updateCaller(%p)\n", codeSegment);
+#endif
 
 		while (caller)
 		{
+#ifdef SHOW_CALLER
+			printf("\tcaller %p, codeSeg %p\n", caller, caller->codeSeg);
+#endif
 			invalidateBranch(caller->codeSeg);
 			caller = caller->next;
 		}
@@ -243,11 +257,18 @@ static void freeCallers(code_seg_t* const codeSegment)
 	caller_t *prev;
 	caller_t *next;
 
+#ifdef SHOW_CALLER
+	printf("freCaller(%p)\n", codeSegment);
+#endif
+
 	//remove any existing callers
 	if (codeSegment->callers)
 	{
 		prev = codeSegment->callers;
 
+#ifdef SHOW_CALLER
+		printf("\t%p\n", prev);
+#endif
 		while (prev)
 		{
 			next = prev->next;

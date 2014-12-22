@@ -31,6 +31,7 @@
 //Print when a segment is deleted
 #define SHOW_PRINT_SEGMENT_DELETE			(1)
 
+#define SHOW_CALLER							(1)
 // ========================================================
 
 // Print the constants in intermediate code
