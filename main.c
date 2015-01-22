@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
 	if (argc <= 1) fPtr = fopen("../m64p_test_rom.v64", "rb");
 	else fPtr = fopen(argv[1], "rb");
 
-	if (fPtr == NULL) return 2;
+ 	if (fPtr == NULL) return 2;
 
 	long romlength = 0;
 	fseek(fPtr, 0L, SEEK_END);

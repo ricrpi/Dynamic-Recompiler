@@ -27,7 +27,7 @@ void cc_interrupt()
 
 	Cause |= 0x8000;
 
-	printf("cc_interrupt() called\n");
+	//printf("cc_interrupt() called\n");
 
 	if (*(dmaPI+2))
 	{
