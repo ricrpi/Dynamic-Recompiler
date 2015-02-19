@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "memory.h"
+#include "mem_state.h"
 
 #include "Debugger.h"	// RWD
 #include "DebugDefines.h"

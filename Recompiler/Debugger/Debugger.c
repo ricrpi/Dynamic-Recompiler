@@ -9,6 +9,7 @@
 #include "InstructionSetARM6hf.h"
 #include "Translate.h"
 #include "memory.h"
+#include "mem_state.h"
 
 #define LINE_LEN 500
 //#define HISTORY_LEN 5
@@ -223,7 +224,7 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 				, (uint32_t)CurrentCodeSeg->ARMcode
 				, seg_type_s[CurrentCodeSeg->Type]);
 
-		code_seg_t*  tempCodeSeg=segmentData->StaticSegments;
+		/*code_seg_t*  tempCodeSeg=segmentData->StaticSegments;
 		x=1;
 		while (tempCodeSeg !=NULL)
 		{
@@ -237,7 +238,7 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 			}
 
 			tempCodeSeg = tempCodeSeg->next;
-		}
+		}*/
 	}
 }
 
@@ -409,12 +410,12 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 		{
 			for (x=0; x < len; x++)
 			{
-				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)segmentData->DynamicBounds[(val-0x80000000)/4 + x]);
+				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)getSegmentAt(val + x*4));
 			}
 		}
 		else if (val < 0x83FFFFFF)	//Dynamic Recompiled ARM code
 		{
-			code_seg_t* codeseg = segmentData->StaticSegments;
+			/*code_seg_t* codeseg = get; //segmentData->StaticSegments;
 
 			while (codeseg)
 			{
@@ -444,14 +445,14 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 					}
 				}
 				codeseg = codeseg->next;
-			}
+			}*/
 
 		}
 		else if (val < 0x88000000)
 		{
 			for (x=0; x < len; x++)
 			{
-				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)segmentData->StaticBounds[(val-0x88000000)/4 + x]);
+				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)getSegmentAt(val + x * 4));
 			}
 		}
 
@@ -474,9 +475,9 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 
 	if (!strlen(userInput[1]))
 	{
-		printf("First Segment   0x%x, number of segments %d\n"
-				, (uint32_t)segmentData->StaticSegments
-				, segmentData->count);
+		//printf("First Segment   0x%x, number of segments %d\n"
+		//		, (uint32_t)segmentData->StaticSegments
+			//	, segmentData->count);
 
 		printf("Current Segment 0x%x\n"
 				"\tMIPS            ARM\n"
@@ -516,7 +517,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 
 		if (val > 2)
 		{
-			tempCodeSeg=segmentData->StaticSegments;
+			/*tempCodeSeg=segmentData->StaticSegments;
 
 			while (tempCodeSeg != NULL)
 			{
@@ -531,12 +532,12 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				}
 
 				tempCodeSeg = tempCodeSeg->next;
-			}
+			}*/
 		}else if (!CurrentCodeSeg->MIPSReturnRegister)
 		{
 			if (0 == val)
 			{
-				CurrentCodeSeg = segmentData->StaticSegments;
+				//CurrentCodeSeg = segmentData->StaticSegments;
 				ok = 1;
 			}
 			else if (1 == val && CurrentCodeSeg->pContinueNext != NULL)
@@ -552,7 +553,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 		}
 		else
 		{
-			tempCodeSeg = segmentData->StaticSegments;
+			/*tempCodeSeg = segmentData->StaticSegments;
 			x=1;
 			while (tempCodeSeg != NULL)
 			{
@@ -574,7 +575,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				}
 
 				tempCodeSeg = tempCodeSeg->next;
-			}
+			}*/
 		}
 		if (!ok) printf("Invalid entry\n");
 	}

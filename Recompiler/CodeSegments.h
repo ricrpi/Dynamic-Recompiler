@@ -11,34 +11,10 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "InstructionSet.h"
+#include "literals.h"
+#include "callers.h"
 
 //-------------------------------------------------------------------
-
-/*
- * want to know if:
- * 1. segment has any code before
- * 2. segment has any code after
- */
-typedef enum
-{
-	BLOCK_INVALID,			// invalid code section
-	BLOCK_START,			// start of a block CPU will only ever jump to this
-	BLOCK_START_CONT,		// start of a block, there is a valid block before
-	BLOCK_PART,				// within a block
-	BLOCK_END,				// block will not continue after this point (e.g. Jump with no link)
-	BLOCK_END_CONT,			// block may/will continue after end of segment e.g. conditional branch, jump/branch with link etc.
-	sizeof_BLOCK_TYPE_E
-} block_type_e;
-
-/*
-static const char* block_type_s[sizeof_BLOCK_TYPE_E] = {
-	"BLOCK_INVALID",
-	"BLOCK_START",
-	"BLOCK_START_CONT",
-	"BLOCK_PART",
-	"BLOCK_END",
-	"BLOCK_END_CONT"
-};*/
 
 typedef enum
 {
@@ -55,18 +31,6 @@ static const char* seg_type_s[sizeof_SEG_TYPE_E] = {
 		"SEG_END",			// segment has no code after - literals go after
 		"SEG_ALONE"
 };
-
-typedef struct _literal_t
-{
-	struct _literal_t* next;
-	int32_t value;
-} literal_t;
-
-typedef struct _caller_t
-{
-	struct _caller_t* next;
-	struct _code_seg* codeSeg;
-} caller_t;
 
 typedef struct _code_seg
 {
@@ -103,13 +67,13 @@ typedef struct _code_seg
 typedef struct _code_segment_data
 {
 	uint32_t count;
-	code_seg_t* StaticSegments;		// code run directly in ROM
-	code_seg_t** StaticBounds;
-	uint32_t StaticLength;
+	//code_seg_t* StaticSegments;		// code run directly in ROM
+	//code_seg_t** StaticBounds;
+	//uint32_t StaticLength;
 
-	code_seg_t* DynamicSegments;	// code running in RDRAM (copied or DMA'd from ROM)
-	code_seg_t** DynamicBounds;
-	uint32_t DynamicLength;
+	//code_seg_t* DynamicSegments;	// code running in RDRAM (copied or DMA'd from ROM)
+	//code_seg_t** DynamicBounds;
+	//uint32_t DynamicLength;
 
 	literal_t* literals;
 
@@ -123,12 +87,16 @@ typedef struct _code_segment_data
 	code_seg_t* segTrap;
 
 	volatile code_seg_t* dbgCurrentSegment;
+
+	uint8_t bProfile;
 } code_segment_data_t;
 
 //-------------------------------------------------------------------
 
 extern uint32_t showPrintSegmentDelete;
+//TODO RWD
 
+extern code_segment_data_t segmentData;
 
 /*
  * Function to create a newSegment
@@ -140,22 +108,10 @@ code_seg_t* newSegment();
  */
 uint32_t delSegment(code_seg_t* codeSegment);
 
-/*
- * Function to walk the Intermediate Instruction' LinkedList and free it.
- */
-void freeIntermediateInstructions(code_seg_t* codeSegment);
+void invalidateBranch(code_seg_t* codeSegment);
 
 code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize);
 
-uint32_t addLiteral(code_seg_t* const codeSegment,  regID_t* const base, int32_t* const offset, const uint32_t value);
-
-int32_t ScanForCode(const uint32_t* const address, const uint32_t length);
-
-code_seg_t* getSegmentAt(size_t address);
-
-void CompileCodeAt(const uint32_t* const address);
-
-//TODO RWD
-extern code_segment_data_t segmentData;
+int CompileCodeAt(const uint32_t* const address);
 
 #endif /* CODESEGMENTS_H_ */
