@@ -225,14 +225,14 @@ uint32_t delSegment(code_seg_t* codeSegment)
 
 int CompileCodeAt(const uint32_t* const address)
 {
-	//code_seg_t* seg;
-	int x;
-	uint32_t y = 0;
+	int 			x;
 	Instruction_e 	op;
+	uint32_t 		uiMIPScodeLen = 0;
+	code_seg_t* 	newSeg;
+	code_seg_t* 	prevSeg = NULL;
 
-	uint32_t index = ((uint32_t)address & 0x00FFFFFF)/sizeof(code_seg_t*);
-	uint32_t uiMIPScodeLen = 0;
-
+	// Find the shortest length of contiguous blocks (super block) of MIPS code at 'address'
+	// Contiguous blocks should end with an OPS_JUMP && !OPS_LINK
 	while (1) // (index + uiMIPScodeLen < upperAddress/sizeof(code_seg_t*))
 	{
 		op = ops_type(address[uiMIPScodeLen]);
@@ -250,7 +250,7 @@ int CompileCodeAt(const uint32_t* const address)
 						break;
 	}
 
-	//Remove all segments in segment group
+	//Now expire the segments within the super block ande remove the segments
 	for (x = 0; x < uiMIPScodeLen; x++)
 	{
 		code_seg_t* toDelete;
@@ -265,148 +265,122 @@ int CompileCodeAt(const uint32_t* const address)
 		}
 	}
 
-	code_seg_t* 	newSeg;
+	int segmentStartIndex = 0;
 
-	uint32_t 		prevWordCode 	= 0;
-	int32_t 		countJumps 		= 0;
-	int 			SegmentsCreated = 0;
-
-	x = 0;
-
-	while (1)
+	// Create new segments
+	for (x = 0; x < uiMIPScodeLen; x++)
 	{
 		op = ops_type(address[x]);
-
-		//we are not in valid code
-		if (INVALID == op)
-		{
-			prevWordCode = 0;
-			break;
-		}
 
 		if ((op & OPS_JUMP) == OPS_JUMP)
 		{
 			uint32_t uiAddress = ops_JumpAddress(&address[x]);
 
-			if (op & OPS_LINK)
-			{
-				if (INVALID == ops_type(address[x+1]))
-				{
-					prevWordCode = 0;
-					break;
-				}
-			}
-
-			countJumps++;
 			newSeg = newSegment();
 			newSeg->MIPScode = (uint32_t*)(address + x);
-			newSeg->MIPScodeLen = x - y +1;
+			newSeg->MIPScodeLen = x - segmentStartIndex + 1;
+
 			if (op == JR) //only JR can set PC to the Link Register (or other register!)
 			{
 				newSeg->MIPSReturnRegister = (*address>>21)&0x1f;
 			}
 
-			if (!prevWordCode)
-				newSeg->Type = SEG_ALONE;
+			if (prevSeg)
+				prevSeg->pContinueNext = newSeg;
+			prevSeg = newSeg;
+
+			if (!segmentStartIndex)
+				newSeg->Type = SEG_START;
 			else
 				newSeg->Type = SEG_END;
 
-			setMemState(address + x, newSeg->MIPScodeLen, newSeg);
+			setMemState((size_t)(address + segmentStartIndex), newSeg->MIPScodeLen, newSeg);
 
-			SegmentsCreated++;
-			//AddSegmentToLinkedList(newSeg);
+			segmentStartIndex = x+1;
 
-			if (op & OPS_LINK) prevWordCode = 1;
-			else prevWordCode = 0;
-			break;
+			// we should have got to the end of the super block
+			if (!(op & OPS_LINK)) break;
 		}
 		else if((op & OPS_BRANCH) == OPS_BRANCH)	//MIPS does not have an unconditional branch
 		{
-			if (INVALID == ops_type(address[x+1]))
-			{
-				prevWordCode = 0;
-				break;
-			}
-
-			int32_t offset =  ops_BranchOffset(&address[y]);
-
-			if (INVALID == ops_type(address[x + offset]))
-			{
-				prevWordCode = 0;
-				break;
-			}
-
-			countJumps++;
-			newSeg = newSegment();
+			int32_t offset =  ops_BranchOffset(&address[x]);
 
 			//Is this an internal branch - need to create two segments
 			// if use x<= y + offset then may throw SIGSEGV if offset is -1!
-			if (offset < 0 && x < y + offset)
+			if (offset < 0 && x + offset >= segmentStartIndex )
 			{
+				newSeg = newSegment();
 				newSeg->MIPScode = (uint32_t*)(address + x);
-				newSeg->MIPScodeLen = x - y + offset + 1;
-				y = x;
+				newSeg->MIPScodeLen = x + offset - segmentStartIndex + 1;
 
-				if (!prevWordCode)
+				if (prevSeg)
+					prevSeg->pContinueNext = newSeg;
+				prevSeg = newSeg;
+
+				if (!segmentStartIndex)
 					newSeg->Type = SEG_START;
 				else
 					newSeg->Type = SEG_SANDWICH;
 
-				setMemState(address + x, newSeg->MIPScodeLen, newSeg);
-				SegmentsCreated++;
-				//AddSegmentToLinkedList(newSeg);
+				setMemState((size_t)(address + segmentStartIndex), newSeg->MIPScodeLen, newSeg);
+				segmentStartIndex = x+1;
 
 				newSeg = newSegment();
-				newSeg->MIPScode = (uint32_t*)(address + y + offset + 1);
+				newSeg->MIPScode = (uint32_t*)(address + segmentStartIndex + offset + 1);
 				newSeg->MIPScodeLen = -offset;
 				newSeg->Type = SEG_SANDWICH;
 
-				setMemState(address + x, newSeg->MIPScodeLen, newSeg);
-				SegmentsCreated++;
-				//AddSegmentToLinkedList(newSeg);
+				prevSeg->pContinueNext = newSeg;
+				prevSeg = newSeg;
 
+				setMemState((size_t)(address + segmentStartIndex), newSeg->MIPScodeLen, newSeg);
+				segmentStartIndex = x+1;
 			}
 			else // if we are branching external to the block?
 			{
-				newSeg->MIPScode = (uint32_t*)(address + x);
-				newSeg->MIPScodeLen = x - y + 1;
-				y = x;
 
-				if (!prevWordCode)
+				newSeg = newSegment();
+				newSeg->MIPScode = (uint32_t*)(address + x);
+				newSeg->MIPScodeLen = x - segmentStartIndex + 1;
+
+				if (prevSeg)
+					prevSeg->pContinueNext = newSeg;
+				prevSeg = newSeg;
+
+				if (!segmentStartIndex)
 					newSeg->Type = SEG_START;
 				else
 					newSeg->Type = SEG_SANDWICH;
 
-				setMemState(address + x, newSeg->MIPScodeLen, newSeg);
-				SegmentsCreated++;
-				//AddSegmentToLinkedList(newSeg);
+				setMemState((size_t)(address + segmentStartIndex), newSeg->MIPScodeLen, newSeg);
+				segmentStartIndex = x+1;
 			}
-
-			prevWordCode = 1;
-			break;
 		}
-		else
-			x++;
-
-	} // while (1)
+	} // for (x = 0; x < uiMIPScodeLen; x++)
 
 	newSeg = getSegmentAt((size_t)address);
 
-	// Now we can translate and emit code to the next 'break' in instructions
-	while (newSeg->pContinueNext)
+	if (newSeg)
 	{
+		// Now we can translate and emit code to the next 'break' in instructions
+		while (newSeg->pContinueNext)
+		{
+			segmentData.dbgCurrentSegment = newSeg;
+			Translate(newSeg);
+			emit_arm_code(newSeg);
+
+			newSeg = newSeg->pContinueNext;
+		}
+
 		segmentData.dbgCurrentSegment = newSeg;
 		Translate(newSeg);
 		emit_arm_code(newSeg);
-
-		newSeg = newSeg->next;
 	}
-
-	segmentData.dbgCurrentSegment = newSeg;
-	Translate(newSeg);
-	emit_arm_code(newSeg);
-
-	return SegmentsCreated;
+	else
+	{
+		printf("CompileCodeAt() failed for adress 0x%08x\n", address);
+	}
+	return 0;
 }
 
 #if 0

@@ -4,21 +4,18 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../CodeSegments.c \
 ../main.c \
 ../r4300.c \
 ../rom.c \
 ../tlb.c 
 
 OBJS += \
-./CodeSegments.o \
 ./main.o \
 ./r4300.o \
 ./rom.o \
 ./tlb.o 
 
 C_DEPS += \
-./CodeSegments.d \
 ./main.d \
 ./r4300.d \
 ./rom.d \
@@ -29,7 +26,7 @@ C_DEPS += \
 %.o: ../%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -I"/home/rjhender/git/R4300-code-analysis" -I"/home/rjhender/git/R4300-code-analysis/Debugger" -I"/home/rjhender/git/R4300-code-analysis/InstructionSets" -I"/home/rjhender/git/R4300-code-analysis/Translations" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -I"/home/rjhender/git/R4300-code-analysis" -I"/home/rjhender/git/R4300-code-analysis/InstructionSets" -I"/home/rjhender/git/R4300-code-analysis/Recompiler" -I"/home/rjhender/git/R4300-code-analysis/Recompiler/Debugger" -I"/home/rjhender/git/R4300-code-analysis/Translations" -I"/home/rjhender/git/R4300-code-analysis/InstructionSets" -I/home/rjhender/rpi/tools/arm-bcm2708/arm-bcm2708hardfp-linux-gnueabi/arm-bcm2708hardfp-linux-gnueabi/sysroot/usr/include -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

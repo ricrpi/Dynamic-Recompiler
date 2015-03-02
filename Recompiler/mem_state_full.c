@@ -11,7 +11,7 @@
 #include "CodeSegments.h"
 
 
-static memMap_t** Blocks = NULL;
+static memMap_t* Blocks = NULL;
 static uint32_t memMapCount = 0;
 
 void initMemState(memMap_t* MemoryBlocks, uint32_t Count)
@@ -25,8 +25,8 @@ void initMemState(memMap_t* MemoryBlocks, uint32_t Count)
 
 	for (x=0; x< Count; x++)
 	{
-		Blocks[x]->_memStatePtr = malloc(Blocks[x]->size * sizeof(code_seg_t*));
-		memset(Blocks[x]->_memStatePtr,0, Blocks[x]->size * sizeof(code_seg_t*));
+		Blocks[x]._memStatePtr = malloc(Blocks[x].size * sizeof(code_seg_t*));
+		memset(Blocks[x]._memStatePtr,0, Blocks[x].size * sizeof(code_seg_t*));
 	}
 }
 
@@ -36,9 +36,9 @@ code_seg_t* getSegmentAt(size_t address)
 
 	for (x=0; x < memMapCount; x++)
 	{
-		if (Blocks[x]->address <= address && Blocks[x]->address + Blocks[x]->size > address)
+		if (Blocks[x].address <= address && Blocks[x].address + Blocks[x].size > address)
 		{
-			return Blocks[x]->_memStatePtr[(address - Blocks[x]->address)/sizeof(code_seg_t*)];
+			return Blocks[x]._memStatePtr[(address - Blocks[x].address)/sizeof(code_seg_t*)];
 		}
 	}
 
@@ -53,13 +53,13 @@ void setMemState(size_t address, uint32_t length, code_seg_t* codeSeg)
 
 	for (x=0; x < memMapCount; x++)
 	{
-		if (Blocks[x]->address <= address && Blocks[x]->address + Blocks[x]->size > address)
+		if (Blocks[x].address <= address && Blocks[x].address + Blocks[x].size > address)
 		{
 			int i;
 
 			for (i=0; i < length; i++)
 			{
-				code_seg_t* Blockcurrent = Blocks[x]->_memStatePtr[(address - Blocks[x]->address)/sizeof(code_seg_t*) + i];
+				code_seg_t* Blockcurrent = Blocks[x]._memStatePtr[(address - Blocks[x].address)/sizeof(code_seg_t*) + i];
 				if (!codeSeg && Blockcurrent)
 				{
 					if (Blockcurrent->callers || Blockcurrent->Intermcode )
@@ -68,9 +68,9 @@ void setMemState(size_t address, uint32_t length, code_seg_t* codeSeg)
 						abort();
 					}
 				}
-				Blockcurrent = codeSeg;
-				return;
+				Blocks[x]._memStatePtr[(address - Blocks[x].address)/sizeof(code_seg_t*) + i] = codeSeg;
 			}
+			return;
 		}
 	}
 

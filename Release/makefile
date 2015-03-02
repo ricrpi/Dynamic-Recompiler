@@ -8,6 +8,10 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include Translations/subdir.mk
+-include Recompiler/Debugger/subdir.mk
+-include Recompiler/subdir.mk
+-include InstructionSets/subdir.mk
 -include subdir.mk
 -include objects.mk
 
@@ -22,19 +26,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: r4300-code-analysis
+all: R4300-code-analysis
 
 # Tool invocations
-r4300-code-analysis: $(OBJS) $(USER_OBJS)
+R4300-code-analysis: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
-	@echo 'Invoking: GCC C Linker'
-	gcc  -o "r4300-code-analysis" $(OBJS) $(USER_OBJS) $(LIBS)
+	@echo 'Invoking: Cross GCC Linker'
+	gcc  -o "R4300-code-analysis" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) r4300-code-analysis
+	-$(RM) $(EXECUTABLES)$(OBJS)$(C_DEPS) R4300-code-analysis
 	-@echo ' '
 
 .PHONY: all clean dependents

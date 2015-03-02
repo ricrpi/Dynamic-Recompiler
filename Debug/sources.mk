@@ -15,6 +15,7 @@ C_DEPS :=
 SUBDIRS := \
 . \
 Translations \
+Recompiler \
+Recompiler/Debugger \
 InstructionSets \
-Debugger \
 

@@ -4,41 +4,29 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../CodeSegments.c \
-../Debugger.c \
-../InstructionSet.c \
-../InstructionSetARM6hf.c \
-../InstructionSetMIPS4.c \
-../Translate.c \
 ../main.c \
-../rom.c 
+../r4300.c \
+../rom.c \
+../tlb.c 
 
 OBJS += \
-./CodeSegments.o \
-./Debugger.o \
-./InstructionSet.o \
-./InstructionSetARM6hf.o \
-./InstructionSetMIPS4.o \
-./Translate.o \
 ./main.o \
-./rom.o 
+./r4300.o \
+./rom.o \
+./tlb.o 
 
 C_DEPS += \
-./CodeSegments.d \
-./Debugger.d \
-./InstructionSet.d \
-./InstructionSetARM6hf.d \
-./InstructionSetMIPS4.d \
-./Translate.d \
 ./main.d \
-./rom.d 
+./r4300.d \
+./rom.d \
+./tlb.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
 %.o: ../%.c
 	@echo 'Building file: $<'
-	@echo 'Invoking: GCC C Compiler'
-	gcc -I"/home/rjhender/git/R4300-code-analysis/r4300-code-analysis" -O3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@echo 'Invoking: Cross GCC Compiler'
+	gcc -I/home/rjhender/rpi/tools/arm-bcm2708/arm-bcm2708hardfp-linux-gnueabi/arm-bcm2708hardfp-linux-gnueabi/sysroot/usr/include -O3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
