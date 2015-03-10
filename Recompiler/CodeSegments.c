@@ -1,9 +1,21 @@
-/*
- * CodeSegments.c
- *
- *  Created on: 16 Apr 2014
- *      Author: rjhender
- */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *                                                                         *
+ *  Dynamic-Recompiler - Turns MIPS code into ARM code                       *
+ *  Original source: http://github.com/ricrpi/Dynamic-Recompiler             *
+ *  Copyright (C) 2015  Richard Hender                                       *
+ *                                                                           *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
+ *                                                                           *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -223,7 +235,7 @@ uint32_t delSegment(code_seg_t* codeSegment)
 	return ret;
 }
 
-int CompileCodeAt(const uint32_t* const address)
+code_seg_t* CompileCodeAt(const uint32_t* const address)
 {
 	int 			x;
 	Instruction_e 	op;
@@ -250,7 +262,7 @@ int CompileCodeAt(const uint32_t* const address)
 						break;
 	}
 
-	//Now expire the segments within the super block ande remove the segments
+	//Now expire the segments within the super block and remove the segments
 	for (x = 0; x < uiMIPScodeLen; x++)
 	{
 		code_seg_t* toDelete;
@@ -277,7 +289,7 @@ int CompileCodeAt(const uint32_t* const address)
 			uint32_t uiAddress = ops_JumpAddress(&address[x]);
 
 			newSeg = newSegment();
-			newSeg->MIPScode = (uint32_t*)(address + x);
+			newSeg->MIPScode = (uint32_t*)(address + segmentStartIndex);
 			newSeg->MIPScodeLen = x - segmentStartIndex + 1;
 
 			if (op == JR) //only JR can set PC to the Link Register (or other register!)
@@ -310,7 +322,7 @@ int CompileCodeAt(const uint32_t* const address)
 			if (offset < 0 && x + offset >= segmentStartIndex )
 			{
 				newSeg = newSegment();
-				newSeg->MIPScode = (uint32_t*)(address + x);
+				newSeg->MIPScode = (uint32_t*)(address + segmentStartIndex);
 				newSeg->MIPScodeLen = x + offset - segmentStartIndex + 1;
 
 				if (prevSeg)
@@ -326,21 +338,21 @@ int CompileCodeAt(const uint32_t* const address)
 				segmentStartIndex = x+1;
 
 				newSeg = newSegment();
-				newSeg->MIPScode = (uint32_t*)(address + segmentStartIndex + offset + 1);
+				newSeg->MIPScode = (uint32_t*)(address + segmentStartIndex + offset);
 				newSeg->MIPScodeLen = -offset;
 				newSeg->Type = SEG_SANDWICH;
 
 				prevSeg->pContinueNext = newSeg;
 				prevSeg = newSeg;
 
-				setMemState((size_t)(address + segmentStartIndex), newSeg->MIPScodeLen, newSeg);
+				setMemState((size_t)(address + segmentStartIndex + offset), newSeg->MIPScodeLen, newSeg);
 				segmentStartIndex = x+1;
 			}
 			else // if we are branching external to the block?
 			{
 
 				newSeg = newSegment();
-				newSeg->MIPScode = (uint32_t*)(address + x);
+				newSeg->MIPScode = (uint32_t*)(address + segmentStartIndex);
 				newSeg->MIPScodeLen = x - segmentStartIndex + 1;
 
 				if (prevSeg)
@@ -380,7 +392,8 @@ int CompileCodeAt(const uint32_t* const address)
 	{
 		printf("CompileCodeAt() failed for adress 0x%08x\n", address);
 	}
-	return 0;
+
+	return getSegmentAt((size_t)address);
 }
 
 #if 0
@@ -676,7 +689,7 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	//Initialize the target memory mapping
 	initMemState(Blocks, sizeof(Blocks)/sizeof(memMap_t));
 
-	CompileCodeAt(0x88000040);
+	//CompileCodeAt(0x88000040);
 
 	segmentData.segStart = Generate_CodeStart(&segmentData);
 	emit_arm_code(segmentData.segStart);
@@ -691,9 +704,9 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN)) = (uint32_t)segmentData.segBranchUnknown->ARMEntryPoint;
 
 	// Compile the First contiguous block of Segments
-	code_seg_t* seg = getSegmentAt(0x88000040);
+//	code_seg_t* seg = getSegmentAt(0x88000040);
 
-	while (seg->pContinueNext)
+	/*while (seg->pContinueNext)
 	{
 		segmentData.dbgCurrentSegment = seg;
 		Translate(seg);
@@ -717,7 +730,7 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 #endif
 
 	segmentData.dbgCurrentSegment = getSegmentAt(0x88000040);
-
+*/
 
 	return &segmentData;
 

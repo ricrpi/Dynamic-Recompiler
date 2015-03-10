@@ -1,16 +1,27 @@
-
-
-/*
- * decomp.c
- *
- *  Created on: 19 Mar 2014
- *      Author: rjhender
- */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *                                                                         *
+ *  Dynamic-Recompiler - Turns MIPS code into ARM code                       *
+ *  Original source: http://github.com/ricrpi/Dynamic-Recompiler             *
+ *  Copyright (C) 2015  Richard Hender                                       *
+ *                                                                           *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
+ *                                                                           *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define __USE_GNU
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/mman.h>
 #include "rom.h"
@@ -39,7 +50,7 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 
 	if (sig == SIGSEGV){
 		size_t ins_addr;
-		#if __i386
+		#if __i386__
 			ins_addr = ucontext->uc_mcontext.gregs[14];
 		#else
 			ins_addr = ucontext->uc_mcontext.arm_pc;

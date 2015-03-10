@@ -1,3 +1,21 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *                                                                         *
+ *  Dynamic-Recompiler - Turns MIPS code into ARM code                       *
+ *  Original source: http://github.com/ricrpi/Dynamic-Recompiler             *
+ *  Copyright (C) 2015  Richard Hender                                       *
+ *                                                                           *
+ *  This program is free software: you can redistribute it and/or modify     *
+ *  it under the terms of the GNU General Public License as published by     *
+ *  the Free Software Foundation, either version 3 of the License, or        *
+ *  (at your option) any later version.                                      *
+ *                                                                           *
+ *  This program is distributed in the hope that it will be useful,          *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+ *  GNU General Public License for more details.                             *
+ *                                                                           *
+ *  You should have received a copy of the GNU General Public License        *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string.h>
 #include <stdint.h>
@@ -249,8 +267,19 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 	if (!CMD_CMP(1, "arm"))
 	{
-		uint32_t count = CurrentCodeSeg->ARMcodeLen;
-		uint32_t* addr = CurrentCodeSeg->ARMcode;
+		uint32_t count= CurrentCodeSeg->ARMcodeLen;
+		uint32_t* addr;
+
+		if (CurrentCodeSeg)
+		{
+			count = CurrentCodeSeg->ARMcodeLen;
+			addr = CurrentCodeSeg->ARMcode;
+		}
+		else
+		{
+			count = 10;
+			addr = 0x81000000;
+		}
 
 		if (strlen(userInput[3]))
 		{
@@ -300,8 +329,19 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 	}
 	else if (!CMD_CMP(1, "mips"))
 	{
-		uint32_t count = CurrentCodeSeg->MIPScodeLen;
-		uint32_t* addr = CurrentCodeSeg->MIPScode;
+		uint32_t count;
+		uint32_t* addr;
+
+		if (CurrentCodeSeg)
+		{
+			count = CurrentCodeSeg->MIPScodeLen;
+			addr = CurrentCodeSeg->MIPScode;
+		}
+		else
+		{
+			count = 10;
+			addr = 0x88000040;
+		}
 
 		if (strlen(userInput[3]))
 		{
@@ -310,14 +350,14 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 		}
 		else if (strlen(userInput[2]))
 		{
-				if (!strncasecmp(userInput[2], "0x", 2))
-				{
-					addr = (uint32_t*)((Mstrtoul(userInput[2], &tailPointer, 0))&~0x3);
-				}
-				else
-				{
-					count = Mstrtoul(userInput[2], &tailPointer, 0);
-				}
+			if (!strncasecmp(userInput[2], "0x", 2))
+			{
+				addr = (uint32_t*)((Mstrtoul(userInput[2], &tailPointer, 0))&~0x3);
+			}
+			else
+			{
+				count = Mstrtoul(userInput[2], &tailPointer, 0);
+			}
 		}
 
 		if (NULL == addr)
@@ -350,7 +390,16 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 	else if (!CMD_CMP(1, "value"))
 	{
 		uint32_t count = 10;
-		uint32_t* addr = CurrentCodeSeg->ARMcode;
+		uint32_t* addr;
+
+		if (!CurrentCodeSeg)
+		{
+			addr = CurrentCodeSeg->ARMcode;
+		}
+		else
+		{
+			addr = 0x81000000;
+		}
 
 		if (strlen(userInput[3]))
 		{
@@ -468,16 +517,11 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 static int Debugger_seg(const code_segment_data_t* const segmentData)
 {
 	int val;
-	int x=0;
 	char *tailPointer;
-	code_seg_t* tempCodeSeg;
-
 
 	if (!strlen(userInput[1]))
 	{
-		//printf("First Segment   0x%x, number of segments %d\n"
-		//		, (uint32_t)segmentData->StaticSegments
-			//	, segmentData->count);
+		printf("First Segment   0x%x\n", (uint32_t)getSegmentAt(0x88000040));
 
 		printf("Current Segment 0x%x\n"
 				"\tMIPS            ARM\n"
@@ -492,7 +536,6 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 	else if (!CMD_CMP(1, "start"))
 	{
 		CurrentCodeSeg = segmentData->segStart;
-
 	}
 	else if (!CMD_CMP(1, "stop"))
 	{
@@ -510,14 +553,35 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 	{
 		CurrentCodeSeg = segmentData->segInterrupt;
 	}
+	else if (!CMD_CMP(1, "get"))
+	{
+		uint32_t count = 10;
+		uint32_t *addr;
+
+		addr = (uint32_t*)Mstrtoul(userInput[2], &tailPointer, 0);
+
+		if (strlen(userInput[3]))
+		{
+			count = Mstrtoul(userInput[3], &tailPointer, 0);
+		}
+
+		int i;
+
+		for (i=0; i < count; i++)
+		{
+			printf("0x%08x\t0x%08x\n", (uint32_t)(addr + i), getSegmentAt((size_t)(addr + i)));
+		}
+	}
 	else
 	{
 		val = Mstrtoul(userInput[1], &tailPointer, 0);
 		int ok = 0;
 
+		code_seg_t* tempCodeSeg;
+
 		if (val > 2)
 		{
-			/*tempCodeSeg=segmentData->StaticSegments;
+			tempCodeSeg=getSegmentAt(0x88000040);
 
 			while (tempCodeSeg != NULL)
 			{
@@ -532,12 +596,12 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				}
 
 				tempCodeSeg = tempCodeSeg->next;
-			}*/
+			}
 		}else if (!CurrentCodeSeg->MIPSReturnRegister)
 		{
 			if (0 == val)
 			{
-				//CurrentCodeSeg = segmentData->StaticSegments;
+				CurrentCodeSeg = getSegmentAt(0x88000040);
 				ok = 1;
 			}
 			else if (1 == val && CurrentCodeSeg->pContinueNext != NULL)
@@ -553,8 +617,8 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 		}
 		else
 		{
-			/*tempCodeSeg = segmentData->StaticSegments;
-			x=1;
+			tempCodeSeg = getSegmentAt(0x88000040);
+			int x = 1;
 			while (tempCodeSeg != NULL)
 			{
 				if (tempCodeSeg == (code_seg_t*)val)
@@ -575,7 +639,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				}
 
 				tempCodeSeg = tempCodeSeg->next;
-			}*/
+			}
 		}
 		if (!ok) printf("Invalid entry\n");
 	}
@@ -815,6 +879,20 @@ void Debugger_set(const code_segment_data_t* const segmentData)
 	{
 		Debugger_translate(segmentData);
 	}
+	else if (!CMD_CMP(0, "compile"))
+	{
+		char* tailPointer;
+		uint32_t val = Mstrtoul(userInput[1], &tailPointer, 0);
+
+		if (!val)
+		{
+			printf(HELP_COMP);
+			return 1;
+		}
+
+		CurrentCodeSeg = CompileCodeAt((uint32_t*)val);
+
+	}
 	else if (!CMD_CMP(0, "start"))
 	{
 		pfvru1 run = (pfvru1)segmentData->segStart->ARMEntryPoint;
@@ -830,6 +908,7 @@ void Debugger_set(const code_segment_data_t* const segmentData)
 	{
 		if 		(!CMD_CMP(1, "print"))		printf(HELP_PRINT);
 		else if (!CMD_CMP(1, "segment"))	printf(HELP_SEG);
+		else if (!CMD_CMP(1, "compile"))	printf(HELP_COMP);
 		else if (!CMD_CMP(1, "translate"))
 		{
 			int x;
