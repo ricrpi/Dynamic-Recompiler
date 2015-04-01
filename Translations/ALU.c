@@ -18,6 +18,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "Translate.h"
+#include "InstructionSet_ascii.h"
 
 /*
  * Function to turn 64bit registers into multiple 32-bit registers

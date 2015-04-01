@@ -52,6 +52,10 @@
 					"\tprint reg arm                     Print arm registers\n" \
 					"\tprint value [x] [y]               Print raw values from address [x] to [x + y]\n"
 
+#define HELP_SET	"\tshowPrintSegmentDelete            Print when segment is deleted\n"\
+					"\tshowRegTranslationMap             Print out mapping between HOST registers and emulated regisers\n"\
+					"\tshowRegTranslationMapProgress     Print register mapping info on-the-fly\n"
+
 #define HELP_SEG 	"\tseg [1|2]                         Change to segment, current Segment branches/continues to\n" \
 					"\tseg 0                             Change to First segment\n" \
 					"\tseg start                         Change to START segment\n" \
@@ -65,6 +69,7 @@
 					"\thelp                              Prints this Help page\n"\
 					HELP_PRINT "\n"\
 					HELP_TRANS "\n"\
+					HELP_SET "\n"\
 					HELP_SEG "\n"\
 					HELP_COMP "\n"\
 					"set [parameter] [value]\n"

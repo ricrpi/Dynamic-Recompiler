@@ -26,19 +26,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: R4300-code-analysis
+all: Dynamic-Recompiler
 
 # Tool invocations
-R4300-code-analysis: $(OBJS) $(USER_OBJS)
+Dynamic-Recompiler: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C Linker'
-	gcc  -o "R4300-code-analysis" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc  -o "Dynamic-Recompiler" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(EXECUTABLES)$(OBJS)$(C_DEPS) R4300-code-analysis
+	-$(RM) $(EXECUTABLES)$(OBJS)$(C_DEPS) Dynamic-Recompiler
 	-@echo ' '
 
 .PHONY: all clean dependents

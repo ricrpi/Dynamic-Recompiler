@@ -31,5 +31,6 @@ typedef struct _caller_t
 struct _code_seg;
 
 void updateCallers(struct _code_seg* const codeSegment);
+void freeCallers(struct _code_seg* const codeSegment);
 
 #endif /* RECOMPILER_CALLERS_H_ */

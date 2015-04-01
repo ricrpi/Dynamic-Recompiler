@@ -58,7 +58,21 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 
 		printf("\nSegmentation detected trying to access address %p on instruction 0x%x\n", si->si_addr, ins_addr);
 	}
-	if (sig == SIGABRT)	printf("\nAbort detected\n");
+	else if (sig == SIGABRT)
+	{
+		printf("\nAbort detected\n");
+	}
+	else if (sig == SIGILL)
+	{
+		printf("\nIllegal instruction at %p\n", si->si_addr);
+		printf_arm(si->si_addr, *((uint32_t*)si->si_addr));
+	}
+	else if (sig == SIGINT)
+	{
+		printf("Current segment 0x%X\n\n", (uint32_t)segmentData.dbgCurrentSegment);
+		while (Debugger_start(&segmentData, &ucontext->uc_mcontext, NULL));
+		return;
+	}
 
 	if (level > 10)
 	{
@@ -116,12 +130,14 @@ int main(int argc, char* argv[])
 
 	sigaction(SIGSEGV, &sa, NULL);
 	sigaction(SIGABRT, &sa, NULL);
+	sigaction(SIGILL, &sa, NULL);
+	sigaction(SIGINT, &sa, NULL);
 
 	printf("R4300 Recompiler\n\nOpening %s\n",argv[1]);
 
 	FILE *fPtr;
 
-	if (argc <= 1) fPtr = fopen("../m64p_test_rom.v64", "rb");
+	if (argc <= 1) fPtr = fopen("m64p_test_rom.v64", "rb");
 	else fPtr = fopen(argv[1], "rb");
 
  	if (fPtr == NULL) return 2;

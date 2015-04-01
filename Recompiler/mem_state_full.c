@@ -18,6 +18,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include "mem_state.h"
 #include "CodeSegments.h"

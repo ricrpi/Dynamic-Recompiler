@@ -788,6 +788,8 @@ void emit_arm_code(code_seg_t* const codeSeg)
 
 	codeSeg->ARMEntryPoint = out;
 
+	printf("emit arm code. segment 0x%08x output to 0x%08x\n", (uint32_t)codeSeg, (uint32_t)codeSeg->ARMcode);
+
 	//write out code instructions
 	while (ins)
 	{

@@ -20,7 +20,8 @@
 #include "literals.h"
 #include "CodeSegments.h"
 #include "memory.h"
-
+#include <stdio.h>
+#include <stdlib.h>
 
 static uint32_t GlobalLiteralCount = 0;
 //================== Literals ========================================

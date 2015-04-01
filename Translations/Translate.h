@@ -21,7 +21,6 @@
 #define TRANSLATE_H_
 
 #include "InstructionSet.h"
-#include "InstructionSet_ascii.h"
 #include "CodeSegments.h"
 #include "DebugDefines.h"
 #include "assert.h"

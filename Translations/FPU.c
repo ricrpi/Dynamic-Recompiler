@@ -18,6 +18,8 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "Translate.h"
+#include "InstructionSet_ascii.h"
+
 
 void Translate_FPU(code_seg_t* const codeSegment)
 {

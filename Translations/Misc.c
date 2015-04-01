@@ -18,12 +18,12 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "Translate.h"
+#include "InstructionSet_ascii.h"
 
 
 void Translate_Generic(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
-	Instruction_t*new_ins;
 	ins = codeSegment->Intermcode;
 
 #if defined(USE_INSTRUCTION_COMMENTS)

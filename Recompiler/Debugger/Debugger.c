@@ -194,8 +194,6 @@ static void printregs(mcontext_t* context, size_t* regs)
 
 static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData, const uint32_t val, const code_seg_t* const CurrentCodeSeg)
 {
-	int x;
-
 	if (!CurrentCodeSeg->MIPSReturnRegister)
 	{
 		printf("Seg  0x%08x  \t0x%08x\t0x%08x\ttype: %s\n"
@@ -278,7 +276,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 		else
 		{
 			count = 10;
-			addr = 0x81000000;
+			addr = (uint32_t*)0x81000000;
 		}
 
 		if (strlen(userInput[3]))
@@ -340,7 +338,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 		else
 		{
 			count = 10;
-			addr = 0x88000040;
+			addr = (uint32_t*)0x88000040;
 		}
 
 		if (strlen(userInput[3]))
@@ -398,7 +396,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 		}
 		else
 		{
-			addr = 0x81000000;
+			addr = (uint32_t*)0x81000000;
 		}
 
 		if (strlen(userInput[3]))
@@ -408,7 +406,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 		}
 		else if (strlen(userInput[2]))
 		{
-			addr = Mstrtoul(userInput[2], &tailPointer, 0);
+			addr = (uint32_t*)Mstrtoul(userInput[2], &tailPointer, 0);
 			count = 1;
 		}
 
@@ -452,60 +450,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 	else if (!CMD_CMP(1, "lookup"))
 	{
 		uint32_t val = Mstrtoul(userInput[2], &tailPointer, 0);
-		uint32_t len = 1; //Mstrtoul(userInput[3], &tailPointer, 0);
-		int x=0;
-
-		if (val < 0x81000000)
-		{
-			for (x=0; x < len; x++)
-			{
-				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)getSegmentAt(val + x*4));
-			}
-		}
-		else if (val < 0x83FFFFFF)	//Dynamic Recompiled ARM code
-		{
-			/*code_seg_t* codeseg = get; //segmentData->StaticSegments;
-
-			while (codeseg)
-			{
-				if (codeseg->ARMcode)
-				{
-					if  ((uint32_t)codeseg->ARMcode <= val
-							&& (uint32_t)codeseg->ARMcode + codeseg->ARMcodeLen < val)
-					{
-						printf("0x%08x => Static Segment 0x%08x\n",val,(uint32_t)codeseg);
-						return 1;
-					}
-				}
-				codeseg = codeseg->next;
-			}
-
-			codeseg = segmentData->DynamicSegments;
-
-			while (codeseg)
-			{
-				if (codeseg->ARMcode)
-				{
-					if  ((uint32_t)codeseg->ARMcode <= val
-							&& (uint32_t)codeseg->ARMcode + codeseg->ARMcodeLen < val)
-					{
-						printf("0x%08x => Dynamic Segment 0x%08x\n",val,(uint32_t)codeseg);
-						return 1;
-					}
-				}
-				codeseg = codeseg->next;
-			}*/
-
-		}
-		else if (val < 0x88000000)
-		{
-			for (x=0; x < len; x++)
-			{
-				printf("0x%08x => 0x%08x\n", (val + x*4),(uint32_t)getSegmentAt(val + x * 4));
-			}
-		}
-
-
+		printf("0x%08x => 0x%08x\n", (val),(uint32_t)getSegmentAt(val));
 	}
 	else
 	{
@@ -516,7 +461,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 static int Debugger_seg(const code_segment_data_t* const segmentData)
 {
-	int val;
+	int32_t val;
 	char *tailPointer;
 
 	if (!strlen(userInput[1]))
@@ -569,33 +514,28 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 
 		for (i=0; i < count; i++)
 		{
-			printf("0x%08x\t0x%08x\n", (uint32_t)(addr + i), getSegmentAt((size_t)(addr + i)));
+			printf("0x%08x\t0x%08x\n", (uint32_t)(addr + i), (uint32_t)getSegmentAt((size_t)(addr + i)));
 		}
 	}
 	else
 	{
-		val = Mstrtoul(userInput[1], &tailPointer, 0);
+		val = (uint32_t*)Mstrtoul(userInput[1], &tailPointer, 0);
 		int ok = 0;
 
 		code_seg_t* tempCodeSeg;
 
-		if (val > 2)
+		if ((uint32_t)val > 2)
 		{
-			tempCodeSeg=getSegmentAt(0x88000040);
+			tempCodeSeg=getSegmentAt((uint32_t*)val);
 
-			while (tempCodeSeg != NULL)
+			if (tempCodeSeg)
 			{
-				if ((uint32_t)tempCodeSeg == val
-						|| (uint32_t)tempCodeSeg->MIPScode == val
-						|| (uint32_t)tempCodeSeg->ARMcode == val
-						|| (uint32_t)tempCodeSeg->ARMEntryPoint == val)
-				{
-					CurrentCodeSeg = tempCodeSeg;
-					ok = 1;
-					break;
-				}
-
-				tempCodeSeg = tempCodeSeg->next;
+				CurrentCodeSeg = tempCodeSeg;
+				ok = 1;
+			}
+			else
+			{
+				printf("No segment at 0x%08x\n", val);
 			}
 		}else if (!CurrentCodeSeg->MIPSReturnRegister)
 		{
@@ -748,8 +688,8 @@ void DebugRuntimePrintSegment()
 	//Only print out when the current segment changes
 	if (lastCurrentSegment != segmentData.dbgCurrentSegment)
 	{
-		printf("Current Segment 0x%08x\n", (uint32_t)segmentData.dbgCurrentSegment);
-		lastCurrentSegment = segmentData.dbgCurrentSegment;
+		printf("Current Segment 0x%08x. ARM start 0x%08x. MIPS 0x%08x\n", (uint32_t)segmentData.dbgCurrentSegment, (uint32_t)segmentData.dbgCurrentSegment->ARMcode, (uint32_t)segmentData.dbgCurrentSegment->MIPScode);
+		lastCurrentSegment = (code_seg_t*)segmentData.dbgCurrentSegment;
 	}
 
 	//DebugRuntimePrintMIPS();
@@ -830,24 +770,19 @@ void Debugger_set(const code_segment_data_t* const segmentData)
 		}
 		else
 		{
-			printf("invalid parameter\n");
+			printf(HELP_SET);
 		}
 	}
 	else
 	{
-		printf("usage:\n"
-				"\tshowPrintSegmentDelete        0 or 1\n"
-				"\tshowRegTranslationMap         0 or 1\n"
-				"\tshowRegTranslationMapProgress 0 or 1\n"
-
-				);
+		printf(HELP_SET);
 	}
 }
 
  int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context, size_t* regs)
 {
 	//find segment
-	if (!CurrentCodeSeg) CurrentCodeSeg = segmentData->dbgCurrentSegment;
+	if (!CurrentCodeSeg) CurrentCodeSeg = (code_seg_t*)segmentData->dbgCurrentSegment;
 
 	printf("> "); fflush(stdin);
 	getCmd();

@@ -68,10 +68,10 @@ uint32_t virtual_address(unsigned int* addr)
 	}
 	else
 	{
-		printf("virtual_address 0x%08x = 0x08x\n",(uint32_t)addr, *addr);
+		printf("virtual_address 0x%08x = 0x%08x\n",(uint32_t)addr, *addr);
 	}
 
-	return 0x80000000 + addr;
+	return 0x80000000 + (uint32_t)addr;
 }
 
 void p_r_a(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3
@@ -102,15 +102,27 @@ void p_r_a(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3
 size_t branchUnknown(size_t address)
 {
 	volatile code_seg_t* code_seg 	= segmentData.dbgCurrentSegment;
-	uint32_t* 	out 		= code_seg->ARMcode + code_seg->ARMcodeLen -1;
-	Instruction_t 	ins;
-	size_t targetAddress;
+	Instruction_t* 	ins = newEmptyInstr();
+	size_t ARMAddress;
+	uint32_t MIPSaddress;
+	Instruction_e op;
 
-	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", address, (uint32_t)code_seg);
+	// find out it the end of the segment is a JUMP or BRANCH
+	op = ops_type(code_seg->MIPScode[code_seg->MIPScodeLen - 1]);
 
-	code_seg_t* tgtSeg = getSegmentAt(address);
+	if (op & OPS_BRANCH){
+		MIPSaddress =  (uint32_t)(code_seg->MIPScode + code_seg->MIPScodeLen - 1) + ops_BranchOffset(code_seg->MIPScode + code_seg->MIPScodeLen - 1);
+	}
+	else
+	{
+		MIPSaddress =  ops_JumpAddress(code_seg->MIPScode + code_seg->MIPScodeLen - 1);
+	}
 
-	printf("tgtSeg = 0x%08x\n", tgtSeg);
+	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", MIPSaddress, (uint32_t)code_seg);
+
+	code_seg_t* tgtSeg = getSegmentAt(MIPSaddress);
+
+	printf("tgtSeg = 0x%08x\n", (uint32_t)tgtSeg);
 
 	// 1. Need to generate the ARM assembler for target code_segment. Use 'addr' and code Seg map.
 	// 2. Then we need to patch the code_segment branch we came from. Do we need it to be a link?
@@ -119,30 +131,44 @@ size_t branchUnknown(size_t address)
 	// 1.
 	if (NULL != tgtSeg)
 	{
-		printf("Translating pre-existing CodeSegment\n");
-		if (NULL == tgtSeg->ARMEntryPoint) Translate(tgtSeg);
+		if (NULL == tgtSeg->ARMEntryPoint)
+		{
+			printf("Translating pre-existing CodeSegment\n");
 
-		targetAddress = (size_t)tgtSeg->ARMEntryPoint;
+			Translate(tgtSeg);
+		}
+		else
+		{
+			printf("Patch pre-existing CodeSegment\n");
+		}
+
+		ARMAddress = (size_t)tgtSeg->ARMEntryPoint;
 	}
 	else
 	{
-		printf("Creating new CodeSegment for 0x%08x\n", address);
-		CompileCodeAt((uint32_t*)address);
-		targetAddress = (size_t)getSegmentAt(address)->ARMEntryPoint;
+		printf("Creating new CodeSegment for 0x%08x\n", MIPSaddress);
+		CompileCodeAt((uint32_t*)MIPSaddress);
+		ARMAddress = (size_t)getSegmentAt(MIPSaddress)->ARMEntryPoint;
 	}
 
 	// 2.
 	//Get MIPS condition code for branch
-	mips_decode(*(code_seg->MIPScode + code_seg->MIPScodeLen -1), &ins);
+	mips_decode(*(code_seg->MIPScode + code_seg->MIPScodeLen -1), ins);
+	printf_Intermediate(ins,1);
 
 	//Set instruction to ARM_BRANCH for new target
-	InstrB(&ins, ins.cond, targetAddress, 1);
+	InstrB(ins, ins->cond, ARMAddress, 1);
+	printf_Intermediate(ins,1);
+
+	uint32_t* 	out 		= ((uint32_t*)code_seg->ARMcode) + code_seg->ARMcodeLen -1;
+
+	printf("emitting at address %p\n", out);
 
 	//emit the arm code
-	*out = arm_encode(&ins, (size_t)out);
+	*out = arm_encode(ins, (size_t)out);
 
 	// 3.
-	return targetAddress;
+	return ARMAddress;
 }
 
 #if defined(TEST_BRANCH_TO_C)
@@ -358,7 +384,7 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 	code_seg->Intermcode = ins = newInstruction;
 
 #if defined (USE_INSTRUCTION_COMMENTS)
-	sprintf(newInstruction->comment, "Generate_ISR() segment 0x%08x\n", code_seg);
+	sprintf(newInstruction->comment, "Generate_ISR() segment 0x%08x\n", (uint32_t)code_seg);
 #endif
 
 	ins = insertCall_To_C(code_seg, ins, AL, (size_t)&cc_interrupt, REG_HOST_STM_EABI);
@@ -393,7 +419,7 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 	code_seg->Intermcode = ins = newInstruction;
 
 #if defined (USE_INSTRUCTION_COMMENTS)
-	sprintf(newInstruction->comment, "Generate_BranchUnknown() segment 0x%08x\n", code_seg);
+	sprintf(newInstruction->comment, "Generate_BranchUnknown() segment 0x%08x\n", (uint32_t)code_seg);
 #endif
 
 	ins = insertCall_To_C(code_seg, ins, AL, (uint32_t)&branchUnknown, REG_HOST_STM_R1_3);

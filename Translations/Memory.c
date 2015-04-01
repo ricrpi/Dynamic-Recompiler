@@ -18,6 +18,8 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "Translate.h"
+#include "InstructionSet_ascii.h"
+
 #include "memory.h"
 
 uint8_t uMemoryBase 		= 0x80;
