@@ -161,12 +161,13 @@ static void sprintInstr(char* str, const Instruction_t* const ins)
 	{
 		if (ins->W) wb = '!';
 		if (ins->PR == 1 && ins->U == 1) sprintf(writeBack, "ib%c", wb);
-		else if (ins->PR == 1 && ins->U == 0) sprintf(writeBack, "db%c", wb);
-		else if (ins->PR == 0 && ins->U == 1) sprintf(writeBack, "%c", wb);	//ia [default]
-		else if (ins->PR == 0 && ins->U == 0) sprintf(writeBack, "da%c", wb);
 		else if (ins->PR == 1 && ins->U == 0
 				&& ins->instruction == ARM_STM
 				&& ins->R1.regID == REG_HOST_SP) sprintf(writeBack, "fd%c", wb);
+		else if (ins->PR == 1 && ins->U == 0) sprintf(writeBack, "db%c", wb);
+		else if (ins->PR == 0 && ins->U == 1) sprintf(writeBack, "%c", wb);	//ia [default]
+		else if (ins->PR == 0 && ins->U == 0) sprintf(writeBack, "da%c", wb);
+
 	}
 	else if (ins->instruction == ARM_LDR
 			|| ins->instruction == ARM_STR)
@@ -432,7 +433,7 @@ Instruction_t* newEmptyInstr()
 	newInstr->B=0;			// Byte/Word bit, 1 = byte
 	newInstr->I=0;			// Immediate
 	newInstr->Ln=0;			// Link bit for branch
-	newInstr->PR=1;			// Pre/Post increment, 1 for pre
+	newInstr->PR=0;			// Pre/Post increment, 1 for pre
 	newInstr->S=0;			// Set condition flags
 	newInstr->U=1;			// Up/Down, set for inc, clear for decrement
 	newInstr->W=0;			// Writeback bit set to write to base register
