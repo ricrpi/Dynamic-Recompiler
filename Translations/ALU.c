@@ -377,19 +377,41 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				{
 					if (imm < 0)
 					{
-						InstrI(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm));
+						int32_t ImmShift = Imm8Shift((uint16_t)-ins->immediate);
 
-						if (imm < -255)
+						if (ImmShift == -1)
 						{
-							new_ins = newInstrI(ARM_SUB, AL, Rd1, Rd1, REG_NOT_USED, (-imm)&0xFF00);
-							ADD_LL_NEXT(new_ins, ins);
+							if (0 == R1)
+							{
+								InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (-imm&0xFF));
+
+								new_ins = newInstrI(ARM_SUB, AL, Rd1, Rd1, REG_NOT_USED, -imm&0xFF00);
+								ADD_LL_NEXT(new_ins, ins);
+							}
+							else
+							{
+								InstrI(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm&0xFF));
+
+								new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, -imm&0xFF00);
+								ADD_LL_NEXT(new_ins, ins)
+
+								new_ins = newInstr(ARM_ADD, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
+								ADD_LL_NEXT(new_ins, ins);
+							}
+						}
+						else
+						{
+							InstrI(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm));
 						}
 					}
 					else if (imm > 0)
 					{
-						if (imm > 255)
+						int32_t ImmShift = Imm8Shift((uint16_t)ins->immediate);
+
+						if (ImmShift == -1)
 						{
-							if (0 == R1){
+							if (0 == R1)
+							{
 								InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (imm&0xFF));
 
 								new_ins = newInstrI(ARM_ADD, AL, Rd1, Rd1, REG_NOT_USED, imm&0xFF00);
@@ -399,13 +421,23 @@ void Translate_ALU(code_seg_t* const codeSegment)
 							{
 								InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
 
-								new_ins = newInstrI(ARM_ADD, AL, Rd1, Rd1, REG_NOT_USED, imm&0xFF00);
+								new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, imm&0xFF00);
+								ADD_LL_NEXT(new_ins, ins)
+
+								new_ins = newInstr(ARM_ADD, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
 								ADD_LL_NEXT(new_ins, ins);
 							}
 						}
 						else
 						{
-							InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
+							if (0 == R1)
+							{
+								InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, imm);
+							}
+							else
+							{
+								InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, imm);
+							}
 						}
 					}
 					else if (Rd1 == R1) // imm = 0
@@ -479,90 +511,88 @@ void Translate_ALU(code_seg_t* const codeSegment)
 
 				break;
 			case ANDI:
-				if (imm < 0)
-				{
-					InstrI(ins, ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (-imm)&0xff);
+			{
+				int32_t ImmShift = Imm8Shift((uint16_t)ins->immediate);
 
-					if (imm < 255)
-					{
-						new_ins = newInstrI(ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (-imm)&0xFF00);
-						ADD_LL_NEXT(new_ins, ins);
-					}
+				if (ImmShift == -1)
+				{
+
+					InstrI(ins, ARM_AND, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FF00);
+
+					new_ins = newInstrI(ARM_AND, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm)&0x000000FF);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_ORR, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
+					ADD_LL_NEXT(new_ins, ins);
 				}
 				else
 				{
-					InstrI(ins, ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (imm&0xff));
-
-					if (imm > 255)
-					{
-						new_ins = newInstrI(ARM_BIC, AL, Rd1, R1, REG_NOT_USED, (imm)&0xFF00);
-						ADD_LL_NEXT(new_ins, ins);
-					}
+					InstrI(ins, ARM_AND, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FFFF);
+					ADD_LL_NEXT(new_ins, ins);
 				}
+
+				// 64 bit part
+				new_ins = newInstrI(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+				ADD_LL_NEXT(new_ins, ins);
+
 				break;
+			}
 			case ORI:
-				ins->immediate = ins->immediate&0xff;
+			{
+				int32_t ImmShift = Imm8Shift((uint16_t)imm);
 
-				if (imm < 0)
+				if (ImmShift == -1)
 				{
-					InstrI(ins, ARM_ORR, AL, Rd1, R1, REG_NOT_USED, 0xFF000000);
 
-					new_ins = newInstrI(ARM_ORR, AL, Rd1, R1, REG_NOT_USED, 0x00FF0000);
+					InstrI(ins, ARM_ORR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FF00);
+
+					new_ins = newInstrI(ARM_ORR, AL, Rd1, REG_TEMP_SCRATCH0, REG_NOT_USED, (imm)&0x000000FF);
 					ADD_LL_NEXT(new_ins, ins);
 
-					if ((imm)&0x0000FF00)
-					{
-						new_ins = newInstrI(ARM_ORR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FF00);
-						ADD_LL_NEXT(new_ins, ins);
-					}
-
-					new_ins = newInstrI(ARM_ORR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x000000FF);
+					new_ins = newInstr(ARM_ORR, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				else
 				{
-					InstrI(ins, ARM_ORR, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
-
-					if (imm > 255)
-					{
-						new_ins = newInstrI(ARM_ORR, AL, Rd1, R1, REG_NOT_USED, imm&0xFF00);
-						ADD_LL_NEXT(new_ins, ins);
-					}
+					InstrI(ins, ARM_ORR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FFFF);
 				}
+
+				// 64 bit part
+				new_ins = newInstr(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1 | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
 				break;
+			}
 			case XORI:
-				ins->immediate = ins->immediate&0xff;
+			{
+				int32_t ImmShift = Imm8Shift((uint16_t)imm);
 
-				if (imm < 0)
+				if (ImmShift == -1)
 				{
-					InstrI(ins, ARM_EOR, AL, Rd1, R1, REG_NOT_USED, 0xFF000000);
 
-					new_ins = newInstrI(ARM_EOR, AL, Rd1, R1, REG_NOT_USED, 0x00FF0000);
+					InstrI(ins, ARM_EOR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FF00);
+
+					new_ins = newInstrI(ARM_EOR, AL, Rd1, REG_TEMP_SCRATCH0, REG_NOT_USED, (imm)&0x000000FF);
 					ADD_LL_NEXT(new_ins, ins);
 
-					if ((imm)&0x0000FF00)
-					{	new_ins = newInstrI(ARM_EOR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FF00);
-						ADD_LL_NEXT(new_ins, ins);
-					}
-
-					new_ins = newInstrI(ARM_EOR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x000000FF);
+					new_ins = newInstr(ARM_EOR, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				else
 				{
-					InstrI(ins, ARM_EOR, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
-
-					if (imm > 255)
-					{
-						new_ins = newInstrI(ARM_EOR, AL, Rd1, R1, REG_NOT_USED, imm&0xFF00);
-						ADD_LL_NEXT(new_ins, ins);
-					}
+					InstrI(ins, ARM_EOR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FFFF);;
 				}
+
+				// 64 bit part
+				new_ins = newInstr(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1 | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
 				break;
+			}
 			case DADDI:
 			case DADDIU:
 				TRANSLATE_ABORT();
-					break;
+				break;
 		default: break;
 		}
 
