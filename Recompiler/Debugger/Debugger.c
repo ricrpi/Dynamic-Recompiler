@@ -210,24 +210,29 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 					, (uint32_t)CurrentCodeSeg->pContinueNext->ARMcode);
 		}
 
-		if (CurrentCodeSeg->pBranchNext != NULL)
+		Instruction_t ins;
+		mips_decode(CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1], &ins);
+
+		code_seg_t* branch = getSegmentAt((size_t)CurrentCodeSeg->MIPScode + CurrentCodeSeg->MIPScodeLen -1 + ins.offset);
+
+		if (branch)
 		{
-			if (CurrentCodeSeg->MIPScode == CurrentCodeSeg->pBranchNext->MIPScode)	//Loops on itself
+			if (CurrentCodeSeg->MIPScode == branch->MIPScode)	//Loops on itself
 			{
 				printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Loop)\n"
-					, (uint32_t)CurrentCodeSeg->pBranchNext
-					, (uint32_t)CurrentCodeSeg->pBranchNext->MIPScode
-					, (uint32_t)CurrentCodeSeg->pBranchNext->ARMcode);
+					, (uint32_t)branch
+					, (uint32_t)branch->MIPScode
+					, (uint32_t)branch->ARMcode);
 			}else
 			{
 				printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Branch)\n"
-					, (uint32_t)CurrentCodeSeg->pBranchNext
-					, (uint32_t)CurrentCodeSeg->pBranchNext->MIPScode
-					, (uint32_t)CurrentCodeSeg->pBranchNext->ARMcode);
+					, (uint32_t)branch
+					, (uint32_t)branch->MIPScode
+					, (uint32_t)branch->ARMcode);
 			}
 		}
 
-		if (!CurrentCodeSeg->pBranchNext && !CurrentCodeSeg->pContinueNext)
+		if (!branch && !CurrentCodeSeg->pContinueNext)
 		{
 			printf("No linkage for code in its current location!\n");
 		}
@@ -539,6 +544,12 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 			}
 		}else if (!CurrentCodeSeg->MIPSReturnRegister)
 		{
+			Instruction_t ins;
+			mips_decode(CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1], &ins);
+
+
+			code_seg_t* branch = getSegmentAt((size_t)CurrentCodeSeg->MIPScode + CurrentCodeSeg->MIPScodeLen -1 + ins.offset);
+
 			if (0 == val)
 			{
 				CurrentCodeSeg = getSegmentAt(0x88000040);
@@ -549,9 +560,9 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 				CurrentCodeSeg = CurrentCodeSeg->pContinueNext;
 				ok = 1;
 			}
-			else if (2 == val && CurrentCodeSeg->pBranchNext != NULL)
+			else if (2 == val && branch != NULL)
 			{
-				CurrentCodeSeg = CurrentCodeSeg->pBranchNext;
+				CurrentCodeSeg = branch;
 				ok = 1;
 			}
 		}
