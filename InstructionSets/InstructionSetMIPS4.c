@@ -62,7 +62,11 @@
 		((((x&0xf0000000)|(val<<2)) & 0x0FFFFFFF) - x)
 
 #define R_OP "r%02d, r%02d, r%02d"
-#define OP_R(val) ((val>>11)&0x1f, (val>>21)&0x1f, (val>>16)&0x1f)
+#define OP_R(val) (val>>11)&0x1f, (val>>21)&0x1f, (val>>16)&0x1f
+
+#define R2_OP "r%02d, r%02d"
+#define OP_R2(val) (val>>21)&0x1f, (val>>16)&0x1f
+
 
 #define L_OP "r%02u, [r%02u, #%02d]"
 #define OP_L(val) \
@@ -1491,7 +1495,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 	case 0x0F:
 		ins->instruction =  LUI;
 		ins->Rd1.regID = M_Rt(uiMIPSword);
-		ins->immediate = IMM(uiMIPSword, 16);
+		ins->immediate = IMMU(uiMIPSword, 16);
 		ins->I = 1;
 		return 0; 	// I
 	case 0x10:
@@ -2019,8 +2023,8 @@ void fprintf_mips(FILE* stream, const uint32_t x, const uint32_t uiMIPSword)
 			case 0x00: fprintf(stream, "\tSLL   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x02: fprintf(stream, "\tSRL   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x03: fprintf(stream, "\tSRA   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x04: fprintf(stream, "\tSLLV  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x07: fprintf(stream, "\tSRAV  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+			case 0x04: fprintf(stream, "\tSLLV  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x07: fprintf(stream, "\tSRAV  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
 			case 0x08: fprintf(stream, "\tJR    \tr%d\n", (uiMIPSword>>21)&0x1f); return;	// J
 			case 0x09: fprintf(stream, "\tJALR  \tr%d // PC=r%d, r%d=%d \n",
 					(uiMIPSword>>21)&0x1f,
@@ -2034,37 +2038,37 @@ void fprintf_mips(FILE* stream, const uint32_t x, const uint32_t uiMIPSword)
 			case 0x11: fprintf(stream, "\tMTHI  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x12: fprintf(stream, "\tMFLO  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x13: fprintf(stream, "\tMTLO  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x14: fprintf(stream, "\tDSLLV \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x16: fprintf(stream, "\tDSRLV \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x17: fprintf(stream, "\tDSRAV \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x18: fprintf(stream, "\tMULT  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x19: fprintf(stream, "\tMULTU \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1A: fprintf(stream, "\tDIV   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1B: fprintf(stream, "\tDIVU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1C: fprintf(stream, "\tDMULT \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1D: fprintf(stream, "\tDMULTU\t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1E: fprintf(stream, "\tDDIV  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1F: fprintf(stream, "\tDDIVU \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+			case 0x14: fprintf(stream, "\tDSLLV \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x16: fprintf(stream, "\tDSRLV \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x17: fprintf(stream, "\tDSRAV \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x18: fprintf(stream, "\tMULT  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x19: fprintf(stream, "\tMULTU \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1A: fprintf(stream, "\tDIV   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1B: fprintf(stream, "\tDIVU  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1C: fprintf(stream, "\tDMULT \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1D: fprintf(stream, "\tDMULTU\t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1E: fprintf(stream, "\tDDIV  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1F: fprintf(stream, "\tDDIVU \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
 			case 0x20: fprintf(stream, "\tADD   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
-			case 0x21: fprintf(stream, "\tADDU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x22: fprintf(stream, "\tSUB   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x23: fprintf(stream, "\tSUBU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x24: fprintf(stream, "\tAND   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x25: fprintf(stream, "\tOR    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x26: fprintf(stream, "\tXOR   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x27: fprintf(stream, "\tNOR   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2A: fprintf(stream, "\tSLT   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2B: fprintf(stream, "\tSLTU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2C: fprintf(stream, "\tDADD  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2D: fprintf(stream, "\tDADDU \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2E: fprintf(stream, "\tDSUB  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2F: fprintf(stream, "\tDSUBU \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x30: fprintf(stream, "\tTGE   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x31: fprintf(stream, "\tTGEU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x32: fprintf(stream, "\tTLT   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x33: fprintf(stream, "\tTLTU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x34: fprintf(stream, "\tTEQ   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x36: fprintf(stream, "\tTNE   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+			case 0x21: fprintf(stream, "\tADDU  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x22: fprintf(stream, "\tSUB   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x23: fprintf(stream, "\tSUBU  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x24: fprintf(stream, "\tAND   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x25: fprintf(stream, "\tOR    \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x26: fprintf(stream, "\tXOR   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x27: fprintf(stream, "\tNOR   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x2A: fprintf(stream, "\tSLT   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x2B: fprintf(stream, "\tSLTU  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x2C: fprintf(stream, "\tDADD  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x2D: fprintf(stream, "\tDADDU \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x2E: fprintf(stream, "\tDSUB  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x2F: fprintf(stream, "\tDSUBU \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x30: fprintf(stream, "\tTGE   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x31: fprintf(stream, "\tTGEU  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x32: fprintf(stream, "\tTLT   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x33: fprintf(stream, "\tTLTU  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x34: fprintf(stream, "\tTEQ   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x36: fprintf(stream, "\tTNE   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
 			case 0x38: fprintf(stream, "\tDSLL  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x3A: fprintf(stream, "\tDSRL  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x3B: fprintf(stream, "\tDSRA  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
@@ -2110,7 +2114,7 @@ void fprintf_mips(FILE* stream, const uint32_t x, const uint32_t uiMIPSword)
 	case 0x0C: 	fprintf(stream, "\tANDI   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 	case 0x0D: 	fprintf(stream, "\tORI    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 	case 0x0E: 	fprintf(stream, "\tXORI   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-	case 0x0F: 	fprintf(stream, "\tLUI    \t s%02u, #%02d\t// Load upper half of word\n", ((uiMIPSword & 0x001F0000) >> 16), (int)(uiMIPSword<<16)/(1<<16)); return;	// I
+	case 0x0F: 	fprintf(stream, "\tLUI    \t s%02u, #%02d\t\t// Load upper half of word with 0x%x\n", ((uiMIPSword & 0x001F0000) >> 16), uiMIPSword&0xFFFF, uiMIPSword&0xFFFF); return;	// I
 	case 0x10: 	// cop0
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
@@ -2262,10 +2266,10 @@ void fprintf_mips(FILE* stream, const uint32_t x, const uint32_t uiMIPSword)
 	case 0x25: fprintf(stream, "\tLHU   \t" L_OP "\n", OP_L(uiMIPSword)); return;	// Load Halfword unsigned
 	case 0x26: fprintf(stream, "\tLWR   \n"); return;
 	case 0x27: fprintf(stream, "\tLWU   \t" L_OP "\n", OP_L(uiMIPSword)); return;	// Load Word unsigned
-	case 0x28: fprintf(stream, "\tSB    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-	case 0x29: fprintf(stream, "\tSH    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+	case 0x28: fprintf(stream, "\tSB    \t" L_OP "\n", OP_L(uiMIPSword)); return;	// I
+	case 0x29: fprintf(stream, "\tSH    \t" L_OP "\n", OP_L(uiMIPSword)); return;	// I
 	case 0x2A: fprintf(stream, "\tSWL   \n"); return;
-	case 0x2B: fprintf(stream, "\tSW    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+	case 0x2B: fprintf(stream, "\tSW    \t" L_OP "\n", OP_L(uiMIPSword)); return;	// I
 	case 0x2C: fprintf(stream, "\tSDL   \n"); return;
 	case 0x2D: fprintf(stream, "\tSDR   \n"); return;
 	case 0x2E: fprintf(stream, "\tSWR   \n"); return;
@@ -2305,8 +2309,8 @@ void sprintf_mips(char* stream, const uint32_t x, const uint32_t uiMIPSword)
 			case 0x00: sprintf(stream, "\tSLL   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x02: sprintf(stream, "\tSRL   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x03: sprintf(stream, "\tSRA   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x04: sprintf(stream, "\tSLLV  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x07: sprintf(stream, "\tSRAV  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+			case 0x04: sprintf(stream, "\tSLLV  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x07: sprintf(stream, "\tSRAV  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
 			case 0x08: sprintf(stream, "\tJR    \tr%d\n", (uiMIPSword>>21)&0x1f); return;	// J
 			case 0x09: sprintf(stream, "\tJALR  \tr%d // PC=r%d, r%d=%d \n",
 					(uiMIPSword>>21)&0x1f,
@@ -2320,37 +2324,37 @@ void sprintf_mips(char* stream, const uint32_t x, const uint32_t uiMIPSword)
 			case 0x11: sprintf(stream, "\tMTHI  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x12: sprintf(stream, "\tMFLO  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x13: sprintf(stream, "\tMTLO  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x14: sprintf(stream, "\tDSLLV \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x16: sprintf(stream, "\tDSRLV \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x17: sprintf(stream, "\tDSRAV \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x18: sprintf(stream, "\tMULT  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x19: sprintf(stream, "\tMULTU \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1A: sprintf(stream, "\tDIV   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1B: sprintf(stream, "\tDIVU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1C: sprintf(stream, "\tDMULT \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1D: sprintf(stream, "\tDMULTU\t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1E: sprintf(stream, "\tDDIV  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x1F: sprintf(stream, "\tDDIVU \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+			case 0x14: sprintf(stream, "\tDSLLV \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x16: sprintf(stream, "\tDSRLV \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x17: sprintf(stream, "\tDSRAV \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x18: sprintf(stream, "\tMULT  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x19: sprintf(stream, "\tMULTU \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1A: sprintf(stream, "\tDIV   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1B: sprintf(stream, "\tDIVU  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1C: sprintf(stream, "\tDMULT \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1D: sprintf(stream, "\tDMULTU\t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1E: sprintf(stream, "\tDDIV  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x1F: sprintf(stream, "\tDDIVU \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
 			case 0x20: sprintf(stream, "\tADD   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
-			case 0x21: sprintf(stream, "\tADDU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x22: sprintf(stream, "\tSUB   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x23: sprintf(stream, "\tSUBU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x24: sprintf(stream, "\tAND   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x25: sprintf(stream, "\tOR    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x26: sprintf(stream, "\tXOR   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x27: sprintf(stream, "\tNOR   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+			case 0x21: sprintf(stream, "\tADDU  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x22: sprintf(stream, "\tSUB   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x23: sprintf(stream, "\tSUBU  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x24: sprintf(stream, "\tAND   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x25: sprintf(stream, "\tOR    \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x26: sprintf(stream, "\tXOR   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x27: sprintf(stream, "\tNOR   \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
 			case 0x2A: sprintf(stream, "\tSLT   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x2B: sprintf(stream, "\tSLTU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2C: sprintf(stream, "\tDADD  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2D: sprintf(stream, "\tDADDU \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2E: sprintf(stream, "\tDSUB  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x2F: sprintf(stream, "\tDSUBU \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x30: sprintf(stream, "\tTGE   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x31: sprintf(stream, "\tTGEU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x32: sprintf(stream, "\tTLT   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x33: sprintf(stream, "\tTLTU  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x34: sprintf(stream, "\tTEQ   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-			case 0x36: sprintf(stream, "\tTNE   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+			case 0x2C: sprintf(stream, "\tDADD  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x2D: sprintf(stream, "\tDADDU \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x2E: sprintf(stream, "\tDSUB  \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x2F: sprintf(stream, "\tDSUBU \t" R_OP "\n", OP_R(uiMIPSword)); return;	// I
+			case 0x30: sprintf(stream, "\tTGE   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x31: sprintf(stream, "\tTGEU  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x32: sprintf(stream, "\tTLT   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x33: sprintf(stream, "\tTLTU  \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x34: sprintf(stream, "\tTEQ   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
+			case 0x36: sprintf(stream, "\tTNE   \t" R2_OP "\n", OP_R2(uiMIPSword)); return;	// I
 			case 0x38: sprintf(stream, "\tDSLL  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x3A: sprintf(stream, "\tDSRL  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 			case 0x3B: sprintf(stream, "\tDSRA  \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
@@ -2396,7 +2400,7 @@ void sprintf_mips(char* stream, const uint32_t x, const uint32_t uiMIPSword)
 	case 0x0C: 	sprintf(stream, "\tANDI   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 	case 0x0D: 	sprintf(stream, "\tORI    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
 	case 0x0E: 	sprintf(stream, "\tXORI   \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-	case 0x0F: 	sprintf(stream, "\tLUI    \t s%02u, #%02d\t// Load upper half of word\n", ((uiMIPSword & 0x001F0000) >> 16), (int)(uiMIPSword<<16)/(1<<16)); return;	// I
+	case 0x0F: 	sprintf(stream, "\tLUI    \t s%02u, #%02d\t\t// Load upper half of word with 0x%x\n", ((uiMIPSword & 0x001F0000) >> 16), uiMIPSword&0xFFFF, uiMIPSword&0xFFFF); return;	// I
 	case 0x10: 	// cop0
 		op2=(uiMIPSword>>21)&0x1f;
 		switch(op2)
@@ -2548,10 +2552,10 @@ void sprintf_mips(char* stream, const uint32_t x, const uint32_t uiMIPSword)
 	case 0x25: sprintf(stream, "\tLHU   \t" L_OP "\n", OP_L(uiMIPSword)); return;	// Load Halfword unsigned
 	case 0x26: sprintf(stream, "\tLWR   \n"); return;
 	case 0x27: sprintf(stream, "\tLWU   \t" L_OP "\n", OP_L(uiMIPSword)); return;	// Load Word unsigned
-	case 0x28: sprintf(stream, "\tSB    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
-	case 0x29: sprintf(stream, "\tSH    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+	case 0x28: sprintf(stream, "\tSB    \t" L_OP "\n", OP_L(uiMIPSword)); return;	// I
+	case 0x29: sprintf(stream, "\tSH    \t" L_OP "\n", OP_L(uiMIPSword)); return;	// I
 	case 0x2A: sprintf(stream, "\tSWL   \n"); return;
-	case 0x2B: sprintf(stream, "\tSW    \t" I_OP "\n", OP_I(uiMIPSword)); return;	// I
+	case 0x2B: sprintf(stream, "\tSW    \t" L_OP "\n", OP_L(uiMIPSword)); return;	// I
 	case 0x2C: sprintf(stream, "\tSDL   \n"); return;
 	case 0x2D: sprintf(stream, "\tSDR   \n"); return;
 	case 0x2E: sprintf(stream, "\tSWR   \n"); return;
