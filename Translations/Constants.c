@@ -18,6 +18,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "Translate.h"
 #include "DebugDefines.h"
+#include "InstructionSetARM6hf.h"
 
 void Translate_Constants(code_seg_t* const codeSegment)
 {
@@ -72,9 +73,29 @@ void Translate_Constants(code_seg_t* const codeSegment)
 		{
 			regID_t base;
 			int32_t offset;
-			addLiteral(codeSegment, &base, &offset, ins->immediate << 16);
 
-			InstrI(ins, ARM_LDR_LIT, AL, ins->Rd1.regID, REG_NOT_USED, base, offset);
+			if (Imm8Shift(ins->immediate) == -1)
+			{
+				addLiteral(codeSegment, &base, &offset, ins->immediate << 16);
+
+				InstrI(ins, ARM_LDR_LIT, AL, ins->Rd1.regID, REG_NOT_USED, base, offset);
+			}
+			else
+			{
+				Instruction_t* new_ins;
+				InstrI(ins, ARM_MOV, AL, ins->Rd1.regID, REG_NOT_USED, REG_NOT_USED, ins->immediate);
+
+				// sign extend
+				if (ins->immediate&0x8000)
+				{
+					new_ins = newInstrI(ARM_MVN, AL, ins->Rd1.regID | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+				}
+				else
+				{
+					new_ins = newInstrI(ARM_MOV, AL, ins->Rd1.regID | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+				}
+				ADD_LL_NEXT(new_ins, ins);
+			}
 
 			ins->Rd1.state = RS_CONSTANT_I8;
 			if (ins->immediate < 0)
