@@ -49,6 +49,8 @@ const static char* const arm_cond[] = {
 ""		// for AL_B where instruction is AL but is still conditional due to intra segment branching
 };
 
+int32_t Imm8Shift(uint32_t val);
+
 void printf_arm(const uint32_t addr, const uint32_t word);
 
 void emit_arm_code(code_seg_t* const codeSeg);

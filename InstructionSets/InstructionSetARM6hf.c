@@ -88,6 +88,23 @@ static uint32_t ALU_OP2(const Instruction_t* ins)
 	}
 }
 
+int32_t Imm8Shift(uint32_t val)
+{
+	int i= 0;
+
+	if (val == (val&0xFF)) return 0;
+
+	while (!(val&1))
+	{
+		val >>= 1;
+		i++;
+	}
+
+	if (val == (val&0xFF)) return i;
+
+	return -1;
+}
+
 uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 {
 	uint8_t Rd1=0, Rd2=0, R1=0, R2=0, R3=0;
