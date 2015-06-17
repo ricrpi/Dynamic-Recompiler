@@ -110,15 +110,21 @@ size_t branchUnknown(size_t address)
 	// find out it the end of the segment is a JUMP or BRANCH
 	op = ops_type(code_seg->MIPScode[code_seg->MIPScodeLen - 1]);
 
+	//Get MIPS condition code and link
+	mips_decode(*(code_seg->MIPScode + code_seg->MIPScodeLen -1), ins);
+	;
+
 	if (op & OPS_BRANCH){
-		MIPSaddress =  (uint32_t)(code_seg->MIPScode + code_seg->MIPScodeLen - 1) + ops_BranchOffset(code_seg->MIPScode + code_seg->MIPScodeLen - 1);
+		MIPSaddress =  (uint32_t)(code_seg->MIPScode + code_seg->MIPScodeLen - 1) + 4*ops_BranchOffset(code_seg->MIPScode + code_seg->MIPScodeLen - 1);
 	}
 	else
 	{
-		MIPSaddress =  ops_JumpAddress(code_seg->MIPScode + code_seg->MIPScodeLen - 1);
+		MIPSaddress =  (((size_t)code_seg->MIPScode + code_seg->MIPScodeLen * 4)&0xF0000000U) + ops_JumpAddress(&code_seg->MIPScode[code_seg->MIPScodeLen - 1]);
 	}
 
 	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", MIPSaddress, (uint32_t)code_seg);
+
+	printf_Intermediate(ins,1);
 
 	code_seg_t* tgtSeg = getSegmentAt(MIPSaddress);
 
@@ -152,22 +158,34 @@ size_t branchUnknown(size_t address)
 	}
 
 	// 2.
-	//Get MIPS condition code for branch
-	mips_decode(*(code_seg->MIPScode + code_seg->MIPScodeLen -1), ins);
-	printf_Intermediate(ins,1);
+	if (op & OPS_BRANCH)
+	{
+		//Set instruction to ARM_BRANCH for new target
+		InstrB(ins, ins->cond, ARMAddress, 1);
+	}
+	else if (op != JR && op != JALR)
+	{
+		if (ins->Ln)
+		{
+			InstrBL(ins, ins->cond, ARMAddress, 1);
+		}
+		else
+		{
+			InstrB(ins, ins->cond, ARMAddress, 1);
+		}
+	}
 
-	//Set instruction to ARM_BRANCH for new target
-	InstrB(ins, ins->cond, ARMAddress, 1);
-	printf_Intermediate(ins,1);
+	if (op != JR && op != JALR)
+	{
+		printf_Intermediate(ins,1);
 
-	uint32_t* 	out 		= ((uint32_t*)code_seg->ARMcode) + code_seg->ARMcodeLen -1;
+		uint32_t* 	out 		= ((uint32_t*)code_seg->ARMcode) + code_seg->ARMcodeLen -1;
 
-	printf("emitting at address %p\n", out);
+		//emit the arm code
+		printf("emitting at address %p\n", out);
+		*out = arm_encode(ins, (size_t)out);
+	}
 
-	//emit the arm code
-	*out = arm_encode(ins, (size_t)out);
-
-	// 3.
 	return ARMAddress;
 }
 

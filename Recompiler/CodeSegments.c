@@ -396,7 +396,7 @@ code_seg_t* CompileCodeAt(const uint32_t* const address)
 	}
 	else
 	{
-		printf("CompileCodeAt() failed for adress 0x%08x\n", (uint32_t)address);
+		printf("CompileCodeAt() failed for address 0x%08x\n", (uint32_t)address);
 	}
 
 	return getSegmentAt((size_t)address);

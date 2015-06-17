@@ -52,12 +52,7 @@ void Translate_Debug(code_seg_t* codeSegment)
 	Instruction_t*new_ins;
 	ins = codeSegment->Intermcode;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
-	currentTranslation = "Debug - Load Segment ID";
-#endif
-
-
-#if defined(USE_TRANSLATE_DEBUG_SET_CURRENT_SEG)
+#if defined(USE_BREAKPOINTS) || defined(USE_TRANSLATE_DEBUG_SET_CURRENT_SEG)
 	regID_t base;
 	int32_t offset;
 
@@ -68,6 +63,29 @@ void Translate_Debug(code_seg_t* codeSegment)
 	codeSegment->Intermcode = new_ins = newInstrI(ARM_LDR_LIT, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, base, offset);
 	new_ins->nextInstruction = ins;
 	ins = new_ins;
+#endif
+
+#if defined(USE_BREAKPOINTS)
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Debug - Service Breakpoints";
+#endif
+	new_ins = newInstrPUSH(AL, REG_HOST_STM_ALL);
+	ADD_LL_NEXT(new_ins, ins);
+
+	new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, REG_HOST_SP);
+	ADD_LL_NEXT(new_ins, ins);
+
+	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)ServiceBreakPoint, 0);
+
+	new_ins = newInstrPOP(AL, REG_HOST_STM_ALL);
+	ADD_LL_NEXT(new_ins, ins);
+#endif
+
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Debug - Load Segment ID";
+#endif
+
+#if defined(USE_TRANSLATE_DEBUG_SET_CURRENT_SEG)
 
 	//load segmentData->dbgCurrentSegment address
 	addLiteral(codeSegment, &base, &offset, (uint32_t)&segmentData.dbgCurrentSegment);
@@ -83,12 +101,26 @@ void Translate_Debug(code_seg_t* codeSegment)
 	new_ins 		= newInstrI(ARM_STR, AL, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH1, 0);
 	ADD_LL_NEXT(new_ins, ins);
 
+#if defined(USE_TRANSLATE_DEBUG_PRINT_SEGMENT)
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Call DebugRuntimePrintSegment()";
 #endif
-
-#if defined(USE_TRANSLATE_DEBUG_PRINT_SEGMENT)
 	ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintSegment, 0);
+#endif
+
+#if defined(USE_TRANSLATE_DEBUG_PRINT_REGISTERS_ON_ENTRY)
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Call DebugRuntimePrintMIPS()";
+#endif
+	{
+		static code_seg_t* lastSeg = NULL;
+
+		if (lastSeg != codeSegment)
+		{
+			ins = insertCall_To_C(codeSegment, ins, AL,(uint32_t)DebugRuntimePrintMIPS, 0);
+			lastSeg = codeSegment;
+		}
+	}
 #endif
 
 #if defined(USE_INSTRUCTION_COMMENTS)

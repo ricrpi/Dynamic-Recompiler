@@ -22,6 +22,7 @@
 #include "InstructionSet.h"
 #include "InstructionSet_ascii.h"
 #include "DebugDefines.h"
+#include "mem_state.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -151,11 +152,11 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 	case ARM_CMN:
 		return cond << 28 | ins->I << 25 | 0xB << 21 | 1 << 20 | R1 << 16 | ALU_OP2(ins);
 	case ARM_ORR:
-		return cond << 28 | ins->I << 25 | 0xC << 21 | ins->S << 20 | R1 << 16 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0xC << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_MOV:
 		return cond << 28 | ins->I << 25 | 0xD << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_BIC:
-		return cond << 28 | ins->I << 25 | 0xE << 21 | ins->S << 20 | R1 << 16  | Rd1 << 12 | ALU_OP2(ins);
+		return cond << 28 | ins->I << 25 | 0xE << 21 | ins->S << 20 | R1 << 16 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_MVN:
 		return cond << 28 | ins->I << 25 | 0xF << 21 | ins->S << 20 | Rd1 << 12 | ALU_OP2(ins);
 	case ARM_BFC:
@@ -289,7 +290,7 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 	if((word & 0x0f000000) == 0x0a000000) // B
 	{
 		// TODO we could lookup the function being branched to ...
-		printf("\tb%s\t%d   // (0x%x)\n", arm_cond[word>>28], ((int32_t)(word&0xffffff) << 8)/(1 << 8), ((word&0xffffff) << 8)/(1 << 8));
+		printf("\tb%s\t0x%08x   // (%d)\n", arm_cond[word>>28], addr + 8 +((int32_t)(word&0xffffff) << 8)/(1 << 6),  ((int32_t)(word&0xffffff) << 8)/(1 << 8));
 	}
 	else if ((word & 0x0fe0007f) == 0x07e0001f) // BFC
 	{
@@ -306,7 +307,7 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 	}
 	else if((word & 0x0f000000) == 0x0b000000) // BL
 	{
-		printf("\tbl%s\t%d // (0x%x)\n", arm_cond[word>>28], ((int32_t)(word&0xffffff) << 8)/(1 << 8), ((word&0xffffff) << 8)/(1 << 8));
+		printf("\tbl%s\t0x%08x   // (%d)\n", arm_cond[word>>28], addr + 8 +((int32_t)(word&0xffffff) << 8)/(1 << 6),  ((int32_t)(word&0xffffff) << 8)/(1 << 8));
 	}
 	else if ((word & 0x0fffffd0) == 0x012fff10)	// BX / BLX
 	{

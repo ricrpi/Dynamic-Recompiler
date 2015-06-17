@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include "mem_state.h"
 #include "CodeSegments.h"
-
+#include "Debugger.h"
 
 static memMap_t* Blocks = NULL;
 static uint32_t memMapCount = 0;
@@ -83,6 +83,10 @@ void setMemState(size_t address, uint32_t length, code_seg_t* codeSeg)
 				}
 				Blocks[x]._memStatePtr[(address - Blocks[x].address)/sizeof(code_seg_t*) + i] = codeSeg;
 			}
+
+#if defined(SHOW_CODE_SEG_MAP_CHANGES)
+			printf("code seg map address 0x%08x to 0x%08x set to 0x%x\n", address, address + length*4, codeSeg);
+#endif
 			return;
 		}
 	}

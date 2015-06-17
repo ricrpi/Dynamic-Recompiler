@@ -19,6 +19,7 @@ C_SRCS += \
 ../Translations/Misc.c \
 ../Translations/OptimizeARM.c \
 ../Translations/Registers.c \
+../Translations/TLB.c \
 ../Translations/Translate.c 
 
 OBJS += \
@@ -37,6 +38,7 @@ OBJS += \
 ./Translations/Misc.o \
 ./Translations/OptimizeARM.o \
 ./Translations/Registers.o \
+./Translations/TLB.o \
 ./Translations/Translate.o 
 
 C_DEPS += \
@@ -55,6 +57,7 @@ C_DEPS += \
 ./Translations/Misc.d \
 ./Translations/OptimizeARM.d \
 ./Translations/Registers.d \
+./Translations/TLB.d \
 ./Translations/Translate.d 
 
 

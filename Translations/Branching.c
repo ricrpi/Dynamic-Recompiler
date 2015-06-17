@@ -25,11 +25,33 @@
 
 static void getTgtAddress(code_seg_t* const codeSegment, int32_t offset, size_t* tgt_address)
 {
-	code_seg_t* 	BranchToSeg = getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset));
+	code_seg_t* 	BranchToSeg = getSegmentAt((size_t)(codeSegment->MIPScode) + codeSegment->MIPScodeLen * 4 + offset * 4);
 
-	if (BranchToSeg)
+	if (BranchToSeg != NULL)
 	{
-		if (BranchToSeg->ARMEntryPoint)
+		if (BranchToSeg->ARMEntryPoint != NULL)
+		{
+			*tgt_address = (size_t)BranchToSeg->ARMEntryPoint;
+		}
+		else
+		{
+			*tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+		}
+	}
+	else // No segment Found
+	{
+		*tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+	}
+}
+
+static void getTgtJAddress(code_seg_t* const codeSegment, int32_t offset, size_t* tgt_address)
+{
+	// Need to build the address using the last nibble from the instruction within the delay slot + offset << 2
+	code_seg_t* 	BranchToSeg = getSegmentAt((((size_t)(codeSegment->MIPScode) + codeSegment->MIPScodeLen * 4U + 4U)&0xF0000000U) + offset * 4);
+
+	if (BranchToSeg != NULL)
+	{
+		if (BranchToSeg->ARMEntryPoint != NULL)
 		{
 			*tgt_address = (size_t)BranchToSeg->ARMEntryPoint;
 		}
@@ -46,10 +68,10 @@ static void getTgtAddress(code_seg_t* const codeSegment, int32_t offset, size_t*
 
 static uint32_t FindInstructionIndex(code_seg_t* const codeSegment, const Instruction_t* const find_ins)
 {
-	uint32_t index = 0;
-	Instruction_t*	ins= 			codeSegment->Intermcode;
+	uint32_t index = 0U;
+	Instruction_t*	ins = codeSegment->Intermcode;
 
-	while (ins && ins != find_ins)
+	while ((ins != NULL) && (ins != find_ins))
 	{
 		index++;
 		ins = ins->nextInstruction;
@@ -62,7 +84,7 @@ void Translate_InterCode_Branch(code_seg_t* const codeSegment)
 {
 	Instruction_t*	ins;
 	ins = 			codeSegment->Intermcode;
-	uint32_t index = 0;
+	uint32_t index = 0U;
 
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Resolving Intermediate Branches";
@@ -108,8 +130,8 @@ void Translate_Branch(code_seg_t* const codeSegment)
 	Instruction_e	instruction;
 	int32_t 		offset;
 	size_t 			tgt_address;
-	uint8_t 		branchAbsolute 		= 1;
-	uint32_t 		instructionCount 	= 0;
+	uint8_t 		branchAbsolute 		= 1U;
+	uint32_t 		instructionCount 	= 0U;
 
 	regID_t base;
 
@@ -188,8 +210,6 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-
-
 			//if segment loops on its self
 			if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
 			{
@@ -214,18 +234,37 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			break;
 
 		case J:
-		case JAL:
-
 			offset = ins->offset;
-
-			getTgtAddress(codeSegment,offset, &tgt_address);
-
-			InstrB(ins, AL, tgt_address, 1);
-
-			if (instruction & OPS_LINK) ins->Ln = 1;
+			getTgtJAddress(codeSegment,offset, &tgt_address);
+			InstrB(ins, AL, tgt_address, 1U);
 			break;
+		case JAL:
+			offset = ins->offset;
+			getTgtJAddress(codeSegment,offset, &tgt_address);
 
+			InstrPUSH(ins, AL, REG_HOST_STM_LR);
+
+
+			new_ins = newInstrB(AL, tgt_address, 1U);
+			ins->Ln = 1U;
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstrPOP(AL, REG_HOST_STM_LR);
+			ADD_LL_NEXT(new_ins, ins);
+			break;
 		case JR:
+
+			Instr(ins, ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, ins->R1.regID);
+
+			tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+
+			new_ins = newInstrB(AL, tgt_address, 1U);
+			new_ins->Ln = 1U;
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstr(ARM_BX, AL, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_NOT_USED);
+			ADD_LL_NEXT(new_ins, ins);
+			break;
 		case JALR:
 			// we need to lookup the code segment we should be branching to according to the value in the register
 			// work out address in code segment lookup table
@@ -234,10 +273,19 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 			tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
 
-			new_ins = newInstrB(AL, tgt_address, 1);
-			if (instruction & OPS_LINK) new_ins->Ln = 1;
+			new_ins = newInstrPUSH(AL, REG_HOST_STM_LR);
 			ADD_LL_NEXT(new_ins, ins);
 
+			new_ins = newInstrB(AL, tgt_address, 1U);
+			new_ins->Ln = 1U;
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstr(ARM_BX, AL, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_NOT_USED);
+			new_ins->Ln = 1U;
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstrPOP(AL, REG_HOST_STM_LR);
+			ADD_LL_NEXT(new_ins, ins);
 			break;
 
 		case BLTZ:
@@ -377,7 +425,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				new_ins = newInstrB(HI, tgt_address, branchAbsolute);
 			}
 
-			if (instruction & OPS_LINK) new_ins->Ln = 1;
+			if (instruction & OPS_LINK) new_ins->Ln = 1U;
 			ADD_LL_NEXT(new_ins, ins);
 
 			break;

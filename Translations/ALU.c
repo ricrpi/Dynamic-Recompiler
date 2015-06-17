@@ -546,10 +546,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 
 					InstrI(ins, ARM_ORR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FF00);
 
-					new_ins = newInstrI(ARM_ORR, AL, Rd1, REG_TEMP_SCRATCH0, REG_NOT_USED, (imm)&0x000000FF);
-					ADD_LL_NEXT(new_ins, ins);
-
-					new_ins = newInstr(ARM_ORR, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
+					new_ins = newInstrI(ARM_ORR, AL, Rd1, Rd1, REG_NOT_USED, (imm)&0x000000FF);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				else
@@ -569,13 +566,9 @@ void Translate_ALU(code_seg_t* const codeSegment)
 
 				if (ImmShift == -1)
 				{
-
 					InstrI(ins, ARM_EOR, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FF00);
 
-					new_ins = newInstrI(ARM_EOR, AL, Rd1, REG_TEMP_SCRATCH0, REG_NOT_USED, (imm)&0x000000FF);
-					ADD_LL_NEXT(new_ins, ins);
-
-					new_ins = newInstr(ARM_EOR, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
+					new_ins = newInstrI(ARM_EOR, AL, Rd1, Rd1, REG_NOT_USED, (imm)&0x000000FF);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				else

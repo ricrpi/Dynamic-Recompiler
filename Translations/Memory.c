@@ -27,6 +27,10 @@ uint8_t uMemoryBase 		= 0x80;
 
 static Instruction_t* insertCheckAddressRaw(Instruction_t* ins, regID_t R1)
 {
+	// 0x80 = 1000 0000
+	// 0xA0 = 1010 0000
+	// 0xD0 = 1101 0000
+
 	Instruction_t* new_ins;
 	InstrI(ins, ARM_AND, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, 0xD0 << 24);	// ignore cache bit
 
@@ -65,6 +69,39 @@ static Instruction_t* FixOffsetTooLarge(Instruction_t* ins, regID_t Rx)
 		ADD_LL_NEXT(new_ins, ins);
 	}
 	return ins;
+}
+
+static void storeWord(uint32_t b, uint32_t v)
+{
+	uint32_t* addr = (uint32_t*)(b);
+
+	if ((((uint32_t)addr)&0xD0000000) == 0x80000000)
+	{
+		addr = (uint32_t*)((uint32_t)addr&0xD0000000);
+		*addr = v;
+	}
+	else
+	{
+		printf("storeWord() virtual address 0x%x\n", addr);
+		abort();
+	}
+
+}
+
+static uint32_t loadWord(uint32_t b)
+{
+	uint32_t* addr = (uint32_t*)(b);
+
+	if ((((uint32_t)addr)&0xD0000000) == 0x80000000)
+	{
+		addr = (uint32_t*)((uint32_t)addr&0xD0000000);
+		return *addr;
+	}
+	else
+	{
+		printf("loadWord() virtual address 0x%x\n", addr);
+		abort();
+	}
 }
 
 /*
@@ -121,6 +158,25 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			TRANSLATE_ABORT();
 			break;
 		case SW:
+#if 1
+			Instr(ins, ARM_MOV, AL,REG_TEMP_SCRATCH0, REG_NOT_USED, R1);
+
+			if (funcTempImm < 0)
+			{
+				new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -funcTempImm);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else if (funcTempImm > 0)
+			{
+				new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, funcTempImm);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+
+			new_ins = newInstr(ARM_MOV, AL, REG_TEMP_SCRATCH1, REG_NOT_USED, R2);
+			ADD_LL_NEXT(new_ins, ins);
+
+			insertCall_To_C(codeSegment, ins, AL, &storeWord, 0);
+#else
 			ins = insertCheckAddressRaw(ins, R1);
 
 			// used to force loading of registers
@@ -194,6 +250,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			//ins = insertP_R_A(codeSegment, ins, AL);
 
 			// TODO we need to check memory changed is not in code space
+#endif
 			break;
 		case SDL:
 		case SDR:
@@ -206,6 +263,26 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			TRANSLATE_ABORT();
 			break;
 		case LW:
+#if 1
+			Instr(ins, ARM_MOV, AL,REG_TEMP_SCRATCH0, REG_NOT_USED, R1);
+
+			if (funcTempImm < 0)
+			{
+				new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -funcTempImm);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else if (funcTempImm > 0)
+			{
+				new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, funcTempImm);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+
+			ins = insertCall_To_C(codeSegment, ins, AL, (uint32_t)&loadWord, 0);
+
+			new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
+			ADD_LL_NEXT(new_ins, ins);
+
+#else
 			ins = insertCheckAddressRaw(ins, R1);
 
 			// used to force loading of registers
@@ -244,7 +321,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 				// now store the value at REG_TEMP_SCRATCH0 ( This will be R2 + host base + funcTempImm&0xf000 )
 				new_ins = newInstrI(ARM_LDR, AL_B, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0, (-funcTempImm)&0xfff);
-				new_ins->U = 0;
+				new_ins->U = 0U;
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
@@ -261,7 +338,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			ins1->branchToThisInstruction = new_ins;
 
-			ins = insertCall_To_C(codeSegment,ins, AL_B, (size_t)&virtual_address, 0);
+			ins = insertCall_To_C(codeSegment,ins, AL_B, (size_t)&virtual_address, 0U);
 
 			//Clear Status
 			new_ins = newInstr(ARM_LDR, AL_B, Rd1, REG_NOT_USED, REG_HOST_R0);
@@ -272,7 +349,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ADD_LL_NEXT(new_ins, ins);
 
 			ins2->branchToThisInstruction = new_ins;
-
+#endif
 			break;
 		case LBU:
 		case LHU:

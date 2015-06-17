@@ -38,7 +38,7 @@ Dynamic-Recompiler: $(OBJS) $(USER_OBJS)
 
 # Other Targets
 clean:
-	-$(RM) $(EXECUTABLES)$(OBJS)$(C_DEPS) Dynamic-Recompiler
+	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) Dynamic-Recompiler
 	-@echo ' '
 
 .PHONY: all clean dependents

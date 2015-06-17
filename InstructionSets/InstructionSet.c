@@ -210,6 +210,7 @@ Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condit
 
 	ins->I = 0;
 	ins->S = 0;
+	ins->immediate = 0;
 
 	switch (ins_e)
 	{
@@ -404,6 +405,22 @@ Instruction_t* InstrBL(Instruction_t* ins, const Condition_e cond, const int32_t
 	return ins;
 }
 
+Instruction_t* InstrPUSH(Instruction_t* ins, const Condition_e cond, const uint32_t Rmask)
+{
+	assert(Rmask < (1<<16));
+
+	ins->instruction = ARM_STM;
+	ins->cond = cond;
+	ins->R1.regID = REG_HOST_SP;
+	ins->Rmask = Rmask;
+	ins->W = 1;
+	ins->PR = 1;
+	ins->U = 0;
+
+	return ins;
+
+}
+
 Instruction_t* newEmptyInstr()
 {
 	Instruction_t* newInstr;
@@ -433,7 +450,7 @@ Instruction_t* newEmptyInstr()
 	newInstr->B=0;			// Byte/Word bit, 1 = byte
 	newInstr->I=0;			// Immediate
 	newInstr->Ln=0;			// Link bit for branch
-	newInstr->PR=0;			// Pre/Post increment, 1 for pre
+	newInstr->PR=1;			// Pre/Post increment, 1 for pre
 	newInstr->S=0;			// Set condition flags
 	newInstr->U=1;			// Up/Down, set for inc, clear for decrement
 	newInstr->W=0;			// Writeback bit set to write to base register

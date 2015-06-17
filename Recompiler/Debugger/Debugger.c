@@ -211,27 +211,31 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 		}
 
 		Instruction_t ins;
-		mips_decode(CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1], &ins);
-
-		code_seg_t* branch = getSegmentAt((size_t)CurrentCodeSeg->MIPScode + CurrentCodeSeg->MIPScodeLen -1 + ins.offset);
-
-		if (branch)
+		code_seg_t* branch = NULL;
+		if (CurrentCodeSeg->MIPScodeLen > 0U)
 		{
-			if (CurrentCodeSeg->MIPScode == branch->MIPScode)	//Loops on itself
+			mips_decode(CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1], &ins);
+
+			branch = getSegmentAt((size_t)CurrentCodeSeg->MIPScode + CurrentCodeSeg->MIPScodeLen -1 + ins.offset);
+
+			if (branch != NULL)
 			{
-				printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Loop)\n"
-					, (uint32_t)branch
-					, (uint32_t)branch->MIPScode
-					, (uint32_t)branch->ARMcode);
-			}else
-			{
-				printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Branch)\n"
-					, (uint32_t)branch
-					, (uint32_t)branch->MIPScode
-					, (uint32_t)branch->ARMcode);
+				if (CurrentCodeSeg->MIPScode == branch->MIPScode)	//Loops on itself
+				{
+					printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Loop)\n"
+						, (uint32_t)branch
+						, (uint32_t)branch->MIPScode
+						, (uint32_t)branch->ARMcode);
+				}
+				else
+				{
+					printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Branch)\n"
+						, (uint32_t)branch
+						, (uint32_t)branch->MIPScode
+						, (uint32_t)branch->ARMcode);
+				}
 			}
 		}
-
 		if (!branch && !CurrentCodeSeg->pContinueNext)
 		{
 			printf("No linkage for code in its current location!\n");
@@ -540,7 +544,8 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 			}
 			else
 			{
-				printf("No segment at 0x%08x\n", val);
+				CurrentCodeSeg = (code_seg_t*)val;
+				ok = 1;
 			}
 		}else if (!CurrentCodeSeg->MIPSReturnRegister)
 		{
@@ -602,7 +607,6 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 
 static int Debugger_translate(const code_segment_data_t* const segmentData)
 {
-
 	uint32_t bounds[2];
 	uint32_t x,y;
 	uint32_t val;
@@ -611,7 +615,7 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	bounds[1] = COUNTOF(Translations)-1;
 	char *tailPointer;
 
-	for (x=0; x < COUNTOF(bounds); x++)
+	for (x = 0U; x < COUNTOF(bounds); x++)
 	{
 			if (!strlen(userInput[1+x])) break;
 
@@ -625,7 +629,7 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 			else
 			{
 				// scan for names
-				for (y = 0; y < COUNTOF(Translations); y++)
+				for (y = 0U; y < COUNTOF(Translations); y++)
 				{
 					if (!CMD_CMP(1+x, Translations[y].name)){
 						bounds[x] = y;
@@ -672,9 +676,9 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 		{
 			uint32_t count = CurrentCodeSeg->ARMcodeLen;
 			uint32_t* addr = CurrentCodeSeg->ARMcode;
-			int x;
+			uint32_t x;
 
-			for (x=0; x< count; x++)
+			for (x = 0U; x < count; x++)
 			{
 				if (addr + x == (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
 				{
@@ -690,6 +694,79 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 	}
 
 	return 0;
+}
+
+
+static code_seg_t* breakpoints[] = {NULL, NULL, NULL, NULL, NULL};
+
+static Debugger_breakpoint()
+{
+	uint32_t x;
+	char* tailPointer;
+
+	if (!CMD_CMP(0, "breakpoint"))
+	{
+		if (strlen(userInput[1]))
+		{
+			uint32_t v = Mstrtoul(userInput[1], &tailPointer, 0);
+			for (x=0U; x < COUNTOF(breakpoints); x++)
+			{
+				if (breakpoints[x] == NULL)
+				{
+					breakpoints[x] = (code_seg_t*)v;
+					break;
+				}
+			}
+		}
+		else
+		{
+			for (x=0U; x < COUNTOF(breakpoints); x++)
+			{
+				if (breakpoints[x] != NULL)
+				{
+					printf("%d. 0x%x\n", x, breakpoints[x]);
+				}
+			}
+		}
+	}
+	else if (!CMD_CMP(0, "delete"))
+	{
+		if (strlen(userInput[1]))
+		{
+			uint32_t v = Mstrtoul(userInput[1], &tailPointer, 0);
+
+			if (v < COUNTOF(breakpoints))
+			{
+				breakpoints[v] = NULL;
+			}
+			else
+			{
+				code_seg_t* delSegBreakpoint = (code_seg_t*)v;
+				for (x=0U; x < COUNTOF(breakpoints); x++)
+				{
+					if (breakpoints[x] == delSegBreakpoint)
+					{
+						breakpoints[x] = NULL;
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+void ServiceBreakPoint(code_seg_t* codeSeg, size_t* regs)
+{
+	uint32_t x;
+
+	for (x = 0U; x < COUNTOF(breakpoints); x++)
+	{
+		if (codeSeg == breakpoints[x])
+		{
+			while(Debugger_start(&segmentData, NULL, regs));
+		}
+	}
 }
 
 void DebugRuntimePrintSegment()
@@ -708,22 +785,22 @@ void DebugRuntimePrintSegment()
 
 void DebugRuntimePrintMIPS()
 {
-	int x;
+	uint32_t x;
 
-	for (x=0; x < 16; x++)
+	for (x=0U; x < 16U; x++)
 	{
 		printf( "\tr%-2d 0x%08x%08x\tr%-2d 0x%08x%08x\n"
-				,  0 + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_WIDE)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x))
-				, 16 + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_WIDE)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x)));
+				,  0U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_WIDE)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x))
+				, 16U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_WIDE)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x)));
 	}
 
 	printf("\n");
 
-	for (x=0; x < 16; x++)
+	for (x=0U; x < 16U; x++)
 	{
 		printf( "\tf%-2d 0x%08x%08x\tf%-2d 0x%08x%08x\n"
-						,  0 + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_FP))
-						, 16 + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x+REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_FP)));
+						,  0U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_FP))
+						, 16U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x+REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_FP)));
 	}
 
 	printf("\n\tBadVaddr 0x%08x  PC     0x%08x\n"
@@ -790,7 +867,7 @@ void Debugger_set(const code_segment_data_t* const segmentData)
 	}
 }
 
- int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context, size_t* regs)
+int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context, size_t* regs)
 {
 	//find segment
 	if (!CurrentCodeSeg) CurrentCodeSeg = (code_seg_t*)segmentData->dbgCurrentSegment;
@@ -849,6 +926,11 @@ void Debugger_set(const code_segment_data_t* const segmentData)
 		uint32_t ret = run();
 
 		printf("End run: %u (0x%x)\n", ret, ret);
+	}
+	else if (!CMD_CMP(0, "breakpoint")
+			|| !CMD_CMP(0, "delete"))
+	{
+		Debugger_breakpoint();
 	}
 	else if (!CMD_CMP(0, "help"))
 	{

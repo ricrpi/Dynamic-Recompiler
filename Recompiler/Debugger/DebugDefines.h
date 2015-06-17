@@ -44,6 +44,7 @@
 #define SHOW_PRINT_SEGMENT_DELETE			(1)
 
 #define SHOW_CALLER							(1)
+
 // ========================================================
 
 // Print the constants in intermediate code
@@ -53,8 +54,6 @@
 //#define SHOW_PRINT_ARM_VALUE
 
 //#define SHOW_PRINT_MIPS_VALUE
-
-
 
 // Print MIPS code / Translation step for each intermediate instruction
 #define USE_INSTRUCTION_COMMENTS
@@ -66,8 +65,10 @@
 #define USE_TRANSLATE_DEBUG						// think this must be active for branch unknowns to work!
 #define USE_TRANSLATE_DEBUG_SET_CURRENT_SEG		// think this must be active for branch unknowns to work!
 #define USE_TRANSLATE_DEBUG_PRINT_SEGMENT
+//define USE_TRANSLATE_DEBUG_PRINT_REGISTERS_ON_ENTRY
 //#define USE_TRANSLATE_DEBUG_BREAK_AT_END		// causes the debugger to start at the end of code segment execution
-#define USE_TRANSLATE_DEBUG_LINE_NUMBERS
+//#define USE_TRANSLATE_DEBUG_LINE_NUMBERS
+#define USE_BREAKPOINTS
 
 // ========= Recompiling Checks =======================================
 
@@ -77,6 +78,7 @@
 //#define DO_HOSTREG_RENUMBER_IN_TRANSLATIONS
 //#define ASSERT_ARM_NOT_COMPILED
 
+#define SHOW_CODE_SEG_MAP_CHANGES
 
 // ========= Customize Aborts for debugging ===========================
 
