@@ -30,19 +30,12 @@
 
 typedef enum
 {
-	SEG_SANDWICH,		// segment has code before and after - literals need to be global
+	SEG_ALONE,			// segment has no code before or after - literals can go either side
 	SEG_START,			// segment has no code before - literals go before
 	SEG_END,			// segment has no code after - literals go after
-	SEG_ALONE,			// segment has no code before or after - literals can go either side
+	SEG_SANDWICH,		// segment has code before and after - literals need to be global
 	sizeof_SEG_TYPE_E
 } seg_type_e;
-
-static const char* seg_type_s[sizeof_SEG_TYPE_E] = {
-		"SEG_SANDWICH",		// segment has code before and after - literals need to be global
-		"SEG_START",			// segment has no code before - literals go before
-		"SEG_END",			// segment has no code after - literals go after
-		"SEG_ALONE"
-};
 
 typedef struct _code_seg
 {

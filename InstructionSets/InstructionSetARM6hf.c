@@ -761,16 +761,23 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 	return;
 }
 
+
+static uint32_t* emit_out = NULL;
+
+void resetEmitAddress()
+{
+	//emit_out = *((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START));
+}
+
 void emit_arm_code(code_seg_t* const codeSeg)
 {
-	static uint32_t* out = NULL;
 
 	/* TODO check for (out > MMAP_DR_BASE + 0x02000000)
 	 * eventually we will need to wrap back to MMAP_DR_BASE and
 	 * invalidate code Segments that are overwritten.
 	 */
 
-	if (!out) out = (uint32_t*)MMAP_DR_BASE;
+	if (!emit_out) emit_out = (uint32_t*)MMAP_DR_BASE;
 
 	Instruction_t *ins = codeSeg->Intermcode;
 	literal_t* lits = codeSeg->literals;
@@ -785,7 +792,7 @@ void emit_arm_code(code_seg_t* const codeSeg)
 		return;
 	}
 
-	codeSeg->ARMcode = out;
+	codeSeg->ARMcode = emit_out;
 	codeSeg->ARMcodeLen = 0;
 
 	//write out start literals
@@ -796,25 +803,25 @@ void emit_arm_code(code_seg_t* const codeSeg)
 		{
 			while (lits)
 			{
-				*out = lits->value;
+				*emit_out = lits->value;
 				codeSeg->ARMcodeLen++;
-				out++;
+				emit_out++;
 				lits = lits->next;
 			}
 		}
 	}
 
-	codeSeg->ARMEntryPoint = out;
+	codeSeg->ARMEntryPoint = emit_out;
 
-	printf("emit arm code. segment 0x%08x output to 0x%08x\n", (uint32_t)codeSeg, (uint32_t)codeSeg->ARMcode);
+	//printf("emit arm code. segment 0x%08x output to 0x%08x\n", (uint32_t)codeSeg, (uint32_t)codeSeg->ARMcode);
 
 	//write out code instructions
 	while (ins)
 	{
-		*out = arm_encode(ins, (size_t)out);
-		ins->outputAddress = (size_t)out;
+		*emit_out = arm_encode(ins, (size_t)emit_out);
+		ins->outputAddress = (size_t)emit_out;
 		codeSeg->ARMcodeLen++;
-		out++;
+		emit_out++;
 		ins = ins->nextInstruction;
 	}
 
@@ -825,9 +832,9 @@ void emit_arm_code(code_seg_t* const codeSeg)
 		{
 			while (lits)
 			{
-				*out = lits->value;
+				*emit_out = lits->value;
 				codeSeg->ARMcodeLen++;
-				out++;
+				emit_out++;
 				lits = lits->next;
 			}
 		}

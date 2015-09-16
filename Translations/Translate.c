@@ -163,5 +163,10 @@ void Translate(code_seg_t* const codeSegment)
 	for (x=0; x < COUNTOF(Translations); x++)
 	{
 		Translations[x].function(codeSegment);
+
+		if (Translations[x].function == Translate_Write)
+		{
+			break;
+		}
 	}
 }

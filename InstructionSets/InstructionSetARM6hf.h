@@ -27,7 +27,6 @@
 
 #define ARM_BRANCH_OFFSET (2)
 
-
 const static char* const arm_reg_a[] = {"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7","r8","r9","r10","fp","r12","sp","lr","pc"};
 const static char* const arm_cond[] = {
 "eq",
@@ -52,6 +51,8 @@ const static char* const arm_cond[] = {
 int32_t Imm8Shift(uint32_t val);
 
 void printf_arm(const uint32_t addr, const uint32_t word);
+
+void resetEmitAddress();
 
 void emit_arm_code(code_seg_t* const codeSeg);
 

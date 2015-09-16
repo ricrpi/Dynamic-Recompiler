@@ -81,4 +81,5 @@ void ServiceBreakPoint(code_seg_t* codeSeg, size_t* regs);
 
 int Debugger_start(const code_segment_data_t* const segmentData, mcontext_t* context, size_t* regs);
 
+void DebugRuntimePrintMIPS();
 #endif /* DEBUGGER_H_ */

@@ -168,7 +168,6 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-
 			//if segment loops on its self
 			if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
 			{
@@ -186,7 +185,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				new_ins = newInstrB(EQ, tgt_address, 1);
 			}
 
-			if (instruction & OPS_LINK) new_ins->Ln = 1;
+			if (instruction & OPS_LINK)
+			{
+				new_ins->Ln = 1;
+			}
 			ADD_LL_NEXT(new_ins, ins);
 
 			break;
@@ -253,17 +255,25 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			ADD_LL_NEXT(new_ins, ins);
 			break;
 		case JR:
+#ifdef TEST
+			if (ins->R1.regID == 0)	// this is an invalid instruction
+			{
+				InstrB(ins, AL, *((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_STOP)), 1);
+			}
+			else
+#endif
+			{
+				Instr(ins, ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, ins->R1.regID);
 
-			Instr(ins, ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, ins->R1.regID);
+				tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
 
-			tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
+				new_ins = newInstrB(AL, tgt_address, 1U);
+				new_ins->Ln = 1U;
+				ADD_LL_NEXT(new_ins, ins);
 
-			new_ins = newInstrB(AL, tgt_address, 1U);
-			new_ins->Ln = 1U;
-			ADD_LL_NEXT(new_ins, ins);
-
-			new_ins = newInstr(ARM_BX, AL, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_NOT_USED);
-			ADD_LL_NEXT(new_ins, ins);
+				new_ins = newInstr(ARM_BX, AL, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_NOT_USED);
+				ADD_LL_NEXT(new_ins, ins);
+			}
 			break;
 		case JALR:
 			// we need to lookup the code segment we should be branching to according to the value in the register

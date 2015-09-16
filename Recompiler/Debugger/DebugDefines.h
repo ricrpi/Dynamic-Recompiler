@@ -41,7 +41,7 @@
 #define SHOW_REG_TRANSLATION_MAP_PROGRESS	(1)
 
 //Print when a segment is deleted
-#define SHOW_PRINT_SEGMENT_DELETE			(1)
+#define SHOW_PRINT_SEGMENT_DELETE			(0)
 
 #define SHOW_CALLER							(1)
 
@@ -62,13 +62,14 @@
 #define USE_INSTRUCTION_INIT_REGS
 
 // Use the translation that adds debugging markers
-#define USE_TRANSLATE_DEBUG						// think this must be active for branch unknowns to work!
-#define USE_TRANSLATE_DEBUG_SET_CURRENT_SEG		// think this must be active for branch unknowns to work!
-#define USE_TRANSLATE_DEBUG_PRINT_SEGMENT
-//define USE_TRANSLATE_DEBUG_PRINT_REGISTERS_ON_ENTRY
+
+//#define USE_TRANSLATE_DEBUG						// think this must be active for branch unknowns to work!
+//#define USE_TRANSLATE_DEBUG_SET_CURRENT_SEG		// think this must be active for branch unknowns to work!
+//#define USE_TRANSLATE_DEBUG_PRINT_SEGMENT
+//#define USE_TRANSLATE_DEBUG_PRINT_REGISTERS_ON_ENTRY
 //#define USE_TRANSLATE_DEBUG_BREAK_AT_END		// causes the debugger to start at the end of code segment execution
 //#define USE_TRANSLATE_DEBUG_LINE_NUMBERS
-#define USE_BREAKPOINTS
+//#define USE_BREAKPOINTS
 
 // ========= Recompiling Checks =======================================
 

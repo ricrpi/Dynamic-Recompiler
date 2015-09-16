@@ -37,6 +37,13 @@
 #define CMD_CMP(X, TXT) (strncasecmp(userInput[X], TXT, strlen(userInput[X])))
 
 
+static const char* seg_type_s[sizeof_SEG_TYPE_E] = {
+		"SEG_SANDWICH",		// segment has code before and after - literals need to be global
+		"SEG_START",			// segment has no code before - literals go before
+		"SEG_END",			// segment has no code after - literals go after
+		"SEG_ALONE"
+};
+
 static char userInput[20][40];
 //static char cmdHistory[HISTORY_LEN][LINE_LEN];
 
@@ -535,7 +542,7 @@ static int Debugger_seg(const code_segment_data_t* const segmentData)
 
 		if ((uint32_t)val > 2)
 		{
-			tempCodeSeg=getSegmentAt((uint32_t*)val);
+			tempCodeSeg=getSegmentAt((size_t)val);
 
 			if (tempCodeSeg)
 			{
@@ -631,7 +638,7 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 				// scan for names
 				for (y = 0U; y < COUNTOF(Translations); y++)
 				{
-					if (!CMD_CMP(1+x, Translations[y].name)){
+					if (!CMD_CMP(1 + x, Translations[y].name)){
 						bounds[x] = y;
 						break;
 					}

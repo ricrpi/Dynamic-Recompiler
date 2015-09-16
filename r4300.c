@@ -387,7 +387,7 @@ void r4300_reset_hard(void)
 {
     unsigned int i;
 
-    reg = (uint32_t*)MMAP_FP_BASE;
+    reg = (uint64_t*)MMAP_FP_BASE;
     reg_cop0 = (uint32_t*)MMAP_FP_BASE + REG_CO;
 
     // clear r4300 registers and TLB entries

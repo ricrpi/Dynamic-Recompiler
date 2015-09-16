@@ -13,3 +13,5 @@
 /tlb.d
 /tlb.o
 /Recompiler
+/Remote Debug
+/test

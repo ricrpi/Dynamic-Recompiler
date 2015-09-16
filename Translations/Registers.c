@@ -83,6 +83,17 @@ uint32_t RegMemByteOffset(regID_t reg)
 		return reg*4;
 }
 
+// Function:	FindRegNextUsedAgain
+//
+// Description:	Function to step through the instruction chain to find when the provided Register is next used.
+//
+// Parameters:	const Instruction_t* const ins		The instruction to start searching from
+//				const regID_t Reg					The register to search for
+//
+// Returns:		The number of instruction to execute before the register is used again.
+//				If the register is overwritten then -1 is returned. (The register can be reused immediately)
+//				If the register is never referenced again then -2 is returned. (The register can be saved to free it)
+//
 static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_t Reg)
 {
 	const Instruction_t* in = ins->nextInstruction;
@@ -92,7 +103,11 @@ static int32_t FindRegNextUsedAgain(const Instruction_t* const ins, const regID_
 	{
 		if (in->R1.regID == Reg || in->R2.regID == Reg || in->R3.regID == Reg)
 			return x;
-		if (x && (in->Rd1.regID == Reg || in->Rd2.regID == Reg))					//might overwrite itself
+
+		// make sure that x > 0 in case the first instruction in the chain is updating it
+		// must also check the condition as the register may not have changed
+		if (x > 0U
+				&& ((in->Rd1.regID == Reg && in->cond == AL) || (in->Rd2.regID == Reg && in->cond == AL)))
 			return -1;
 		x++;
 		in = in->nextInstruction;
@@ -307,6 +322,13 @@ static uint32_t pushpopRegister(Instruction_t* ins)
 	return bestReg;
 }
 
+// Function:	getNextRegister
+//
+// Description:	Finds the next available host register that can be used for translation.
+//
+// Parametrs:	Instruction_t* ins
+//				uint32_t* uiCurrentRegisterIndex
+//
 static void getNextRegister(Instruction_t* ins, uint32_t* uiCurrentRegisterIndex)
 {
 	uint32_t uiLastRegisterIndex = *uiCurrentRegisterIndex;
@@ -339,34 +361,12 @@ static void getNextRegister(Instruction_t* ins, uint32_t* uiCurrentRegisterIndex
 void Translate_Registers(code_seg_t* const codeSegment)
 {
 	Instruction_t* ins;
-	//Instruction_t*insSearch;
 
 #if defined(USE_INSTRUCTION_COMMENTS)
 	currentTranslation = "Registers";
 #endif
 
 	uint32_t x;
-	uint32_t NumberRegUsed = 0;
-
-	uint16_t counts[REG_T_SIZE];
-	memset(counts,0,sizeof(counts));
-
-	ins = codeSegment->Intermcode;
-	while (ins)
-	{
-		if (ins->Rd1.regID != REG_NOT_USED) counts[ins->Rd1.regID]++;
-		if (ins->Rd2.regID != REG_NOT_USED) counts[ins->Rd2.regID]++;
-		if (ins->R1.regID != REG_NOT_USED) counts[ins->R1.regID]++;
-		if (ins->R2.regID != REG_NOT_USED) counts[ins->R2.regID]++;
-		if (ins->R3.regID != REG_NOT_USED) counts[ins->R3.regID]++;
-
-		ins = ins->nextInstruction;
-	}
-
-	for (x=0; x < REG_HOST + COUNTOF(RegsAvailable); x++)
-	{
-		if (counts[x]) NumberRegUsed++;
-	}
 
 #if SHOW_REG_TRANSLATION_MAP == 2
 	{
@@ -377,6 +377,30 @@ void Translate_Registers(code_seg_t* const codeSegment)
 	if (0)
 	{
 #endif
+		uint32_t NumberRegUsed = 0U;
+
+		uint16_t counts[REG_T_SIZE];
+		memset(counts, 0, sizeof(counts));
+
+		// Carry out a count of all the registers used for Debug purposes only
+		// TODO RWD
+		ins = codeSegment->Intermcode;
+		while (ins)
+		{
+			if (ins->Rd1.regID != REG_NOT_USED) counts[ins->Rd1.regID]++;
+			if (ins->Rd2.regID != REG_NOT_USED) counts[ins->Rd2.regID]++;
+			if (ins->R1.regID != REG_NOT_USED) counts[ins->R1.regID]++;
+			if (ins->R2.regID != REG_NOT_USED) counts[ins->R2.regID]++;
+			if (ins->R3.regID != REG_NOT_USED) counts[ins->R3.regID]++;
+
+			ins = ins->nextInstruction;
+		}
+
+		for (x=0U; x < REG_HOST + COUNTOF(RegsAvailable); x++)
+		{
+			if (counts[x]) NumberRegUsed++;
+		}
+
 		printf("Segment 0x%x uses %d registers\n",(uint32_t)codeSegment, NumberRegUsed);
 	}
 
@@ -384,7 +408,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 
 	//we should do this in the 'instruction' domain so that non-overlapping register usage can be 'flattened'
 
-	uint32_t uiCurrentRegisterIndex = 0;
+	uint32_t uiCurrentRegisterIndex = 0U;
 
 	getNextRegister(ins, &uiCurrentRegisterIndex);
 
@@ -393,19 +417,19 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		if (ins->Rd1.regID != REG_NOT_USED  && ins->Rd1.regID < REG_HOST){
 			if (ins->Rd1.regID < REG_TEMP || ins->Rd1.regID > REG_TEMP_SCRATCH3)
 			{
-				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0U);
 				getNextRegister(ins, &uiCurrentRegisterIndex);
 			}
 			else
 			{
-				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + ins->Rd1.regID - REG_TEMP, 0);
+				UpdateRegWithReg(ins,ins->Rd1.regID, REG_HOST + ins->Rd1.regID - REG_TEMP, 0U);
 			}
 		}
 
 		if (ins->Rd2.regID != REG_NOT_USED && ins->Rd2.regID < REG_HOST){
 			if (ins->Rd2.regID < REG_TEMP || ins->Rd2.regID > REG_TEMP_SCRATCH3)
 			{
-				UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0);
+				UpdateRegWithReg(ins,ins->Rd2.regID, REG_HOST + RegsAvailable[uiCurrentRegisterIndex], 0U);
 				getNextRegister(ins, &uiCurrentRegisterIndex);
 			}
 			else

@@ -65,7 +65,7 @@ C_DEPS += \
 Translations/%.o: ../Translations/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -I"/home/rjhender/git/Dynamic-Recompiler" -I"/home/rjhender/git/Dynamic-Recompiler/InstructionSets" -I"/home/rjhender/git/Dynamic-Recompiler/Recompiler" -I"/home/rjhender/git/Dynamic-Recompiler/Recompiler/Debugger" -I"/home/rjhender/git/Dynamic-Recompiler/Translations" -I"/home/rjhender/git/Dynamic-Recompiler/InstructionSets" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -I"/home/rjhender/git/Dynamic-Recompiler" -I"/home/rjhender/git/Dynamic-Recompiler/InstructionSets" -I"/home/rjhender/git/Dynamic-Recompiler/Recompiler" -I"/home/rjhender/git/Dynamic-Recompiler/Recompiler/Debugger" -I"/home/rjhender/git/Dynamic-Recompiler/Translations" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

@@ -40,17 +40,17 @@
 #define STRIP(x) 			(x & 0xfff)
 
 //Register IDs
-#define REG_NOT_USED 		(0xffff)
-#define REG_FP		 		(0x0020)
+#define REG_NOT_USED 		(0xffffU)
+#define REG_FP		 		(0x0020U)
 
 
-#define REG_WIDE	 		(0x0040)			// 64-32 bit part of (register&0x3F).
+#define REG_WIDE	 		(0x0040U)			// 64-32 bit part of (register&0x3F).
 
-#define REG_CO		 		(0x0080)
-#define REG_SPECIAL	 		(REG_CO) + 32
+#define REG_CO		 		(0x0080U)
+#define REG_SPECIAL	 		(REG_CO) + 32U
 
-#define REG_TEMP			(0x0100)
-#define REG_HOST		 	(0x0200)
+#define REG_TEMP			(0x0100U)
+#define REG_HOST		 	(0x0200U)
 
 #define REG_INDEX			(REG_CO + 0)
 #define REG_RANDOM			(REG_CO + 1)

@@ -23,9 +23,10 @@
 #include "InstructionSet.h"
 #include "CodeSegments.h"
 #include "DebugDefines.h"
-#include "assert.h"
-#include "stdio.h"
-#include "stdlib.h"
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 
 #if defined(ABORT_UNKNOWN_TRANSLATE)
 #define TRANSLATE_ABORT()	\
@@ -195,50 +196,61 @@ void Translate(code_seg_t* const codeSegment);
 
 static TranslationsMap Translations[] =
 {
-		{Translate_init,					"init"},					//
+		{Translate_init,					"init"}						//
 
 		// Hardware related
 
-		{Translate_DelaySlot,				"DelaySlot"},				//
-		{Translate_CountRegister,			"CountRegister"},			//
-//		{Translate_Trap,					"Trap"},					// Not seen in DynaRec
+		, {Translate_DelaySlot,				"DelaySlot"}				//
+		, {Translate_CountRegister,			"CountRegister"}			//
+//		, {Translate_Trap,					"Trap"}						// Not seen in DynaRec
 
 		// InstructionSet related Translations
 
-		{Translate_Constants,				"Constants"},				//
-		{Translate_ALU,						"ALU"},						//
-		{Translate_Generic,					"Generic"},					//
-		{Translate_FPU,						"FPU"},						//
-		{Translate_Memory,					"Memory"},					//
+		, {Translate_Constants,				"Constants"}				//
+		, {Translate_ALU,					"ALU"}						//
+		, {Translate_Generic,				"Generic"}					//
+		, {Translate_FPU,					"FPU"}						//
+		, {Translate_Memory,				"Memory"}					//
 
 #if defined(USE_TRANSLATE_DEBUG_BREAK_AT_END)
-		{Translate_BreakAtEndSegment,		"BreakAtEnd"},
+		, {Translate_BreakAtEndSegment,		"BreakAtEnd"}
 #endif
 
-		{Translate_Branch,					"Branch"},					// Convert MIPS branches
+		, {Translate_Branch,				"Branch"}					// Convert MIPS branches
 
-		{Translate_LoadCachedRegisters, 	"LoadCachedRegisters"},		//
-		{Translate_StoreCachedRegisters, 	"StoreCachedRegisters"},	//
+		, {Translate_LoadCachedRegisters, 	"LoadCachedRegisters"}		//
+		, {Translate_StoreCachedRegisters, 	"StoreCachedRegisters"}		//
 
-		{Translate_CleanUp,					"CleanUp"},					// must be after load/storeCachedRegisters
+		, {Translate_CleanUp,				"CleanUp"}					// must be after load/storeCachedRegisters
 
 #if defined(USE_TRANSLATE_DEBUG)
-		{Translate_Debug,					"Debug"},					// Provides Debug Hooks
+		, {Translate_Debug,					"Debug"}					// Provides Debug Hooks
 #endif
 
 		// Assign arm registers
 
-		{Translate_Registers, 				"Registers"},				//
+		, {Translate_Registers, 			"Registers"}				//
 
 		// Optimizations
 
-		{Translate_LoadStoreWriteBack, 		"LoadStoreWriteBack"},		//
+		, {Translate_LoadStoreWriteBack, 	"LoadStoreWriteBack"}		//
 
 		// Translations after this point must NOT change segment length
 
-		{Translate_InterCode_Branch,		"Intermediate Branch"},
-		{Translate_Literals, 				"Literals"},				//
-		{Translate_Write, 					"Write"}					//
+		, {Translate_InterCode_Branch,		"Intermediate Branch"}		//
+		, {Translate_Literals, 				"Literals"}					//
+		, {Translate_Write, 				"Write"}					//
+
+		// Translations for debug purposes only
+
+#if !defined(USE_TRANSLATE_DEBUG)
+		, {Translate_Debug,					"Debug"}					// Provides Debug Hooks
+#endif
+
+#if !defined(USE_TRANSLATE_DEBUG_BREAK_AT_END)
+		, {Translate_BreakAtEndSegment,		"BreakAtEnd"}
+#endif
+
 };
 
 #endif /* TRANSLATE_H_ */

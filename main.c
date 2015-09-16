@@ -33,6 +33,10 @@
 #include <sys/ucontext.h>
 #include "m64p_types.h"
 
+#ifdef TEST
+#include "UT.h"
+#endif
+
 extern code_segment_data_t segmentData;
 
 unsigned int SP_DMEM[0x1000/4*2];
@@ -50,13 +54,16 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 
 	if (sig == SIGSEGV){
 		size_t ins_addr;
+		size_t ins_addr2;
 		#if __i386__
 			ins_addr = ucontext->uc_mcontext.gregs[14];
+			ins_addr2 = ucontext->uc_mcontext.gregs[14];
 		#else
 			ins_addr = ucontext->uc_mcontext.arm_pc;
+			ins_addr2 = ucontext->uc_mcontext.arm_lr - 4U;
 		#endif
 
-		printf("\nSegmentation detected trying to access address %p on instruction 0x%x\n", si->si_addr, ins_addr);
+		printf("\nSegmentation detected trying to access address %p on instruction 0x%x or 0x%x\n", si->si_addr, ins_addr, ins_addr2);
 	}
 	else if (sig == SIGABRT)
 	{
@@ -133,19 +140,25 @@ int main(int argc, char* argv[])
 	sigaction(SIGILL, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);
 
-	printf("R4300 Recompiler\n\nOpening %s\n",argv[1]);
+
+	printf("R4300 Recompiler\n\n");
+#ifndef TEST
+	printf("Opening %s\n",argv[1]);
+#endif
 
 	FILE *fPtr;
+	long romlength = 0;
 
+#ifndef TEST
 	if (argc <= 1) fPtr = fopen("m64p_test_rom.v64", "rb");
 	else fPtr = fopen(argv[1], "rb");
 
  	if (fPtr == NULL) return 2;
 
-	long romlength = 0;
 	fseek(fPtr, 0L, SEEK_END);
 	romlength = ftell(fPtr);
 	fseek(fPtr, 0L, SEEK_SET);
+#endif
 
 	if (mmap((uint32_t*)(MMAP_BASE)
 			, MMAP_BASE_SIZE + romlength
@@ -169,6 +182,13 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
+#ifdef TEST
+	//Generate helper functions
+	GenerateCodeSegmentData(2000);
+
+	//Start testing
+	Translation_Test(&segmentData);
+#else
 	unsigned char imagetype;
 
 	m64p_rom_header ROM_HEADER;
@@ -300,7 +320,10 @@ int main(int argc, char* argv[])
 	r4300_reset_soft();
 	printf("\nFinished processing ROM\n");
 
+#endif
+
 	while (Debugger_start(&segmentData, NULL, NULL));
+
 
 
 	munmap((uint32_t*)MMAP_BASE, MMAP_BASE_SIZE + romlength);

@@ -708,11 +708,15 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	emit_arm_code(segmentData.segBranchUnknown);
 	*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN)) = (uint32_t)segmentData.segBranchUnknown->ARMEntryPoint;
 
+	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t*)segmentData.segBranchUnknown->ARMcode + segmentData.segBranchUnknown->ARMcodeLen;
+
+#ifndef TEST
 	// Compile the First contiguous block of Segments
 	code_seg_t* seg = CompileCodeAt((uint32_t*)0x88000040);
 	segmentData.dbgCurrentSegment = seg;
 
 	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+
 
 #if 1
 	printf("FUNC_GEN_START                   0x%x\n", (uint32_t)segmentData.segStart->ARMEntryPoint);
@@ -723,6 +727,6 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 	//printf("FUNC_GEN_TRAP                    0x%x\n", (uint32_t)segmentData.segTrap->ARMEntryPoint);
 	printf("RECOMPILED_CODE_START            0x%x\n", (uint32_t)seg->ARMEntryPoint);
 #endif
-
+#endif
 	return &segmentData;
 }

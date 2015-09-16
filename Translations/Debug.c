@@ -53,6 +53,9 @@ void Translate_Debug(code_seg_t* codeSegment)
 	ins = codeSegment->Intermcode;
 
 #if defined(USE_BREAKPOINTS) || defined(USE_TRANSLATE_DEBUG_SET_CURRENT_SEG)
+#if defined(USE_INSTRUCTION_COMMENTS)
+	currentTranslation = "Debug - Get CodeSegment";
+#endif
 	regID_t base;
 	int32_t offset;
 

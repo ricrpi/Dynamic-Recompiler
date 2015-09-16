@@ -26,10 +26,10 @@ void Translate_Literals(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
-	uint32_t x = 0;
+	uint32_t x = 0U;
 
-	uint32_t InterimCodeLen = 0;
-	uint32_t CountLiterals = 0;
+	uint32_t InterimCodeLen = 0U;
+	uint32_t CountLiterals = 0U;
 
 	literal_t* l = codeSegment->literals;
 
@@ -57,13 +57,13 @@ void Translate_Literals(code_seg_t* const codeSegment)
 		{
 		case ARM_STR_LIT:
 		case ARM_LDR_LIT:
-			if ((ins->R2.regID&~REG_HOST) != 0xf)
+			if (ins->R2.regID != REG_HOST_PC)
 			{
 				ins->U = 0;
 			}
-			else if (codeSegment->Type == SEG_START)
+			else if (codeSegment->Type == SEG_START || codeSegment->Type == SEG_ALONE)
 			{
-				ins->offset = ins->offset - x -CountLiterals*4 - 8;
+				ins->offset = ins->offset - x -CountLiterals*4U - 8U;
 
 				if (ins->offset < 0)
 				{
@@ -75,7 +75,7 @@ void Translate_Literals(code_seg_t* const codeSegment)
 			else if (codeSegment->Type == SEG_END
 					&& ((ins->R2.regID&~REG_HOST) == 0xf))
 			{
-				ins->offset = InterimCodeLen * 4 - x + ins->offset - 8;
+				ins->offset = InterimCodeLen * 4U - x + ins->offset - 8U;
 			}
 
 			break;
@@ -83,6 +83,6 @@ void Translate_Literals(code_seg_t* const codeSegment)
 			break;
 		}
 		ins = ins->nextInstruction;
-		x+=4;
+		x += 4U;
 	}
 }

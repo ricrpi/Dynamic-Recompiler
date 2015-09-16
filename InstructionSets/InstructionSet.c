@@ -722,7 +722,7 @@ void printf_Intermediate(const Instruction_t* const ins, uint8_t heading)
 void Intermediate_Literals_print(const code_seg_t* const codeSegment)
 {
 	literal_t*literal;
-	int x;
+	uint32_t x = 0U;
 
 	literal = codeSegment->literals;
 

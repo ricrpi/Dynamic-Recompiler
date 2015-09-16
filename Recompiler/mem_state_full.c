@@ -85,7 +85,7 @@ void setMemState(size_t address, uint32_t length, code_seg_t* codeSeg)
 			}
 
 #if defined(SHOW_CODE_SEG_MAP_CHANGES)
-			printf("code seg map address 0x%08x to 0x%08x set to 0x%x\n", address, address + length*4, codeSeg);
+			printf("code seg map address 0x%08x to 0x%08x set to 0x%x\n", address, address + length*4, (size_t)codeSeg);
 #endif
 			return;
 		}

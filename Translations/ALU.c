@@ -229,7 +229,17 @@ void Translate_ALU(code_seg_t* const codeSegment)
 			case DDIVU:
 				TRANSLATE_ABORT();
 				break;
-			case ADD:	// TRAP
+			case ADD:	// TODO TRAP
+				{
+					// Destination register is conditionally changed so load it
+					Instr(ins, NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+
+					new_ins = newInstrS( ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, R2);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_MOV, VC, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
+					ADD_LL_NEXT(new_ins, ins);
+				} break;
 			case ADDU:
 				{
 					Instr(ins, ARM_ADD, AL, Rd1, R1, R2);
@@ -238,8 +248,8 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				{
 					Instr(ins, ARM_AND, AL, Rd1, R1, R2);
 
-					//new_ins = newInstr(ARM_AND, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
-				//	ADD_LL_NEXT(new_ins, ins);
+					new_ins = newInstr(ARM_AND, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
+					ADD_LL_NEXT(new_ins, ins);
 				}break;
 			case OR:
 				{
@@ -373,6 +383,87 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				TRANSLATE_ABORT();
 				break;
 			case ADDI:	// TRAP
+			{
+				if (imm < 0)
+				{
+					int32_t ImmShift = Imm8Shift((uint16_t)-ins->immediate);
+
+					if (ImmShift == -1)
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (-imm&0xFF));
+
+							new_ins = newInstrI(ARM_SUB, AL, Rd1, Rd1, REG_NOT_USED, -imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							Instr(ins, NO_OP, AL, Rd1, Rd1, REG_NOT_USED);
+
+							new_ins = newInstrI(ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm&0xFF));
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_ADD, VC, Rd1, Rd1, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+					else
+					{
+						InstrI(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm));
+					}
+				}
+				else if (imm > 0)
+				{
+					int32_t ImmShift = Imm8Shift((uint16_t)ins->immediate);
+
+					if (ImmShift == -1)
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (imm&0xFF));
+
+							new_ins = newInstrI(ARM_ADD, AL, Rd1, Rd1, REG_NOT_USED, imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							Instr(ins, NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+
+							new_ins = newInstrIS(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm&0xFF));
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrIS(ARM_ADD, VC, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_ADD, VC, Rd1, Rd1, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+					else
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, imm);
+						}
+						else
+						{
+							InstrIS(ins, ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, imm);
+
+							new_ins = newInstr(ARM_MOV, VC, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+				}
+				else if (Rd1 == R1) // imm = 0
+				{
+					Instr(ins, NO_OP, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
+				}
+			}
+			break;
 			case ADDIU:
 				{
 					if (imm < 0)
@@ -419,9 +510,9 @@ void Translate_ALU(code_seg_t* const codeSegment)
 							}
 							else
 							{
-								InstrI(ins, ARM_ADD, AL, Rd1, R1, REG_NOT_USED, (imm&0xFF));
+								InstrI(ins, ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm&0xFF));
 
-								new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, imm&0xFF00);
+								new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, imm&0xFF00);
 								ADD_LL_NEXT(new_ins, ins)
 
 								new_ins = newInstr(ARM_ADD, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
@@ -528,7 +619,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				else
 				{
 					InstrI(ins, ARM_AND, AL, Rd1, R1, REG_NOT_USED, (imm)&0x0000FFFF);
-					ADD_LL_NEXT(new_ins, ins);
+					//ADD_LL_NEXT(new_ins, ins);
 				}
 
 				// 64 bit part

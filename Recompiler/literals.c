@@ -56,6 +56,17 @@ void freeLiterals(code_seg_t* codeSegment)
 	codeSegment->literals = NULL;
 }
 
+// Function: addLiteral
+//
+// Description:	Function that adds a literal to a codesegment.
+//
+// Parameters:	code_seg_t* const codeSegment	The segment to add literal to
+//				regID_t* const base				Variable to receive the register to use for literal loading
+//				int32_t* const offset			Variable to receive the offset for literal loading
+//				const uint32_t value			The value of the literal
+//
+// Returns:		Zero
+//
 // TODO what if segment length means offset > 4096?
 uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t* const offset, const uint32_t value)
 {
