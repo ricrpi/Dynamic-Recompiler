@@ -45,7 +45,7 @@ Instruction_t* insertP_R_A(code_seg_t* const code_seg, Instruction_t* ins, const
 	regID_t base;
 	int32_t offset;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	char* oldCurrentTranslation = currentTranslation;
 	currentTranslation = "insertP_R_A()";
 #endif
@@ -84,7 +84,7 @@ Instruction_t* insertP_R_A(code_seg_t* const code_seg, Instruction_t* ins, const
 	new_ins 	= newInstrPOP(AL, REG_HOST_STM_EABI);
 	ADD_LL_NEXT(new_ins, ins);
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = oldCurrentTranslation;
 #endif
 
@@ -154,6 +154,8 @@ Instruction_t* insertCall_To_C_Jump(code_seg_t* const code_seg, Instruction_t* i
 void Translate_Write(code_seg_t* codeSegment)
 {
 	emit_arm_code(codeSegment);
+
+	__clear_cache(codeSegment->ARMcode, (uint32_t*)codeSegment->ARMcode + codeSegment->ARMcodeLen);
 }
 
 void Translate(code_seg_t* const codeSegment)

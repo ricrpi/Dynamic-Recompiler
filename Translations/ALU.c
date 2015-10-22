@@ -31,7 +31,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 	regID_t Rd1, R1, R2;
 	ins = codeSegment->Intermcode;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "ALU";
 #endif
 
@@ -43,43 +43,43 @@ void Translate_ALU(code_seg_t* const codeSegment)
 		int32_t imm = ins->immediate;
 		switch (ins->instruction)
 		{
-			case SLL:
+			case MIPS_SLL:
 				{
 					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
 					ins->shift = imm;
 					ins->shiftType = LOGICAL_LEFT;
 				}break;
-			case SRL:
+			case MIPS_SRL:
 				{
 					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
 					ins->shift = imm;
 					ins->shiftType = LOGICAL_RIGHT;
 				}break;
-			case SRA:
+			case MIPS_SRA:
 				{
 					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
 					ins->shift = imm;
 					ins->shiftType = ARITHMETIC_RIGHT;
 				}break;
-			case SLLV:
+			case MIPS_SLLV:
 				{
 					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
 					ins->R3.regID = R2;
 					ins->shiftType = LOGICAL_LEFT;
 				}break;
-			case SRLV:
+			case MIPS_SRLV:
 				{
 					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
 					ins->R3.regID = R2;
 					ins->shiftType = LOGICAL_RIGHT;
 				}break;
-			case SRAV:
+			case MIPS_SRAV:
 				{
 					Instr(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1);
 					ins->R3.regID = R2;
 					ins->shiftType = ARITHMETIC_RIGHT;
 				}break;
-			case DSLLV:
+			case MIPS_DSLLV:
 				/*
 				 *		Rd1 W        Rd1            R1 W           R1               R2 W          R2
 				 * [FF FF FF FF | FF FF FF FE] = [FF FF FF FF | FF FF FF FF] << [00 00 00 00 | 00 00 00 3F]
@@ -115,7 +115,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
-			case DSRLV:
+			case MIPS_DSRLV:
 				/*
 				 *
 				 * [7F FF FF FF | FF FF FF FF] = [FF FF FF FF | FF FF FF FF] >> [00 00 00 00 | 00 00 00 3F]
@@ -146,10 +146,10 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				new_ins = newInstr(ARM_ORR, PL, ins->Rd1.regID| REG_WIDE, ins->Rd1.regID | REG_WIDE, REG_TEMP_SCRATCH1);
 				ADD_LL_NEXT(new_ins, ins);
 				break;
-			case DSRAV: break;
-			case MULT: break;
-			case MULTU: break;
-			case DIV:					//TODO DIV uses signed!
+			case MIPS_DSRAV: break;
+			case MIPS_MULT: break;
+			case MIPS_MULTU: break;
+			case MIPS_DIV:					//TODO DIV uses signed!
 				/*
 				 *  clz  r3, r0                 r3 ← CLZ(r0) Count leading zeroes of N
 					clz  r2, r1                 r2 ← CLZ(r1) Count leading zeroes of D
@@ -222,17 +222,17 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					TRANSLATE_ABORT();
 				}
 				break;
-			case DIVU:
-			case DMULT:
-			case DMULTU:
-			case DDIV:
-			case DDIVU:
+			case MIPS_DIVU:
+			case MIPS_DMULT:
+			case MIPS_DMULTU:
+			case MIPS_DDIV:
+			case MIPS_DDIVU:
 				TRANSLATE_ABORT();
 				break;
-			case ADD:	// TODO TRAP
+			case MIPS_ADD:	// TODO TRAP
 				{
 					// Destination register is conditionally changed so load it
-					Instr(ins, NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+					Instr(ins, DR_NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
 
 					new_ins = newInstrS( ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, R2);
 					ADD_LL_NEXT(new_ins, ins);
@@ -240,18 +240,18 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					new_ins = newInstr(ARM_MOV, VC, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
 					ADD_LL_NEXT(new_ins, ins);
 				} break;
-			case ADDU:
+			case MIPS_ADDU:
 				{
 					Instr(ins, ARM_ADD, AL, Rd1, R1, R2);
 				} break;
-			case AND:
+			case MIPS_AND:
 				{
 					Instr(ins, ARM_AND, AL, Rd1, R1, R2);
 
 					new_ins = newInstr(ARM_AND, AL, Rd1 | REG_WIDE, R1| REG_WIDE, R2 | REG_WIDE);
 					ADD_LL_NEXT(new_ins, ins);
 				}break;
-			case OR:
+			case MIPS_OR:
 				{
 					Instr(ins, ARM_ORR, AL, Rd1, R1, R2);
 
@@ -259,7 +259,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
-			case XOR:
+			case MIPS_XOR:
 				{
 					Instr(ins, ARM_EOR, AL, Rd1, R1, R2);
 
@@ -267,13 +267,13 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
-			case NOR:
+			case MIPS_NOR:
 				Instr(ins, ARM_MVN, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, R2);
 
 				new_ins = newInstr(ARM_ORR, AL, Rd1, REG_TEMP_SCRATCH0, R2);
 				ADD_LL_NEXT(new_ins, ins);
 				break;
-			case SLT:
+			case MIPS_SLT:
 				Instr(ins, ARM_CMP, AL, REG_NOT_USED, R1, R2);
 
 				new_ins = newInstrI(ARM_MOV, LT, Rd1, REG_NOT_USED, REG_NOT_USED, 1);
@@ -282,7 +282,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				new_ins = newInstrI(ARM_MOV, GE, Rd1, REG_NOT_USED, REG_NOT_USED, 0);
 				ADD_LL_NEXT(new_ins, ins);
 				break;
-			case SLTU:
+			case MIPS_SLTU:
 				Instr(ins, ARM_CMP, AL, REG_NOT_USED, R1, R2);
 
 				new_ins = newInstrI(ARM_MOV, CC, Rd1, REG_NOT_USED, REG_NOT_USED, 1);
@@ -291,8 +291,8 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				new_ins = newInstrI(ARM_MOV, CS, Rd1, REG_NOT_USED, REG_NOT_USED, 0);
 				ADD_LL_NEXT(new_ins, ins);
 				break;
-			case DADD:	// TRAP
-			case DADDU:
+			case MIPS_DADD:	// TRAP
+			case MIPS_DADDU:
 				{
 					InstrS(ins, ARM_ADD, AL, Rd1, R1, R2);
 
@@ -300,15 +300,15 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
-			case TGE:
-			case TGEU:
-			case TLT:
-			case TLTU:
-			case TEQ:
-			case TNE:
+			case MIPS_TGE:
+			case MIPS_TGEU:
+			case MIPS_TLT:
+			case MIPS_TLTU:
+			case MIPS_TEQ:
+			case MIPS_TNE:
 				TRANSLATE_ABORT();
 				break;
-			case DSLL:
+			case MIPS_DSLL:
 				{
 					assert(imm < 32);
 
@@ -323,7 +323,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					ins->shiftType = LOGICAL_LEFT;
 					ADD_LL_NEXT(new_ins, ins);
 				}break;
-			case DSRL:
+			case MIPS_DSRL:
 				{
 					assert(imm < 32);
 
@@ -338,7 +338,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					new_ins->shiftType = LOGICAL_RIGHT;
 					ADD_LL_NEXT(new_ins, ins);
 				}break;
-			case DSRA:
+			case MIPS_DSRA:
 				{
 					assert(imm < 32);
 
@@ -353,19 +353,19 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					new_ins->shiftType = ARITHMETIC_RIGHT;
 					ADD_LL_NEXT(new_ins, ins);
 				}break;
-			case DSLL32:
+			case MIPS_DSLL32:
 				{
 					InstrI(ins, ARM_MOV, AL, Rd1 |REG_WIDE , REG_NOT_USED, R1, imm);
 					ins->shiftType = LOGICAL_LEFT;
 				}
 				break;
-			case DSRL32:
+			case MIPS_DSRL32:
 				{
 					InstrI(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1|REG_WIDE , imm);
 					ins->shiftType = LOGICAL_RIGHT;
 				}
 				break;
-			case DSRA32:
+			case MIPS_DSRA32:
 				{
 					InstrIS(ins, ARM_MOV, AL, Rd1 , REG_NOT_USED, R1|REG_WIDE , imm);
 					ins->shiftType = ARITHMETIC_RIGHT;
@@ -374,15 +374,15 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				break;
-			case TGEI:
-			case TGEIU:
-			case TLTI:
-			case TLTIU:
-			case TEQI:
-			case TNEI:
+			case MIPS_TGEI:
+			case MIPS_TGEIU:
+			case MIPS_TLTI:
+			case MIPS_TLTIU:
+			case MIPS_TEQI:
+			case MIPS_TNEI:
 				TRANSLATE_ABORT();
 				break;
-			case ADDI:	// TRAP
+			case MIPS_ADDI:	// TRAP
 			{
 				if (imm < 0)
 				{
@@ -399,7 +399,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 						}
 						else
 						{
-							Instr(ins, NO_OP, AL, Rd1, Rd1, REG_NOT_USED);
+							Instr(ins, DR_NO_OP, AL, Rd1, Rd1, REG_NOT_USED);
 
 							new_ins = newInstrI(ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm&0xFF));
 							ADD_LL_NEXT(new_ins, ins);
@@ -431,7 +431,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 						}
 						else
 						{
-							Instr(ins, NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+							Instr(ins, DR_NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
 
 							new_ins = newInstrIS(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm&0xFF));
 							ADD_LL_NEXT(new_ins, ins);
@@ -460,11 +460,11 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				}
 				else if (Rd1 == R1) // imm = 0
 				{
-					Instr(ins, NO_OP, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
+					Instr(ins, DR_NO_OP, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 				}
 			}
 			break;
-			case ADDIU:
+			case MIPS_ADDIU:
 				{
 					if (imm < 0)
 					{
@@ -533,11 +533,11 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					}
 					else if (Rd1 == R1) // imm = 0
 					{
-						Instr(ins, NO_OP, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
+						Instr(ins, DR_NO_OP, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
 					}
 				}
 				break;
-			case SLTI:
+			case MIPS_SLTI:
 				if (imm < 0)	//TODO no idea if this is right
 				{
 					InstrI(ins, ARM_MVN, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, REG_NOT_USED, (imm)&0xff);
@@ -569,7 +569,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
-			case SLTIU:
+			case MIPS_SLTIU:
 				if (imm < 0)	//TODO no idea if this is right
 				{
 					InstrI(ins, ARM_MVN, AL, REG_TEMP_SCRATCH0, REG_NOT_USED, REG_NOT_USED, (imm)&0xff);
@@ -601,7 +601,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 
 				break;
-			case ANDI:
+			case MIPS_ANDI:
 			{
 				int32_t ImmShift = Imm8Shift((uint16_t)ins->immediate);
 
@@ -628,7 +628,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 
 				break;
 			}
-			case ORI:
+			case MIPS_ORI:
 			{
 				int32_t ImmShift = Imm8Shift((uint16_t)imm);
 
@@ -651,7 +651,7 @@ void Translate_ALU(code_seg_t* const codeSegment)
 
 				break;
 			}
-			case XORI:
+			case MIPS_XORI:
 			{
 				int32_t ImmShift = Imm8Shift((uint16_t)imm);
 
@@ -673,8 +673,89 @@ void Translate_ALU(code_seg_t* const codeSegment)
 
 				break;
 			}
-			case DADDI:
-			case DADDIU:
+			case MIPS_DADDI:
+			{
+				if (imm < 0)
+				{
+					int32_t ImmShift = Imm8Shift((uint16_t)-ins->immediate);
+
+					if (ImmShift == -1)
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (-imm&0xFF));
+
+							new_ins = newInstrI(ARM_SUB, AL, Rd1, Rd1, REG_NOT_USED, -imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							Instr(ins, DR_NO_OP, AL, Rd1, Rd1, REG_NOT_USED);
+
+							new_ins = newInstrI(ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm&0xFF));
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_ADD, VC, Rd1, Rd1, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+					else
+					{
+						InstrI(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm));
+					}
+				}
+				else if (imm > 0)
+				{
+					int32_t ImmShift = Imm8Shift((uint16_t)ins->immediate);
+
+					if (ImmShift == -1)
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (imm&0xFF));
+
+							new_ins = newInstrI(ARM_ADD, AL, Rd1, Rd1, REG_NOT_USED, imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							Instr(ins, DR_NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+
+							new_ins = newInstrIS(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm&0xFF));
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrIS(ARM_ADD, VC, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_ADD, VC, Rd1, Rd1, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+					else
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, imm);
+						}
+						else
+						{
+							InstrIS(ins, ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, imm);
+
+							new_ins = newInstr(ARM_MOV, VC, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+				}
+				else if (Rd1 == R1) // imm = 0
+				{
+					Instr(ins, DR_NO_OP, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
+				}
+				break;
+			}
+			case MIPS_DADDIU:
 				TRANSLATE_ABORT();
 				break;
 		default: break;

@@ -28,7 +28,7 @@
 #include <stdlib.h>
 
 
-#if defined(ABORT_UNKNOWN_TRANSLATE)
+#if ABORT_UNKNOWN_TRANSLATE
 #define TRANSLATE_ABORT()	\
 	printf("Cannot translate instruction '%s'\n", Instruction_ascii[STRIP(ins->instruction)]); abort()
 #endif
@@ -200,11 +200,11 @@ static TranslationsMap Translations[] =
 
 		// Hardware related
 
-		, {Translate_DelaySlot,				"DelaySlot"}				//
 		, {Translate_CountRegister,			"CountRegister"}			//
 //		, {Translate_Trap,					"Trap"}						// Not seen in DynaRec
 
 		// InstructionSet related Translations
+		, {Translate_Branch,				"Branch"}					// Convert MIPS branches
 
 		, {Translate_Constants,				"Constants"}				//
 		, {Translate_ALU,					"ALU"}						//
@@ -212,18 +212,17 @@ static TranslationsMap Translations[] =
 		, {Translate_FPU,					"FPU"}						//
 		, {Translate_Memory,				"Memory"}					//
 
-#if defined(USE_TRANSLATE_DEBUG_BREAK_AT_END)
+#if USE_TRANSLATE_DEBUG_BREAK_AT_END
 		, {Translate_BreakAtEndSegment,		"BreakAtEnd"}
 #endif
 
-		, {Translate_Branch,				"Branch"}					// Convert MIPS branches
 
 		, {Translate_LoadCachedRegisters, 	"LoadCachedRegisters"}		//
 		, {Translate_StoreCachedRegisters, 	"StoreCachedRegisters"}		//
 
 		, {Translate_CleanUp,				"CleanUp"}					// must be after load/storeCachedRegisters
 
-#if defined(USE_TRANSLATE_DEBUG)
+#if USE_TRANSLATE_DEBUG
 		, {Translate_Debug,					"Debug"}					// Provides Debug Hooks
 #endif
 
@@ -243,11 +242,11 @@ static TranslationsMap Translations[] =
 
 		// Translations for debug purposes only
 
-#if !defined(USE_TRANSLATE_DEBUG)
+#if !USE_TRANSLATE_DEBUG
 		, {Translate_Debug,					"Debug"}					// Provides Debug Hooks
 #endif
 
-#if !defined(USE_TRANSLATE_DEBUG_BREAK_AT_END)
+#if !USE_TRANSLATE_DEBUG_BREAK_AT_END
 		, {Translate_BreakAtEndSegment,		"BreakAtEnd"}
 #endif
 

@@ -23,7 +23,7 @@
 void Translate_Constants(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins = codeSegment->Intermcode;
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "Constants";
 #endif
 	//First off r0 is ALWAYS 0 so lets do that first
@@ -69,7 +69,7 @@ void Translate_Constants(code_seg_t* const codeSegment)
 		switch (ins->instruction)
 		{
 
-		case LUI:
+		case MIPS_LUI:
 		{
 			regID_t base;
 			int32_t offset;

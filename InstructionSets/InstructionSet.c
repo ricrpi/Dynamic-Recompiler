@@ -32,7 +32,7 @@
 static void sprintf_reg_t(char* str, const reg_t r)
 {
 
-#if defined(SHOW_PRINT_INT_CONST)
+#if SHOW_PRINT_INT_CONST
 	char cnst[20];
 	switch (r.state)
 	{
@@ -145,13 +145,19 @@ static void sprintRegList(char* str, const Instruction_t* const ins)
 
 static void sprintInstr(char* str, const Instruction_t* const ins)
 {
-	char ln[2];
+	char ln[2] = {'\0','\0'};
 	char writeBack[] = {0,0,0,0};
 	char s[2];
 	char wb = '\0';
 
-	if (ins->Ln) sprintf(ln,"l");
-	else ln[0] = '\0';
+	/*if (ins->Ln)
+	{
+		sprintf(ln,"l");
+	}
+	else
+	{
+		ln[0] = '\0';
+	}*/
 
 	if (ins->S) sprintf(s,"s");
 		else s[0] = '\0';
@@ -195,7 +201,7 @@ Instruction_t* newInstrCopy(const Instruction_t* ins)
 {
 	Instruction_t* newInstr = (Instruction_t*)malloc(sizeof(Instruction_t));
 	memcpy(newInstr, ins, sizeof(Instruction_t));
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	newInstr->comment[0] = 0;
 #endif
 	return newInstr;
@@ -214,14 +220,14 @@ Instruction_t* Instr(Instruction_t* ins, const Instruction_e ins_e, const Condit
 
 	switch (ins_e)
 	{
-	case SLL:
-	case SLLV:
+	case MIPS_SLL:
+	case MIPS_SLLV:
 		ins-> shiftType = LOGICAL_LEFT; break;
-	case SRL:
-	case SRLV:
+	case MIPS_SRL:
+	case MIPS_SRLV:
 		ins-> shiftType = LOGICAL_RIGHT; break;
-	case SRA:
-	case SRAV:
+	case MIPS_SRA:
+	case MIPS_SRAV:
 		ins-> shiftType = ARITHMETIC_RIGHT; break;
 	case ARM_TST:
 	case ARM_TEQ:
@@ -254,13 +260,15 @@ Instruction_t* InstrI(Instruction_t* ins, const Instruction_e ins_e, const Condi
 	ins->I = 1;
 	ins->S = 0;
 
+	if (ins_e != ARM_B) ins->Ln = 0U;
+
 	switch (ins_e)
 	{
-	case SLL:
-	case SLLV:
+	case MIPS_SLL:
+	case MIPS_SLLV:
 		ins-> shiftType = LOGICAL_LEFT; break;
-	case SRL:
-	case SRLV:
+	case MIPS_SRL:
+	case MIPS_SRLV:
 		ins-> shiftType = LOGICAL_RIGHT; break;
 
 	case ARM_MOV:
@@ -298,14 +306,14 @@ Instruction_t* InstrS(Instruction_t* ins, const Instruction_e ins_e, const Condi
 
 		switch (ins_e)
 		{
-		case SLL:
-		case SLLV:
+		case MIPS_SLL:
+		case MIPS_SLLV:
 			ins-> shiftType = LOGICAL_LEFT; break;
-		case SRL:
-		case SRLV:
+		case MIPS_SRL:
+		case MIPS_SRLV:
 			ins-> shiftType = LOGICAL_RIGHT; break;
-		case SRA:
-		case SRAV:
+		case MIPS_SRA:
+		case MIPS_SRAV:
 			ins-> shiftType = ARITHMETIC_RIGHT; break;
 		case ARM_TST:
 		case ARM_TEQ:
@@ -340,11 +348,11 @@ Instruction_t* InstrIS(Instruction_t* ins, const Instruction_e ins_e, const Cond
 
 	switch (ins_e)
 	{
-	case SLL:
-	case SLLV:
+	case MIPS_SLL:
+	case MIPS_SLLV:
 		ins-> shiftType = LOGICAL_LEFT; break;
-	case SRL:
-	case SRLV:
+	case MIPS_SRL:
+	case MIPS_SRLV:
 		ins-> shiftType = LOGICAL_RIGHT; break;
 
 	case ARM_MOV:
@@ -371,7 +379,15 @@ Instruction_t* InstrIS(Instruction_t* ins, const Instruction_e ins_e, const Cond
 
 Instruction_t* InstrIntB(Instruction_t* ins, const Condition_e cond, const Instruction_t* find_ins)
 {
-	ins->instruction = INT_BRANCH;
+	ins->instruction = DR_INT_BRANCH;
+	ins->cond = cond;
+	ins->branchToThisInstruction = (Instruction_t*)find_ins;
+	return ins;
+}
+
+Instruction_t* InstrIntBL(Instruction_t* ins, const Condition_e cond, const Instruction_t* find_ins)
+{
+	ins->instruction = DR_INT_BRANCH_LINK;
 	ins->cond = cond;
 	ins->branchToThisInstruction = (Instruction_t*)find_ins;
 	return ins;
@@ -381,11 +397,25 @@ Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t 
 {
 	ins->instruction = ARM_B;
 	ins->cond        = cond;
-	ins->Rd1.regID   = REG_NOT_USED;;
+	ins->Rd1.regID   = REG_NOT_USED;
 	ins->R1.regID    = REG_NOT_USED;
 	ins->R2.regID    = REG_NOT_USED;
 	ins->I = absolute;
 	ins->offset = offset;
+	ins->Ln = 0U;
+
+	return ins;
+}
+
+Instruction_t* InstrBX(Instruction_t* ins, const Condition_e cond, const regID_t reg)
+{
+	ins->instruction = ARM_BX;
+	ins->cond        = cond;
+	ins->Rd1.regID   = REG_NOT_USED;
+	ins->R1.regID    = reg;
+	ins->R2.regID    = REG_NOT_USED;
+	ins->I = 0;
+	ins->offset = 0;
 	ins->Ln = 0;
 
 	return ins;
@@ -393,9 +423,9 @@ Instruction_t* InstrB(Instruction_t* ins, const Condition_e cond, const int32_t 
 
 Instruction_t* InstrBL(Instruction_t* ins, const Condition_e cond, const int32_t offset, const uint32_t absolute)
 {
-	ins->instruction = ARM_B;
+	ins->instruction = ARM_BL;
 	ins->cond        = cond;
-	ins->Rd1.regID   = REG_NOT_USED;;
+	ins->Rd1.regID   = REG_NOT_USED;
 	ins->R1.regID    = REG_NOT_USED;
 	ins->R2.regID    = REG_NOT_USED;
 	ins->I = absolute;
@@ -435,7 +465,7 @@ Instruction_t* newEmptyInstr()
 	}
 
 	newInstr->nextInstruction = NULL;
-	newInstr->instruction = UNKNOWN;
+	newInstr->instruction = DR_UNKNOWN;
 	newInstr->cond = AL;
 	newInstr->immediate = 0;
 	newInstr->shift = 0;
@@ -455,7 +485,7 @@ Instruction_t* newEmptyInstr()
 	newInstr->U=1;			// Up/Down, set for inc, clear for decrement
 	newInstr->W=0;			// Writeback bit set to write to base register
 
-#if defined(USE_INSTRUCTION_INIT_REGS)
+#if USE_INSTRUCTION_INIT_REGS
 	newInstr->Rd1_init.regID = REG_NOT_USED;
 	newInstr->Rd2_init.regID = REG_NOT_USED;
 	newInstr->R1_init.regID = REG_NOT_USED;
@@ -463,7 +493,7 @@ Instruction_t* newEmptyInstr()
 	newInstr->R3_init.regID = REG_NOT_USED;
 #endif
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	if (currentTranslation)
 	strcpy(newInstr->comment, currentTranslation);
 #endif
@@ -513,6 +543,12 @@ Instruction_t* newInstrIntB(const Condition_e cond, const Instruction_t* ins)
 	return InstrIntB(newInstr, cond, ins);
 }
 
+Instruction_t* newInstrIntBL(const Condition_e cond, const Instruction_t* ins)
+{
+	Instruction_t* newInstr = newEmptyInstr();
+	return InstrIntBL(newInstr, cond, ins);
+}
+
 /*
  * offset: 		The number of instructions to branch over
  * absolute:	=1? Treats offset as an address
@@ -522,6 +558,13 @@ Instruction_t* newInstrB(const Condition_e cond, const int32_t offset, const uin
 	Instruction_t* newInstr = newEmptyInstr();
 
 	return InstrB(newInstr, cond, offset, absolute);
+}
+
+Instruction_t* newInstrBX(const Condition_e cond, const regID_t reg)
+{
+	Instruction_t* newInstr = newEmptyInstr();
+
+	return InstrBX(newInstr, cond, reg);
 }
 
 /*
@@ -592,18 +635,18 @@ void printf_Intermediate(const Instruction_t* const ins, uint8_t heading)
 
 	if (heading)
 	{
-		#if defined(USE_INSTRUCTION_COMMENTS)
+		#if USE_INSTRUCTION_COMMENTS
 			printf("           \t");
 		#endif
 
-#if defined(USE_INSTRUCTION_INIT_REGS)
-	#if defined(SHOW_PRINT_INT_CONST)
+#if USE_INSTRUCTION_INIT_REGS
+	#if SHOW_PRINT_INT_CONST
 		printf("command   Rd1                     Rd2                     R1                      R2                      R3                       A B I Ln PR S U W immediate                 shift\n");
 	#else
 		printf("command   Rd1         Rd2         R1          R2          R3           A B I Ln PR S U W immediate                 shift\n");
 	#endif
 #else
-	#if defined(SHOW_PRINT_INT_CONST)
+	#if SHOW_PRINT_INT_CONST
 		printf("command   Rd1                     Rd2                     R1                      R2                      R3                       A B I Ln PR S U W immediate                 shift\n");
 	#else
 		printf("command   Rd1   Rd2   R1    R2    R3     A B I Ln PR S U W immediate                 shift\n");
@@ -626,7 +669,7 @@ void printf_Intermediate(const Instruction_t* const ins, uint8_t heading)
 	sprintf_reg_t(r2, ins->R2);
 	sprintf_reg_t(r3, ins->R3);
 
-#if defined(USE_INSTRUCTION_INIT_REGS)
+#if USE_INSTRUCTION_INIT_REGS
 	sprintf_reg_t(rd1 + strlen(rd1), ins->Rd1_init);
 	sprintf_reg_t(rd2 + strlen(rd2), ins->Rd2_init);
 	sprintf_reg_t(r1 + strlen(r1), ins->R1_init);
@@ -637,7 +680,7 @@ void printf_Intermediate(const Instruction_t* const ins, uint8_t heading)
 	sprintf(offset, "%-11d (0x%08X)", ins->offset, ins->offset);
 	sprintf(shift, "%-2d (0x%02X)", ins->shift, ins->shift);
 
-	#if defined(USE_INSTRUCTION_COMMENTS)
+	#if USE_INSTRUCTION_COMMENTS
 		if (ins->comment[0] == '0')
 		{
 			if (ins->outputAddress)
@@ -666,7 +709,7 @@ void printf_Intermediate(const Instruction_t* const ins, uint8_t heading)
 			|| ins->instruction == ARM_STM )
 	{
 		sprintRegList(buffer, ins);
-		#if defined(SHOW_PRINT_INT_CONST)
+		#if SHOW_PRINT_INT_CONST
 		printf("%-9s %s%s%s%-100s", instruction, rd1, rd2, r1, buffer);
 		#else
 		printf("%-9s %s%s%s%-71s", instruction, rd1, rd2, r1, buffer);
@@ -677,7 +720,7 @@ void printf_Intermediate(const Instruction_t* const ins, uint8_t heading)
 	}
 	else
 	{
-		#if defined(SHOW_PRINT_INT_CONST)
+		#if SHOW_PRINT_INT_CONST
 			printf("%-9s %-24s%-24s%-24s%-24s%-24s %d %d %d %d  %d  %d %d %d %-25s %-9s"
 				, instruction
 				, rd1, rd2, r1, r2, r3
@@ -706,7 +749,7 @@ void printf_Intermediate(const Instruction_t* const ins, uint8_t heading)
 		#endif
 	}
 
-	#if defined(USE_INSTRUCTION_COMMENTS)
+	#if USE_INSTRUCTION_COMMENTS
 		if (ins->comment[0] == '0')
 		{
 			printf("\n");

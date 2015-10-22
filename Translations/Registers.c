@@ -210,7 +210,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins = codeSegment->Intermcode;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "LoadCachedRegisters";
 #endif
 
@@ -229,7 +229,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			copied_ins = newInstrCopy(ins);
 
 			ins = InstrI(ins, ARM_LDR, AL, R1, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R1));
-#if defined (USE_INSTRUCTION_INIT_REGS)
+#if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R1;
 #endif
 			ins->nextInstruction = copied_ins;
@@ -244,7 +244,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			copied_ins = newInstrCopy(ins);
 
 			ins = InstrI(ins, ARM_LDR, AL, R2, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R2));
-#if defined (USE_INSTRUCTION_INIT_REGS)
+#if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R2;
 #endif
 			ins->nextInstruction = copied_ins;
@@ -258,7 +258,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			copied_ins = newInstrCopy(ins);
 
 			ins = InstrI(ins, ARM_LDR, AL, R3, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R3));
-#if defined (USE_INSTRUCTION_INIT_REGS)
+#if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R3;
 #endif
 			ins->nextInstruction = copied_ins;
@@ -362,7 +362,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 {
 	Instruction_t* ins;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "Registers";
 #endif
 
@@ -477,7 +477,7 @@ void Translate_Registers(code_seg_t* const codeSegment)
 		ins = ins->nextInstruction;
 	}
 
-#if defined(DO_HOSTREG_RENUMBER_IN_TRANSLATIONS)
+#if DO_HOSTREG_RENUMBER_IN_TRANSLATIONS
 	//Strip HOST flag from register ID leaving ARM register ID ready for writing
 	ins = codeSegment->Intermcode;
 	while (ins)
@@ -516,7 +516,7 @@ void Translate_StoreCachedRegisters(code_seg_t* const codeSegment)
 
 		Instruction_t*new_ins;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "StoreCachedRegisters";
 #endif
 		while (ins)

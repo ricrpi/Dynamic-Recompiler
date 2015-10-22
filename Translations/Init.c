@@ -18,6 +18,8 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "Translate.h"
+#include <string.h>			// memcpy()
+#include "InstructionSetMIPS4.h"
 
 void Translate_init(code_seg_t* const codeSegment)
 {
@@ -34,7 +36,7 @@ void Translate_init(code_seg_t* const codeSegment)
 
 		mips_decode(*(codeSegment->MIPScode + x), newInstruction);
 
-#if defined(USE_INSTRUCTION_INIT_REGS)
+#if USE_INSTRUCTION_INIT_REGS
 		memcpy(&newInstruction->Rd1_init,&newInstruction->Rd1, sizeof(reg_t));
 		memcpy(&newInstruction->Rd2_init,&newInstruction->Rd2, sizeof(reg_t));
 		memcpy(&newInstruction->R1_init,&newInstruction->R1, sizeof(reg_t));
@@ -42,7 +44,7 @@ void Translate_init(code_seg_t* const codeSegment)
 		memcpy(&newInstruction->R3_init,&newInstruction->R3, sizeof(reg_t));
 #endif
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 		sprintf_mips(newInstruction->comment, (uint32_t)(codeSegment->MIPScode + x), *(codeSegment->MIPScode + x));
 #endif
 		if (NULL == prevInstruction)

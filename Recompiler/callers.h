@@ -30,7 +30,7 @@ typedef struct _caller_t
 
 struct _code_seg;
 
-void updateCallers(struct _code_seg* const codeSegment);
 void freeCallers(struct _code_seg* const codeSegment);
+void addToCallers(const struct _code_seg* const caller, struct _code_seg* const callee);
 
 #endif /* RECOMPILER_CALLERS_H_ */

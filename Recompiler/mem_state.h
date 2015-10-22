@@ -33,6 +33,8 @@ typedef struct
 
 void initMemState(memMap_t* MemoryBlocks, uint32_t Count);
 
+void freeMemState();
+
 code_seg_t* getSegmentAt(size_t address);
 
 void setMemState(size_t address, uint32_t length, code_seg_t* codeSeg);

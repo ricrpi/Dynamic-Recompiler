@@ -24,15 +24,27 @@ OUTPUT="InstructionSet_ascii.h"
 INPUT="InstructionSet.h"
 ENUM_DECL="_Instruction_e"
 
+ARCH_I="MIPS"
+ARCH_O="ARM"
+
 #set -x
 set -e
 
 cd $FOLDER
 
-echo "#include \"InstructionSet.h\"" > $OUTPUT
-echo "#ifndef INSTRUCTIONSET_ASCC" >> $OUTPUT
+echo "#ifndef INSTRUCTIONSET_ASCC" > $OUTPUT
 echo "#define INSTRUCTIONSET_ASCC" >> $OUTPUT
+echo "" >> $OUTPUT
+echo "#include \"InstructionSet.h\"" >> $OUTPUT
+echo "" >> $OUTPUT
 echo "static const char* Instruction_ascii[sizeof_mips_op_t+1] = {" >> $OUTPUT
+
+
+# Using a simple state machine where the state is stored in $READING as:
+#	State	Description
+#	1	The specified typedef enum has been found but no '{' on line
+#	2	The specified typedef enum has been found and '{' found 
+#	3	Finished reading the typedef enum
 
 while read line 
 	do
@@ -43,12 +55,18 @@ while read line
 		elif [ $READING -eq 1 -a "$line" = "{" ]; then
 			READING=2
  		elif [ "$line" = "} Instruction_e;" ]; then
+			READING=3
 			break;
 		elif [ $READING -eq 2 ]; then
 			CMT=""
+			# find any comments on the current line
 			CMT=`echo "$line" | cut -s -d "/" --output-delimiter="" -f 2-`
+
+			# find any code on the current line, excluding comments
 			ENUM=`echo "$line" | cut -d "/" -f 1`
 
+			# if the enumeration sets a value then drop the value part
+			# add a comma to the end if it existed before
 			if [ `echo "$ENUM" | grep -c "="` -ge 1 ]; then
 				if [ `echo "$ENUM" | grep -c ","` -ge 1 ]; then
 					ENUM=`echo "$ENUM" | cut -d "=" -f 1`","
@@ -57,17 +75,26 @@ while read line
 				fi
 			fi
 
+			#if the current line is not just a comma and has a length
 			if [ "$ENUM" != "," -a  -n "$ENUM" ]; then
-				if [ `echo "$ENUM" | grep -c "ARM_"` -eq 1 ]; then
-					ENUM=`echo "$ENUM" | sed -e 's/ARM_//' | tr A-Z a-z | sed -e 's/_lit//'`
+
+				# strip the machine ARCH and make the output lower case
+				if [ `echo "$ENUM" | grep -c "${ARCH_O}_"` -eq 1 ]; then
+					ENUM=`echo "$ENUM" | sed -e "s/${ARCH_O}_//" | tr A-Z a-z | sed -e 's/_lit//'`
+				elif [ `echo "$ENUM" | grep -c "${ARCH_I}_"` -eq 1 ]; then
+					ENUM=`echo "$ENUM" | sed -e "s/${ARCH_I}_//" | sed -e 's/_lit//'`			
+				#elif [ `echo "$ENUM" | grep -c "DR_"` -eq 1 ]; then
+				#	ENUM=`echo "$ENUM" | sed -e 's/DR_//' | sed -e 's/_lit//'`			
 				fi
+
 				ENUM=`echo "$ENUM" | sed -e 's/[A-Za-z0-9_]*/\"&\"/'`		
 			fi
 
+			# now write out the 'ascii' value
 			if [ -n "$CMT" ]; then
-				echo "$ENUM // $CMT" >> $OUTPUT
+				echo "\t$ENUM\t // $CMT" >> $OUTPUT
 			else
-				echo "$ENUM"		>> $OUTPUT
+				echo "\t$ENUM"		>> $OUTPUT
 			fi			
 		fi
 	done < $INPUT

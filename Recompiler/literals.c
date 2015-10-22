@@ -91,7 +91,7 @@ uint32_t addLiteral(code_seg_t* const codeSegment, regID_t* const base, int32_t*
 		if (GlobalLiteralCount >= 1024)
 		{
 			printf("CodeSegments.c:%d Run out of Global Literal positions\n", __LINE__);
-#if defined(ABORT_EXCEEDED_GLOBAL_OFFSET)
+#if ABORT_EXCEEDED_GLOBAL_OFFSET
 			abort();
 #endif
 		}

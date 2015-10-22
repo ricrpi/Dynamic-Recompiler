@@ -158,6 +158,8 @@ int main(int argc, char* argv[])
 	fseek(fPtr, 0L, SEEK_END);
 	romlength = ftell(fPtr);
 	fseek(fPtr, 0L, SEEK_SET);
+#else
+	romlength = 2000;
 #endif
 
 	if (mmap((uint32_t*)(MMAP_BASE)
@@ -184,7 +186,7 @@ int main(int argc, char* argv[])
 
 #ifdef TEST
 	//Generate helper functions
-	GenerateCodeSegmentData(2000);
+	GenerateCodeSegmentData(romlength);
 
 	//Start testing
 	Translation_Test(&segmentData);
@@ -325,6 +327,8 @@ int main(int argc, char* argv[])
 	while (Debugger_start(&segmentData, NULL, NULL));
 
 
+	// Clean up Recompiler
+	freeCodeSegmentData();
 
 	munmap((uint32_t*)MMAP_BASE, MMAP_BASE_SIZE + romlength);
 	munmap((uint32_t*)MMAP_PIF_BOOT_ROM, 4096);

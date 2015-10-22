@@ -32,7 +32,7 @@
 #include "Debugger.h"	// RWD
 #include "DebugDefines.h"
 
-uint32_t bMemoryInlineLookup= 0;
+uint32_t bMemoryInlineLookup= 0U;
 
 void cc_interrupt()
 {
@@ -96,12 +96,13 @@ void p_r_a(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3
 			, r6, r14
 			, r7, r15);
 }
+
 /*
  * Function to Compile MIPS code at 'address' and then return the ARM_PC counter to jump to
  */
-size_t branchUnknown(size_t address)
+size_t branchUnknown(code_seg_t* code_seg, size_t* address)
 {
-	volatile code_seg_t* code_seg 	= segmentData.dbgCurrentSegment;
+	//volatile code_seg_t* code_seg 	= segmentData.dbgCurrentSegment;
 	Instruction_t* 	ins = newEmptyInstr();
 	size_t ARMAddress;
 	uint32_t MIPSaddress;
@@ -111,8 +112,8 @@ size_t branchUnknown(size_t address)
 	op = ops_type(code_seg->MIPScode[code_seg->MIPScodeLen - 1]);
 
 	//Get MIPS condition code and link
-	mips_decode(*(code_seg->MIPScode + code_seg->MIPScodeLen -1), ins);
-	;
+	mips_decode(code_seg->MIPScode[code_seg->MIPScodeLen - 1], ins);
+	ins->outputAddress = &code_seg->MIPScode[code_seg->MIPScodeLen - 1];
 
 	if (op & OPS_BRANCH){
 		MIPSaddress =  (uint32_t)(code_seg->MIPScode + code_seg->MIPScodeLen - 1) + 4*ops_BranchOffset(code_seg->MIPScode + code_seg->MIPScodeLen - 1);
@@ -153,39 +154,72 @@ size_t branchUnknown(size_t address)
 	else
 	{
 		printf("Creating new CodeSegment for 0x%08x\n", MIPSaddress);
-		CompileCodeAt((uint32_t*)MIPSaddress);
-		ARMAddress = (size_t)getSegmentAt(MIPSaddress)->ARMEntryPoint;
+		tgtSeg = CompileCodeAt((uint32_t*)MIPSaddress);
+		ARMAddress = (size_t)tgtSeg->ARMEntryPoint;
 	}
+
+	code_seg->pBranchNext = tgtSeg;
 
 	// 2.
-	if (op & OPS_BRANCH)
+	if (((op & OPS_BRANCH) == OPS_BRANCH)
+			|| (op == MIPS_J)
+			|| (op == MIPS_JAL))
 	{
-		//Set instruction to ARM_BRANCH for new target
-		InstrB(ins, ins->cond, ARMAddress, 1);
-	}
-	else if (op != JR && op != JALR)
-	{
-		if (ins->Ln)
+#if USE_HOST_MANAGED_BRANCHING
+		if ((op & OPS_LINK) == OPS_LINK)
 		{
-			InstrBL(ins, ins->cond, ARMAddress, 1);
+			if ((op & OPS_LIKELY) == OPS_LIKELY)
+			{
+				//Set instruction to ARM_BRANCH for new target
+				InstrBL(ins, AL, ARMAddress, 1);
+			}
+			else
+			{
+				//Set instruction to ARM_BRANCH for new target
+				InstrBL(ins, ins->cond, ARMAddress, 1);
+			}
+
 		}
 		else
+#endif
 		{
+			//Set instruction to ARM_BRANCH for new target
 			InstrB(ins, ins->cond, ARMAddress, 1);
 		}
-	}
 
-	if (op != JR && op != JALR)
-	{
+		addToCallers(code_seg, tgtSeg);
+		ins->outputAddress = (size_t)address;
+
 		printf_Intermediate(ins,1);
 
-		uint32_t* 	out 		= ((uint32_t*)code_seg->ARMcode) + code_seg->ARMcodeLen -1;
+		uint32_t* 	out 		= address;
 
 		//emit the arm code
-		printf("emitting at address %p\n", out);
-		*out = arm_encode(ins, (size_t)out);
-	}
+		//printf("emitting at address %p\n", out);
 
+		*out = arm_encode(ins, (size_t)out);
+		__clear_cache(out, &out[1]);
+	}
+#if USE_HOST_MANAGED_BRANCHING == 0
+	else if (op == MIPS_JR)
+	{
+		ins = tgtSeg->Intermcode;
+		Instruction_t branchIns = ins;
+
+		while (ins != NULL)
+		{
+			if (ins == ARM_B)
+			{
+				branchIns = ins;
+			}
+			ins = ins->nextInstruction;
+		}
+
+		ARMAddress = (size_t)branchIns->outputAddress + 4U;
+	}
+#endif
+
+	// 3.
 	return ARMAddress;
 }
 
@@ -401,7 +435,7 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrI(ARM_TST, AL, REG_NOT_USED, REG_STATUS, REG_NOT_USED, 0x01);
 	code_seg->Intermcode = ins = newInstruction;
 
-#if defined (USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	sprintf(newInstruction->comment, "Generate_ISR() segment 0x%08x\n", (uint32_t)code_seg);
 #endif
 
@@ -411,7 +445,7 @@ code_seg_t* Generate_ISR(code_segment_data_t* seg_data)
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	ADD_LL_NEXT(newInstruction, ins);
 
-#if defined(USE_TRANSLATE_DEBUG)
+#if USE_TRANSLATE_DEBUG
 	Translate_Debug(code_seg);
 #endif
 
@@ -436,7 +470,7 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_R0);
 	code_seg->Intermcode = ins = newInstruction;
 
-#if defined (USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	sprintf(newInstruction->comment, "Generate_BranchUnknown() segment 0x%08x\n", (uint32_t)code_seg);
 #endif
 
@@ -446,11 +480,12 @@ code_seg_t* Generate_BranchUnknown(code_segment_data_t* seg_data)
 	newInstruction 		= newInstrI(ARM_SUB, AL, REG_HOST_PC, REG_HOST_R0, REG_NOT_USED, 0);
 	ADD_LL_NEXT(newInstruction, ins);
 
-#if 0 && defined(USE_TRANSLATE_DEBUG)
+#if 0 && USE_TRANSLATE_DEBUG
 	Translate_Debug(code_seg);
 #endif
 
 	Translate_Registers(code_seg);
+	Translate_Literals(code_seg);
 
 	return code_seg;
 }
@@ -467,7 +502,7 @@ code_seg_t* Generate_MIPS_Trap(code_segment_data_t* seg_data)
 	newInstruction 		= newInstr(ARM_MOV, AL, REG_HOST_PC, REG_NOT_USED, REG_HOST_LR);
 	code_seg->Intermcode = ins = newInstruction;
 
-#if defined(USE_TRANSLATE_DEBUG)
+#if USE_TRANSLATE_DEBUG
 	Translate_Debug(code_seg);
 #endif
 

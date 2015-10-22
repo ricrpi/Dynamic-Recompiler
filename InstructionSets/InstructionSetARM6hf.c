@@ -207,8 +207,15 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 			return cond << 28 | 0xA << 24 | ins->Ln << 24 | (((ins->offset - addr )/4 - ARM_BRANCH_OFFSET)&0xffffff);
 		else
 			return cond << 28 | 0xA << 24 | ins->Ln << 24 | ((ins->offset - ARM_BRANCH_OFFSET)&0xffffff);
+	case ARM_BL:
+			if (ins->I)
+				return cond << 28 | 0xA << 24 | 1 << 24 | (((ins->offset - addr )/4 - ARM_BRANCH_OFFSET)&0xffffff);
+			else
+				return cond << 28 | 0xA << 24 | 1 << 24 | ((ins->offset - ARM_BRANCH_OFFSET)&0xffffff);
 	case ARM_BX:
 		return cond << 28 | 0x12fff10 | ins->Ln << 5 | R1;
+	case ARM_BLX:
+		return cond << 28 | 0x12fff10 | 1 << 5 | R1;
 
 	//case JR:
 		//assert(ins->I == 0);
@@ -217,7 +224,7 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 
 		//-------------------------------------------
 
-	case LITERAL:
+	case DR_LITERAL:
 		return ins->immediate;
 
 		//------- ARM Cannot handle -----------------
@@ -230,7 +237,7 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 
 	printf_Intermediate(ins, 1);
 
-#if defined (ABORT_ARM_ENCODE)
+#if ABORT_ARM_ENCODE
 	abort();
 #endif
 	return 0;
@@ -279,7 +286,7 @@ static void opsh(char* str, uint32_t word)
 void printf_arm(const uint32_t addr, const uint32_t word)
 {
 	printf("0x%08x", addr);
-#if defined(SHOW_PRINT_ARM_VALUE)
+#if SHOW_PRINT_ARM_VALUE
 	printf(" 0x%08x", word);
 #endif
 
@@ -754,7 +761,7 @@ void printf_arm(const uint32_t addr, const uint32_t word)
 	else
 	{
 		printf ("\tUnknown Command - value =  %010d (%0x08x)\n", word, word);
-#if defined(ABORT_ARM_DECODE)
+#if ABORT_ARM_DECODE
 		abort();
 #endif
 	}
@@ -777,14 +784,13 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	 * invalidate code Segments that are overwritten.
 	 */
 
-	if (!emit_out) emit_out = (uint32_t*)MMAP_DR_BASE;
+	if (emit_out == NULL)
+	{
+		emit_out = (uint32_t*)MMAP_DR_BASE;
+	}
 
 	Instruction_t *ins = codeSeg->Intermcode;
 	literal_t* lits = codeSeg->literals;
-
-#if defined(ASSERT_ARM_NOT_COMPILED)
-	assert (!codeSeg->ARMcode);
-#endif
 
 	if (!ins)
 	{

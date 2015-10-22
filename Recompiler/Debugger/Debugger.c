@@ -223,7 +223,7 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 		{
 			mips_decode(CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1], &ins);
 
-			branch = getSegmentAt((size_t)CurrentCodeSeg->MIPScode + CurrentCodeSeg->MIPScodeLen -1 + ins.offset);
+			branch = getSegmentAt((size_t)&CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1U + ins.offset]);
 
 			if (branch != NULL)
 			{
@@ -330,7 +330,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 			else if (addr + x < (uint32_t*)CurrentCodeSeg->ARMEntryPoint)
 			{
 				printf("0x%08x", (uint32_t)(addr + x));
-#if defined(SHOW_PRINT_ARM_VALUE)
+#if SHOW_PRINT_ARM_VALUE
 				printf("          ");
 #endif
 				printf("\t.word\t%12d (0x%08x)\n", *((uint32_t*)addr + x), *((uint32_t*)addr + x));

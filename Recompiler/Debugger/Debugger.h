@@ -21,6 +21,8 @@
 #define DEBUGGER_H_
 
 #include <sys/ucontext.h>
+#include "CodeSegments.h"
+
 
 #define HELP_TRANS 	"\ttranslate                         Translate Current Segment\n" \
 					"\ttranslate full                    Translate Current Segment and Generate ARM code\n\n" \
@@ -73,7 +75,6 @@
 					HELP_SEG "\n"\
 					HELP_COMP "\n"\
 					"set [parameter] [value]\n"
-
 
 void Debugger_wrapper();
 

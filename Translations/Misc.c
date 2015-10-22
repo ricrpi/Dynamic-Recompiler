@@ -26,23 +26,23 @@ void Translate_Generic(code_seg_t* const codeSegment)
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "Generic";
 #endif
 	while (ins)
 	{
 		switch (ins->instruction)
 		{
-			case MFHI:
-			case MTHI:
-			case MFLO:
-			case MTLO:
+			case MIPS_MFHI:
+			case MIPS_MTHI:
+			case MIPS_MFLO:
+			case MIPS_MTLO:
 				TRANSLATE_ABORT();
 				break;
-			case MFC0:
+			case MIPS_MFC0:
 				TRANSLATE_ABORT();
 				break;
-			case MTC0:
+			case MIPS_MTC0:
 				if (ins->R1.regID == 0)
 				{
 					InstrI(ins, ARM_MOV, AL, ins->Rd1.regID, REG_NOT_USED, REG_NOT_USED, 0);
@@ -52,7 +52,7 @@ void Translate_Generic(code_seg_t* const codeSegment)
 					Instr(ins, ARM_MOV, AL, ins->Rd1.regID, REG_NOT_USED, ins->R1.regID);
 				}
 				break;
-			case ERET:
+			case MIPS_ERET:
 				TRANSLATE_ABORT();
 				break;
 			//case CACHE: TRANSLATE_ABORT();	// This instruction is removed in CleanUp

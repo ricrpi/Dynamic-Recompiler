@@ -33,7 +33,7 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 	uint32_t instrCount = 0;
 	uint32_t instrCountRemaining = codeSegment->MIPScodeLen;
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "CountRegister";
 #endif
 
@@ -54,7 +54,7 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 	{
 		instrCount++;
 
-		if (ins->instruction == MFC0 && ins->R1.regID == REG_COUNT)
+		if (ins->instruction == MIPS_MFC0 && ins->R1.regID == REG_COUNT)
 		{
 			//add COUNT update
 			Instruction_t* newInstruction 	= newEmptyInstr();
@@ -86,10 +86,15 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 	{
 		Instruction_t* newInstruction;
 
-		//goto second last instruction
+		//goto instruction before a branch or jump
 		if (ins->nextInstruction)
 		{
-			while (ins->nextInstruction->nextInstruction) ins = ins->nextInstruction;
+			while (ins->nextInstruction->nextInstruction
+					&& !((ins->nextInstruction->instruction & OPS_BRANCH)
+							|| (ins->nextInstruction->instruction &OPS_JUMP)))
+			{
+				ins = ins->nextInstruction;
+			}
 		}
 
 		//create COUNT update instructions
@@ -102,13 +107,31 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 			if (instrCountRemaining > 255)
 			{
 				newInstruction = newInstrI(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff00);
-				ADD_LL_NEXT(newInstruction, ins);
+
+				if (ins == codeSegment->Intermcode)
+				{
+					newInstruction->nextInstruction = codeSegment->Intermcode;
+					codeSegment->Intermcode = ins = newInstruction;
+				}
+				else
+				{
+					ADD_LL_NEXT(newInstruction, ins);
+				}
 			}
 
 			newInstruction = newInstrIS(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff);
-			ADD_LL_NEXT(newInstruction, ins);
 
-			#if defined(USE_INSTRUCTION_COMMENTS)
+			if (ins == codeSegment->Intermcode)
+			{
+				newInstruction->nextInstruction = codeSegment->Intermcode;
+				codeSegment->Intermcode = ins = newInstruction;
+			}
+			else
+			{
+				ADD_LL_NEXT(newInstruction, ins);
+			}
+
+			#if USE_INSTRUCTION_COMMENTS
 				currentTranslation = "Call cc_interrupt()";
 			#endif
 

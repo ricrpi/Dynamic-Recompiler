@@ -22,7 +22,7 @@
 
 #include "memory.h"
 
-uint8_t uMemoryBase 		= 0x80;
+uint8_t uMemoryBase 		= 0x80U;
 
 
 static Instruction_t* insertCheckAddressRaw(Instruction_t* ins, regID_t R1)
@@ -82,10 +82,9 @@ static void storeWord(uint32_t b, uint32_t v)
 	}
 	else
 	{
-		printf("storeWord() virtual address 0x%x\n", addr);
+		printf("storeWord() virtual address 0x%x\n", (uint32_t)addr);
 		abort();
 	}
-
 }
 
 static uint32_t loadWord(uint32_t b)
@@ -99,9 +98,10 @@ static uint32_t loadWord(uint32_t b)
 	}
 	else
 	{
-		printf("loadWord() virtual address 0x%x\n", addr);
+		printf("loadWord() virtual address 0x%x\n", (uint32_t)addr);
 		abort();
 	}
+	return NULL;
 }
 
 /*
@@ -121,7 +121,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 	//TODO we need to check that memory being modified is not MIPS code!
 
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "Memory";
 #endif
 
@@ -141,23 +141,23 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 		switch (ins->instruction)
 		{
-		case LL:
-		case LWC1:
-		case LLD:
-		case LDC1:
-		case LD:
-		case SC:
-		case SWC1:
-		case SCD:
-		case SDC1:
-		case SD:
-		case SB:
+		case MIPS_LL:
+		case MIPS_LWC1:
+		case MIPS_LLD:
+		case MIPS_LDC1:
+		case MIPS_LD:
+		case MIPS_SC:
+		case MIPS_SWC1:
+		case MIPS_SCD:
+		case MIPS_SDC1:
+		case MIPS_SD:
+		case MIPS_SB:
 			//ins = insertCheckAddressRaw(ins, R1);
-		case SH:
-		case SWL:
+		case MIPS_SH:
+		case MIPS_SWL:
 			TRANSLATE_ABORT();
 			break;
-		case SW:
+		case MIPS_SW:
 #if 1
 			Instr(ins, ARM_MOV, AL,REG_TEMP_SCRATCH0, REG_NOT_USED, R1);
 
@@ -252,17 +252,17 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			// TODO we need to check memory changed is not in code space
 #endif
 			break;
-		case SDL:
-		case SDR:
-		case SWR:
-		case LDL:
-		case LDR:
-		case LB:
-		case LH:
-		case LWL:
+		case MIPS_SDL:
+		case MIPS_SDR:
+		case MIPS_SWR:
+		case MIPS_LDL:
+		case MIPS_LDR:
+		case MIPS_LB:
+		case MIPS_LH:
+		case MIPS_LWL:
 			TRANSLATE_ABORT();
 			break;
-		case LW:
+		case MIPS_LW:
 #if 1
 			Instr(ins, ARM_MOV, AL,REG_TEMP_SCRATCH0, REG_NOT_USED, R1);
 
@@ -351,10 +351,10 @@ void Translate_Memory(code_seg_t* const codeSegment)
 			ins2->branchToThisInstruction = new_ins;
 #endif
 			break;
-		case LBU:
-		case LHU:
-		case LWR:
-		case LWU:
+		case MIPS_LBU:
+		case MIPS_LHU:
+		case MIPS_LWR:
+		case MIPS_LWU:
 			TRANSLATE_ABORT();
 			break;
 		default: break;

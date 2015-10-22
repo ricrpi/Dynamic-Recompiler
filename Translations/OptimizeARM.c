@@ -23,7 +23,7 @@ void Translate_LoadStoreWriteBack(code_seg_t* const codeSegment)
 {
 	Instruction_t*ins;
 	ins = codeSegment->Intermcode;
-#if defined(USE_INSTRUCTION_COMMENTS)
+#if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "LoadStoreWriteBack";
 #endif
 

@@ -113,10 +113,14 @@ code_seg_t* newSegment();
  */
 uint32_t delSegment(code_seg_t* codeSegment);
 
-void invalidateBranch(code_seg_t* codeSegment);
+void freeIntermediateInstructions(code_seg_t* const codeSegment);
+
+void invalidateBranch(const code_seg_t* codeSegment);
 
 code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize);
 
-code_seg_t* CompileCodeAt(const uint32_t* const address);
+void freeCodeSegmentData();
+
+code_seg_t* CompileCodeAt(const uint32_t const address[]);
 
 #endif /* CODESEGMENTS_H_ */
