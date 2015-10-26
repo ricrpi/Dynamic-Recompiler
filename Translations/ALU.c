@@ -20,6 +20,103 @@
 #include "Translate.h"
 #include "InstructionSet_ascii.h"
 
+static int32_t div32(int32_t x, int32_t y)
+{
+	if (y)
+	{
+		return x / y;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+static uint32_t divu(uint32_t x, uint32_t y)
+{
+	if (y)
+	{
+		return x / y;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+
+static int64_t ddiv(int64_t x, int64_t y)
+{
+	if (y)
+	{
+	return x / y;
+		}
+	else
+	{
+		return 0;
+	}
+}
+
+static int64_t mod(int32_t x, int32_t y)
+{
+	if (y)
+	{
+		return x % y;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+static int64_t dmod(int64_t x, int64_t y)
+{
+	if (y)
+	{
+		return x % y;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+static uint64_t modu(uint32_t x, uint32_t y)
+{
+	if (y)
+	{
+		return x % y;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+static uint64_t dmodu(uint64_t x, uint64_t y)
+{
+	if (y)
+	{
+		return x % y;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+uint64_t ddivu(uint64_t x, uint64_t y)
+{
+	if (y)
+	{
+		return x / y;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 /*
  * Function to turn 64bit registers into multiple 32-bit registers
  *
@@ -30,6 +127,9 @@ void Translate_ALU(code_seg_t* const codeSegment)
 	Instruction_t*new_ins;
 	regID_t Rd1, R1, R2;
 	ins = codeSegment->Intermcode;
+	regID_t base;
+	int32_t offset;
+
 
 #if USE_INSTRUCTION_COMMENTS
 	currentTranslation = "ALU";
@@ -173,6 +273,66 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					mov r0, r2
 				 */
 				{
+					// populate registers ready for call
+					new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R2);
+					ADD_LL_NEXT(new_ins, ins);
+
+					addLiteral(codeSegment, &base, &offset, (uint32_t)div32);
+
+					new_ins = newInstrPUSH(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+					ADD_LL_NEXT(new_ins, ins);
+
+					// get the address of function to call
+					new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R4, REG_NOT_USED, base, offset);
+					ADD_LL_NEXT(new_ins, ins);
+
+					// now branch
+					new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R4, REG_NOT_USED);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrPOP(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+					ADD_LL_NEXT(new_ins, ins);
+
+					// move division result into LOW
+					new_ins = newInstrI(ARM_MOV, AL, REG_MULTLO , REG_NOT_USED, REG_NOT_USED, 0);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_MOV, AL, REG_MULTLO | REG_WIDE, REG_NOT_USED, REG_HOST_R0);
+					ADD_LL_NEXT(new_ins, ins);
+
+					// calculate MOD
+					new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1 );
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R2);
+					ADD_LL_NEXT(new_ins, ins);
+
+					addLiteral(codeSegment, &base, &offset, (uint32_t)mod);
+					new_ins = newInstrPUSH(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+					ADD_LL_NEXT(new_ins, ins);
+
+					// get the address of function to call
+					new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R4, REG_NOT_USED, base, offset);
+					ADD_LL_NEXT(new_ins, ins);
+
+					// now branch
+					new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R4, REG_NOT_USED);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstrPOP(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+					ADD_LL_NEXT(new_ins, ins);
+
+					// move mod result into HI
+					new_ins = newInstrI(ARM_MOV, AL, REG_MULTHI , REG_NOT_USED, REG_NOT_USED, 0);
+					ADD_LL_NEXT(new_ins, ins);
+
+					new_ins = newInstr(ARM_MOV, AL, REG_MULTHI | REG_WIDE, REG_NOT_USED, REG_HOST_R0);
+					ADD_LL_NEXT(new_ins, ins);
+
+					/*
 					// Count leading Zeros of N
 					Instr(ins, ARM_CLZ, AL, REG_TEMP_SCRATCH3, R1, REG_NOT_USED);
 
@@ -219,15 +379,218 @@ void Translate_ALU(code_seg_t* const codeSegment)
 					new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
 					ADD_LL_NEXT(new_ins, ins);
 
-					TRANSLATE_ABORT();
+					TRANSLATE_ABORT();*/
 				}
 				break;
 			case MIPS_DIVU:
+
+				// populate registers ready for call
+				Instr(ins, ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R2);
+				ADD_LL_NEXT(new_ins, ins);
+
+				addLiteral(codeSegment, &base, &offset, (uint32_t)divu);
+
+				new_ins = newInstrPUSH(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// get the address of function to call
+				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R4, REG_NOT_USED, base, offset);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// now branch
+				new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R4, REG_NOT_USED);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrPOP(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// move division result into LOW
+				new_ins = newInstrI(ARM_MOV, AL, REG_MULTLO , REG_NOT_USED, REG_NOT_USED, 0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTLO | REG_WIDE, REG_NOT_USED, REG_HOST_R0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// calculate MOD
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1 );
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R2);
+				ADD_LL_NEXT(new_ins, ins);
+
+				addLiteral(codeSegment, &base, &offset, (uint32_t)modu);
+				new_ins = newInstrPUSH(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// get the address of function to call
+				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R4, REG_NOT_USED, base, offset);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// now branch
+				new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R4, REG_NOT_USED);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrPOP(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// move mod result into HI
+				new_ins = newInstrI(ARM_MOV, AL, REG_MULTHI , REG_NOT_USED, REG_NOT_USED, 0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTHI | REG_WIDE, REG_NOT_USED, REG_HOST_R0);
+				ADD_LL_NEXT(new_ins, ins);
+				break;
 			case MIPS_DMULT:
 			case MIPS_DMULTU:
+
+				break;
 			case MIPS_DDIV:
+
+				// populate registers ready for call
+				Instr(ins, ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1 );
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R1 | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R2, REG_NOT_USED, R2);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R3, REG_NOT_USED, R2  | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
+				addLiteral(codeSegment, &base, &offset, (uint32_t)ddiv);
+				new_ins = newInstrPUSH(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// get the address of function to call
+				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R4, REG_NOT_USED, base, offset);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// now branch
+				new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R4, REG_NOT_USED);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrPOP(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// move division result into LOW
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTLO , REG_NOT_USED, REG_HOST_R0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTLO | REG_WIDE, REG_NOT_USED, REG_HOST_R1);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// modulus
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1 );
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R1 | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R2, REG_NOT_USED, R2);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R3, REG_NOT_USED, R2  | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
+				addLiteral(codeSegment, &base, &offset, (uint32_t)dmod);
+				new_ins = newInstrPUSH(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// get the address of function to call
+				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R4, REG_NOT_USED, base, offset);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// now branch
+				new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R4, REG_NOT_USED);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrPOP(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// move mod result into HI
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTHI , REG_NOT_USED, REG_HOST_R0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTHI | REG_WIDE, REG_NOT_USED, REG_HOST_R1);
+				ADD_LL_NEXT(new_ins, ins);
+				break;
 			case MIPS_DDIVU:
-				TRANSLATE_ABORT();
+
+				// populate registers ready for call
+				Instr(ins, ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1 | REG_WIDE);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R1 );
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R2, REG_NOT_USED, R2 | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R3, REG_NOT_USED, R2 );
+				ADD_LL_NEXT(new_ins, ins);
+
+				addLiteral(codeSegment, &base, &offset, (uint32_t)ddivu);
+
+				new_ins = newInstrPUSH(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// get the address of function to call
+				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R4, REG_NOT_USED, base, offset);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// now branch
+				new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R4, REG_NOT_USED);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrPOP(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// move division result into LOW
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTLO , REG_NOT_USED, REG_HOST_R0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTLO | REG_WIDE, REG_NOT_USED, REG_HOST_R1);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// modulus
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1 );
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R1 | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R2, REG_NOT_USED, R2);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_HOST_R3, REG_NOT_USED, R2  | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
+				addLiteral(codeSegment, &base, &offset, (uint32_t)dmodu);
+				new_ins = newInstrPUSH(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// get the address of function to call
+				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R4, REG_NOT_USED, base, offset);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// now branch
+				new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R4, REG_NOT_USED);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrPOP(AL, REG_HOST_STM_R4 | REG_HOST_STM_LR);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// move mod result into HI
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTHI , REG_NOT_USED, REG_HOST_R0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, AL, REG_MULTHI | REG_WIDE, REG_NOT_USED, REG_HOST_R1);
+				ADD_LL_NEXT(new_ins, ins);
+
 				break;
 			case MIPS_ADD:	// TODO TRAP
 				{
@@ -292,6 +655,27 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 				break;
 			case MIPS_DADD:	// TRAP
+			{
+				// Destination register is conditionally changed so load it
+				Instr(ins, DR_NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+
+				new_ins = newInstr(DR_NO_OP, AL, REG_NOT_USED, Rd1 | REG_WIDE, REG_NOT_USED);
+				ADD_LL_NEXT(new_ins, ins);
+
+				// Set the carry bit if needed
+				new_ins = newInstrS(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, R2);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrS(ARM_ADC, AL, REG_TEMP_SCRATCH1, R1| REG_WIDE, R2 | REG_WIDE);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, VC, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstr(ARM_MOV, VC, Rd1| REG_WIDE, REG_NOT_USED, REG_TEMP_SCRATCH1);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			break;
 			case MIPS_DADDU:
 				{
 					InstrS(ins, ARM_ADD, AL, Rd1, R1, R2);
@@ -691,6 +1075,8 @@ void Translate_ALU(code_seg_t* const codeSegment)
 						else
 						{
 							Instr(ins, DR_NO_OP, AL, Rd1, Rd1, REG_NOT_USED);
+							new_ins = newInstr(DR_NO_OP, AL, Rd1| REG_WIDE, Rd1| REG_WIDE, REG_NOT_USED);
+							ADD_LL_NEXT(new_ins, ins);
 
 							new_ins = newInstrI(ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm&0xFF));
 							ADD_LL_NEXT(new_ins, ins);
@@ -719,18 +1105,30 @@ void Translate_ALU(code_seg_t* const codeSegment)
 
 							new_ins = newInstrI(ARM_ADD, AL, Rd1, Rd1, REG_NOT_USED, imm&0xFF00);
 							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
 						}
 						else
 						{
 							Instr(ins, DR_NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
 
+							new_ins = newInstr(DR_NO_OP, AL, REG_NOT_USED, Rd1 | REG_WIDE, REG_NOT_USED);
+							ADD_LL_NEXT(new_ins, ins);
+
 							new_ins = newInstrIS(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm&0xFF));
 							ADD_LL_NEXT(new_ins, ins);
 
-							new_ins = newInstrIS(ARM_ADD, VC, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, imm&0xFF00);
+							new_ins = newInstrIS(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, imm&0xFF00);
 							ADD_LL_NEXT(new_ins, ins);
 
-							new_ins = newInstr(ARM_ADD, VC, Rd1, Rd1, REG_TEMP_SCRATCH0);
+							new_ins = newInstrIS(ARM_ADC, AL, REG_TEMP_SCRATCH1, R1 | REG_WIDE, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_MOV, VC, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_MOV, VC, Rd1 | REG_WIDE, REG_NOT_USED, REG_TEMP_SCRATCH1);
 							ADD_LL_NEXT(new_ins, ins);
 						}
 					}
@@ -739,12 +1137,27 @@ void Translate_ALU(code_seg_t* const codeSegment)
 						if (0 == R1)
 						{
 							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, imm);
+
+							new_ins = newInstrI(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
 						}
 						else
 						{
-							InstrIS(ins, ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, imm);
+							Instr(ins, DR_NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+
+							new_ins = newInstr(DR_NO_OP, AL, REG_NOT_USED, Rd1 | REG_WIDE, REG_NOT_USED);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrIS(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, imm);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrIS(ARM_ADC, AL, REG_TEMP_SCRATCH1, R1 | REG_WIDE, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
 
 							new_ins = newInstr(ARM_MOV, VC, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_MOV, VC, Rd1 | REG_WIDE, REG_NOT_USED, REG_TEMP_SCRATCH1);
 							ADD_LL_NEXT(new_ins, ins);
 						}
 					}
@@ -756,7 +1169,111 @@ void Translate_ALU(code_seg_t* const codeSegment)
 				break;
 			}
 			case MIPS_DADDIU:
-				TRANSLATE_ABORT();
+				if (imm < 0)
+				{
+					int32_t ImmShift = Imm8Shift((uint16_t)-ins->immediate);
+
+					if (ImmShift == -1)
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (-imm&0xFF));
+
+							new_ins = newInstrI(ARM_SUB, AL, Rd1, Rd1, REG_NOT_USED, -imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_MVN, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							Instr(ins, DR_NO_OP, AL, Rd1, Rd1, REG_NOT_USED);
+
+							new_ins = newInstr(DR_NO_OP, AL, Rd1| REG_WIDE, Rd1| REG_WIDE, REG_NOT_USED);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm&0xFF));
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstr(ARM_ADD, AL, Rd1, Rd1, REG_TEMP_SCRATCH0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+					else
+					{
+						InstrIS(ins, ARM_SUB, AL, Rd1, R1, REG_NOT_USED, (-imm));
+
+						new_ins = newInstr(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1 | REG_WIDE);
+						ADD_LL_NEXT(new_ins, ins);
+
+						new_ins = newInstrI(ARM_SUB, VS, Rd1 | REG_WIDE, Rd1 | REG_WIDE, REG_NOT_USED, 1);
+						ADD_LL_NEXT(new_ins, ins);
+					}
+				}
+				else if (imm > 0)
+				{
+					int32_t ImmShift = Imm8Shift((uint16_t)ins->immediate);
+
+					if (ImmShift == -1)
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, (imm&0xFF));
+
+							new_ins = newInstrI(ARM_ADD, AL, Rd1, Rd1, REG_NOT_USED, imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							Instr(ins, DR_NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+
+							new_ins = newInstr(DR_NO_OP, AL, REG_NOT_USED, Rd1 | REG_WIDE, REG_NOT_USED);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrIS(ARM_ADD, AL, REG_TEMP_SCRATCH0, R1, REG_NOT_USED, (imm&0xFF));
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrIS(ARM_ADD, AL, Rd1, REG_TEMP_SCRATCH0, REG_NOT_USED, imm&0xFF00);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_ADC, AL, Rd1 | REG_WIDE, R1 | REG_WIDE, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+					else
+					{
+						if (0 == R1)
+						{
+							InstrI(ins, ARM_MOV, AL, Rd1, REG_NOT_USED, REG_NOT_USED, imm);
+
+							new_ins = newInstrI(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+						else
+						{
+							Instr(ins, DR_NO_OP, AL, REG_NOT_USED, Rd1, REG_NOT_USED);
+
+							new_ins = newInstr(DR_NO_OP, AL, REG_NOT_USED, Rd1 | REG_WIDE, REG_NOT_USED);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrIS(ARM_ADD, AL, Rd1, R1, REG_NOT_USED, imm);
+							ADD_LL_NEXT(new_ins, ins);
+
+							new_ins = newInstrI(ARM_ADC, AL, Rd1 | REG_WIDE, R1 | REG_WIDE, REG_NOT_USED, 0);
+							ADD_LL_NEXT(new_ins, ins);
+						}
+					}
+				}
+				else if (Rd1 == R1) // imm = 0
+				{
+					Instr(ins, DR_NO_OP, AL, REG_NOT_USED, REG_NOT_USED, REG_NOT_USED);
+				}
 				break;
 		default: break;
 		}

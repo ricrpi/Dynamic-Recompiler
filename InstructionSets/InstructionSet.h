@@ -43,7 +43,6 @@
 #define REG_NOT_USED 		(0xffffU)
 #define REG_FP		 		(0x0020U)
 
-
 #define REG_WIDE	 		(0x0040U)			// 64-32 bit part of (register&0x3F).
 
 #define REG_CO		 		(0x0080U)
@@ -89,6 +88,9 @@
 #define REG_MULTHI  		(REG_SPECIAL + 4)	// 64 bit
 #define REG_MULTLO   		(REG_SPECIAL + 6)	// 64 bit
 #define REG_LLBIT    		(REG_SPECIAL + 8)	//  1 bit
+
+#define multiLo				(*(volatile uint64_t*)((volatile uint32_t*)(MMAP_FP_BASE) + REG_MULTLO))
+#define multiHi				(*(volatile uint64_t*)((volatile uint32_t*)(MMAP_FP_BASE) + REG_MULTHI))
 
 //Temorary Registers
 #define REG_TEMP_SCRATCH0	(REG_TEMP | 0x00)
@@ -145,10 +147,19 @@
 #define REG_HOST_STM_R3 		(0x0008)
 #define REG_HOST_STM_R1_3 		(REG_HOST_STM_R1|REG_HOST_STM_R2|REG_HOST_STM_R3)
 #define REG_HOST_STM_R2_3 		(REG_HOST_STM_R2|REG_HOST_STM_R3)
+#define REG_HOST_STM_R4 		(0x0010)
+#define REG_HOST_STM_R5 		(0x0020)
+#define REG_HOST_STM_R6 		(0x0040)
+#define REG_HOST_STM_R7 		(0x0080)
+#define REG_HOST_STM_R8 		(0x0100)
+#define REG_HOST_STM_R9 		(0x0200)
+#define REG_HOST_STM_R10 		(0x0400)
 #define REG_HOST_STM_FP 		(0x0800)
+#define REG_HOST_STM_R12 		(0x1000)
 #define REG_HOST_STM_SP			(0x2000)
 #define REG_HOST_STM_LR 		(0x4000)
 #define REG_HOST_STM_PC 		(0x8000)
+
 #define REG_HOST_STM_GENERAL 	(0x17FF)
 #define REG_HOST_STM_EABI 		(0x000F)
 #define REG_HOST_STM_EABI2      (0x5FF0)

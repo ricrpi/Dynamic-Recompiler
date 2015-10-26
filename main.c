@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
 	sigaction(SIGABRT, &sa, NULL);
 	sigaction(SIGILL, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);
-
+	sigaction(SIGFPE, &sa, NULL);
 
 	printf("R4300 Recompiler\n\n");
 #ifndef TEST

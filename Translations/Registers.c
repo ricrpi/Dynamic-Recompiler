@@ -63,24 +63,30 @@ static unsigned char RegsAvailable[] = {
 static 	uint8_t RegLoaded[REG_TEMP];
 
 
-uint32_t showRegTranslationMap = 0;
-uint32_t showRegTranslationMapProgress = 0;
+uint32_t showRegTranslationMap = 0U;
+uint32_t showRegTranslationMapProgress = 0U;
 
 uint32_t RegMemByteOffset(regID_t reg)
 {
+	uint32_t offset = 0U;	// number of 32bits
+
+	if (reg&REG_WIDE) offset += 1U;
+
 	if (reg < REG_CO)
 	{
-		uint32_t offset = 0;	// number of 32bits
+		if ((reg&REG_FP) != NULL)
+		{
+			offset += 64U;
+		}
 
-		if (reg&REG_WIDE) offset += 1;
-		if (reg&REG_FP) offset += 32*2;
-
-		offset += ((reg & ~(REG_WIDE|REG_FP)) * 2);
-
-		return offset*4;
+		offset += ((reg & ~(REG_WIDE | REG_FP))*2U);
 	}
 	else
-		return reg*4;
+	{
+		offset += ((reg & ~(REG_WIDE)));
+	}
+
+	return offset * 4U;
 }
 
 // Function:	FindRegNextUsedAgain

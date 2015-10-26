@@ -41,12 +41,12 @@
 #define SHOW_REG_TRANSLATION_MAP_PROGRESS	(1)
 
 //Print when a segment is deleted
-#define SHOW_PRINT_SEGMENT_DELETE			(1)
+#define SHOW_PRINT_SEGMENT_DELETE			(0)
 
 // ========= Debugging Information ===============================================
 
 // Print out changes code segment callers
-#define SHOW_CALLER							(1)
+#define SHOW_CALLER							(0)
 
 // Print the constants in intermediate code
 #define SHOW_PRINT_INT_CONST				(0)
@@ -60,7 +60,9 @@
 #define SHOW_CODE_SEG_MAP_CHANGES			(0)
 
 // Print out information on the CompileAt() call. This call finds new code segments
-#define SHOW_COMPILEAT_STEPS				(1)
+#define SHOW_COMPILEAT_STEPS				(0)
+
+#define SHOW_BRANCHUNKNOWN_STEPS			(0)
 
 // ========= Recompiling Options =======================================
 

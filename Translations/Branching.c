@@ -366,7 +366,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 				// ---- Dynamic Recompiler Branching ABI ----
 
-				addLiteral(codeSegment, &base, &offset, (uint32_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset));
+				addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
 				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
 				ADD_LL_NEXT(new_ins, ins);
 
@@ -427,7 +427,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 				// ---- Dynamic Recompiler Branching ABI ----
 
-				addLiteral(codeSegment, &base, &offset, (uint32_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset));
+				addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
 				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
 				ADD_LL_NEXT(new_ins, ins);
 
@@ -447,7 +447,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				// Provide a jump if not branching on LIKELY
-				new_ins = newInstrIntB(EQ, NULL);
+				new_ins = newInstrIntB(EQ, new_ins);
 				ADD_LL_NEXT(new_ins, LikelybranchInstruction);
 			}
 
@@ -671,8 +671,8 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 			InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
-			new_ins = newInstrI(ARM_CMP, MI, REG_NOT_USED, R1 , REG_NOT_USED, 0); // if not minus
-			ADD_LL_NEXT(new_ins, ins);
+			//new_ins = newInstrI(ARM_CMP, MI, REG_NOT_USED, R1 , REG_NOT_USED, 0); // if not minus
+			//ADD_LL_NEXT(new_ins, ins);
 
 			LikelybranchInstruction = ins;
 
@@ -681,6 +681,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
 			}
+
+			// (2)
+			new_ins 	= newInstrI(ARM_BIC,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
+			ADD_LL_NEXT(new_ins, ins);
 
 			// (3) if segment loops on its self
 			if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
@@ -707,10 +711,14 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			if (delayInstruction->instruction > DR_NO_OP)
+			// (4)
+			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
+			ADD_LL_NEXT(new_ins, ins);
+
+			//if (delayInstruction->instruction > DR_NO_OP)
 			{
 				// Provide a jump if not branching on LIKELY
-				new_ins = newInstrIntB(PL, NULL);
+				new_ins = newInstrIntB(PL, new_ins);
 				ADD_LL_NEXT(new_ins, LikelybranchInstruction);
 			}
 
@@ -798,6 +806,13 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			new_ins = newInstrI(ARM_CMP, MI, REG_NOT_USED, R1 , REG_NOT_USED, 0); // if not minus
 			ADD_LL_NEXT(new_ins, ins);
 
+			// Store the MIPS PC+8 into REG 31
+			addLiteral(codeSegment, &base, &offset, (uint32_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + 1U));
+
+			// REG 31 is updated regardless of whether the branch is taken
+			new_ins = newInstrI(ARM_LDR_LIT, AL, 31, REG_NOT_USED, base, offset);
+			ADD_LL_NEXT(new_ins, ins);
+
 			LikelybranchInstruction = ins;
 
 			// (1)
@@ -806,20 +821,13 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(delayInstruction, ins);
 			}
 
-			// Store the MIPS PC+8 into REG 31
-			addLiteral(codeSegment, &base, &offset, (uint32_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + 1U));
-
-			// REG 31 is updated regardless of whether the branch is taken
-			new_ins = newInstrI(ARM_LDR_LIT, AL, 31, REG_NOT_USED, base, offset);
-			ADD_LL_NEXT(new_ins, ins);
-
 			//if segment loops on its self
 			if (getSegmentAt((size_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset)) == codeSegment)
 			{
 				new_ins = newInstrPUSH(AL, REG_HOST_STM_LR);
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstrIntBL(MI, codeSegment->Intermcode);
+				new_ins = newInstrIntBL(AL, codeSegment->Intermcode);
 				ADD_LL_NEXT(new_ins, ins);
 
 				new_ins = newInstrPOP(AL, REG_HOST_STM_LR);
@@ -831,7 +839,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 				// ---- Dynamic Recompiler Branching ABI ----
 
-				addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment->MIPScode);
+				addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
 				new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
 				ADD_LL_NEXT(new_ins, ins);
 
@@ -848,7 +856,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				new_ins = newInstrPUSH(AL, REG_HOST_STM_LR);
 				ADD_LL_NEXT(new_ins, ins);
 
-				new_ins = newInstrBL(MI, tgt_address, 1);
+				new_ins = newInstrBL(AL, tgt_address, 1);
 				ADD_LL_NEXT(new_ins, ins);
 
 				new_ins = newInstrPOP(AL, REG_HOST_STM_LR);
@@ -863,7 +871,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
 			ADD_LL_NEXT(new_ins, ins);
 
-			if (delayInstruction->instruction > DR_NO_OP)
+			//if (delayInstruction->instruction > DR_NO_OP)
 			{
 				// Provide a jump if not branching on LIKELY
 				new_ins = newInstrIntB(PL, new_ins);
@@ -960,10 +968,14 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
-			if (delayInstruction->instruction > DR_NO_OP)
+			// (4)
+			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
+			ADD_LL_NEXT(new_ins, ins);
+
+			//if (delayInstruction->instruction > DR_NO_OP)
 			{
 				// Provide a jump if not branching on LIKELY
-				new_ins = newInstrIntB(LT, NULL);
+				new_ins = newInstrIntB(LT, new_ins);
 				ADD_LL_NEXT(new_ins, LikelybranchInstruction);
 			}
 
@@ -1125,7 +1137,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
 			ADD_LL_NEXT(new_ins, ins);
 
-			if (delayInstruction->instruction > DR_NO_OP)
+			//if (delayInstruction->instruction > DR_NO_OP)
 			{
 				// Provide a jump if not branching on LIKELY
 				new_ins = newInstrIntB(LT, new_ins);
@@ -1231,7 +1243,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
 			ADD_LL_NEXT(new_ins, ins);
 
-			if (delayInstruction->instruction > DR_NO_OP)
+			//if (delayInstruction->instruction > DR_NO_OP)
 			{
 				// Provide a jump if not branching on LIKELY
 				new_ins = newInstrIntB(GT, new_ins);
@@ -1334,7 +1346,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
 			ADD_LL_NEXT(new_ins, ins);
 
-			if (delayInstruction->instruction > DR_NO_OP)
+			//if (delayInstruction->instruction > DR_NO_OP)
 			{
 				// Provide a jump if not branching on LIKELY
 				new_ins = newInstrIntB(LE, new_ins);

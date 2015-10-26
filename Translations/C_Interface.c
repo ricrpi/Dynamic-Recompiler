@@ -123,13 +123,17 @@ size_t branchUnknown(code_seg_t* code_seg, size_t* address)
 		MIPSaddress =  (((size_t)code_seg->MIPScode + code_seg->MIPScodeLen * 4)&0xF0000000U) + ops_JumpAddress(&code_seg->MIPScode[code_seg->MIPScodeLen - 1]);
 	}
 
+#if SHOW_BRANCHUNKNOWN_STEPS
 	printf("branchUnknown(0x%08x) called from Segment 0x%08x\n", MIPSaddress, (uint32_t)code_seg);
 
 	printf_Intermediate(ins,1);
+#endif
 
 	code_seg_t* tgtSeg = getSegmentAt(MIPSaddress);
 
+#if SHOW_BRANCHUNKNOWN_STEPS
 	printf("tgtSeg = 0x%08x\n", (uint32_t)tgtSeg);
+#endif
 
 	// 1. Need to generate the ARM assembler for target code_segment. Use 'addr' and code Seg map.
 	// 2. Then we need to patch the code_segment branch we came from. Do we need it to be a link?
@@ -140,20 +144,25 @@ size_t branchUnknown(code_seg_t* code_seg, size_t* address)
 	{
 		if (NULL == tgtSeg->ARMEntryPoint)
 		{
+#if SHOW_BRANCHUNKNOWN_STEPS
 			printf("Translating pre-existing CodeSegment\n");
-
+#endif
 			Translate(tgtSeg);
 		}
 		else
 		{
+#if SHOW_BRANCHUNKNOWN_STEPS
 			printf("Patch pre-existing CodeSegment\n");
+#endif
 		}
 
 		ARMAddress = (size_t)tgtSeg->ARMEntryPoint;
 	}
 	else
 	{
+#if SHOW_BRANCHUNKNOWN_STEPS
 		printf("Creating new CodeSegment for 0x%08x\n", MIPSaddress);
+#endif
 		tgtSeg = CompileCodeAt((uint32_t*)MIPSaddress);
 		ARMAddress = (size_t)tgtSeg->ARMEntryPoint;
 	}
@@ -190,12 +199,11 @@ size_t branchUnknown(code_seg_t* code_seg, size_t* address)
 		addToCallers(code_seg, tgtSeg);
 		ins->outputAddress = (size_t)address;
 
+#if SHOW_BRANCHUNKNOWN_STEPS
 		printf_Intermediate(ins,1);
+#endif
 
 		uint32_t* 	out 		= address;
-
-		//emit the arm code
-		//printf("emitting at address %p\n", out);
 
 		*out = arm_encode(ins, (size_t)out);
 		__clear_cache(out, &out[1]);
