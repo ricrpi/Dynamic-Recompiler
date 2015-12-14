@@ -246,8 +246,8 @@ typedef enum _Instruction_e {
 	MIPS_MFLO,	// Rd1 (rd) = LO 					To copy the special purpose LO register to a GPR.
 	MIPS_MTLO,	// LO = R1 (rs)						To copy a GPR to the special purpose LO register.
 	MIPS_DSLLV,	// Rd1 (rd) = R1 (rt) << R2 (rs) 	To left shift a doubleword by a variable number of bits. The bit shift count in the range 0 to 63 is specified by the low-order six bits in GPR rs
-	MIPS_DSRLV,	// Rd1 (rd) = R1 (rt) << R2 (rs) 	To right shift a doubleword by a variable number of bits. The bit shift count in the range 0 to 63 is specified by the low-order six bits in GPR rs
-	MIPS_DSRAV,	// Rd1 (rd) = R1 (rt) << R2 (rs) (arithmetic). To right shift a doubleword by a variable number of bits. The bit shift count in the range 0 to 63 is specified by the low-order six bits in GPR rs
+	MIPS_DSRLV,	// Rd1 (rd) = R1 (rt) >> R2 (rs) 	To right shift a doubleword by a variable number of bits. The bit shift count in the range 0 to 63 is specified by the low-order six bits in GPR rs
+	MIPS_DSRAV,	// Rd1 (rd) = R1 (rt) >> R2 (rs) (arithmetic). To right shift a doubleword by a variable number of bits. The bit shift count in the range 0 to 63 is specified by the low-order six bits in GPR rs
 	MIPS_MULT,	// LO, HI = R1 (rs) * R2 (rt)		The 32-bit word value in GPR rt is multiplied by the 32-bit value in GPR rs, treating both operands as signed values, to produce a 64-bit result. The low-order 32-bit word of the result is placed into special register LO, and the high-order 32-bit word is placed into special register HI.
 	MIPS_MULTU,	// LO, HI = R1 (rs) * R2 (rt)		The 32-bit word value in GPR rt is multiplied by the 32-bit value in GPR rs, treating both operands as unsigned values, to produce a 64-bit result. The low-order 32-bit word of the result is placed into special register LO, and the high-order 32-bit word is placed into special register HI.
 	MIPS_DIV,	// (LO, HI) = R1 (rs) / R2 (rt) 	To divide 32-bit signed integers. The 32-bit word value in GPR rs is divided by the 32-bit value in GPR rt, treating both operands as signed values. The 32-bit quotient is placed into special register LO and the 32-bit remainder is placed into special register HI.
@@ -465,59 +465,76 @@ typedef enum _Instruction_e {
 	// ARM
 	//---------------------------
 
-	ARM_BFC= STRIP(MIPS_LWU) + 1,
-	ARM_BFI,
-	ARM_CLZ,
-	ARM_PKHBT,
-	ARM_PKHTB,
-	ARM_RBIT,
-	ARM_REV,
-	ARM_REV16,
-	ARM_REVSH,
+	ARM_ADC= STRIP(MIPS_LWU) + 1,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
+	ARM_ADD,		// Rd1 (Rd) = R1 (Rn) + Op2
 	ARM_AND,		// R1 (Rd) = R2 (Rn) & Op2
+	ARM_ASR,		// Rd1 (Rd) = R1 (Rn) >> #<imm>
 	ARM_B,			// pc = pc+<offset>
+	ARM_BFC,
+	ARM_BFI,
+	ARM_BIC,		// Rd1 (Rd) = R1 (Rn) AND ~Op2
 	ARM_BL,			// lr = pc-4, pc = pc+<offset>
 	ARM_BLX,		// lr = pc-4, pc = R1 (Rm)
 	ARM_BX,			// pc = R1 (Rm)
-	ARM_EOR,
-	ARM_SUB,		// Rd1 (Rd) = R1 - Op2
-	ARM_RSB,		// Rd1 (Rd) = Op2 - R1
-	ARM_ADD,		// Rd1 (Rd) = R1 (Rn) + Op2
-	ARM_ADC,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
-	ARM_ASR,		// Rd1 (Rd) = R1 (Rn) >> #<imm>
-	ARM_SBC,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
-	ARM_RSC,
-	ARM_TST,		// R1 (Rn) & Op2
-	ARM_TEQ,		// R1 (Rn) ^ Op2
-	ARM_CMP,		// R1 (Rn) - Op2
+	ARM_CLZ,
 	ARM_CMN,		// R1 (Rn) + Op2
-	ARM_ORR,		// Rd1 (Rd) = R1 (Rn) | Op2
-	ARM_MOV,		// Rd1 (Rd) = Op2
-	ARM_BIC,		// Rd1 (Rd) = R1 (Rn) AND ~Op2
-	ARM_MVN,		// Rd1 (Rd) = ~Op2
-	ARM_LDR,		// Rd1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
-	ARM_STR,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
-	ARM_LDRD,		// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
-	ARM_STRD,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
-	ARM_LDR_LIT,	// Rd1 (Rt) = memory[ R2 (Rn) + imm ]
-	ARM_STR_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
-	ARM_LDRD_LIT,	// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
-	ARM_STRD_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
+	ARM_CMP,		// R1 (Rn) - Op2
+	ARM_DMB,		// ARMv7 Data Memory Barrier
+	ARM_DSB,		// ARMv7 Data Synchronization Barrier
+	ARM_EOR,
+	ARM_ISB,		// ARMv7 Instruction Synchronization Barrier
+
+	ARM_LDC,
 	ARM_LDM,		// Rmask (<registers>) = memory [ Rn ], if (W) Rn +-= count of registers  (+ if U, - if ~U)
-	ARM_STM,		// memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
-
-	ARM_LDRH,		// Rd1 (Rd
-	ARM_STRH,
-	ARM_LDRSH,
-	ARM_STRSH,
-
+	ARM_LDR,		// Rd1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
+	ARM_LDR_LIT,	// Rd1 (Rt) = memory[ R2 (Rn) + imm ]
 	ARM_LDRB,
-	ARM_STRB,
-	ARM_LDRSB,
-	ARM_STRSB,
-
-	ARM_MRS,
+	ARM_LDRD,		// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
+	ARM_LDRD_LIT,	// Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
+	ARM_LDRH,		// Rd1 (Rd
+	ARM_LDRSB,		// Rd1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ] or memory[ R2 (Rn) + imm8 ]
+	ARM_LDRSH,		// Rd1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ] or memory[ R2 (Rn) + imm8 ]
+	ARM_MCR,
+	ARM_MCRR,
+	ARM_MLA,		// Rd1 = R1 (Rn) * R2 (Rm) + R3 (Ra)
+	ARM_MLS,		// Rd1 = R1 (Ra) - R2 (Rn) * R3 (Rm)
+	ARM_MOV,		// Rd1 (Rd) = Op2
+	ARM_MRC,		//
+	ARM_MRRC,		//
+	ARM_MRS,		//
 	ARM_MSR,
+	ARM_MUL,		// Rd1 (Rd) = R1 (Rn) * R2 (Rm)
+	ARM_MVN,		// Rd1 (Rd) = ~Op2
+	ARM_ORR,		// Rd1 (Rd) = R1 (Rn) | Op2
+	ARM_PKHBT,
+	ARM_PKHTB,
+	ARM_PLD,		// ARMv7 Pre-load Data
+	ARM_RBIT,		//
+	ARM_REV,
+	ARM_REV16,
+	ARM_REVSH,
+	ARM_RSB,		// Rd1 (Rd) = Op2 - R1
+	ARM_RSC,
+	ARM_SBC,		// Rd1 (Rd) = R1 (Rn) + Op2 + Carry
+	ARM_SDIV,		// ARMv7VE, optional on ARMv7-A, ARMv7-R
+	ARM_SMLAL,		// Signed, Rd1 (RdHi), Rd2 (RdLo) = R1 (Rn) * R2 (Rm) + ( Rd1 (RdHi): Rd2 (RdLo) )
+	ARM_SMULL,		// Signed, Rd1 (RdHi), Rd2 (RdLo) = R1 (Rn) * R2 (Rm)
+
+	ARM_STC,		// Store Coprocessor
+	ARM_STM,		// memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
+	ARM_STR,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
+	ARM_STR_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
+	ARM_STRB,
+	ARM_STRD,		// memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
+	ARM_STRD_LIT,	// memory [ R2 (Rn) + imm ] = R1 (Rt)
+	ARM_STRH,
+	ARM_STRSB,
+	ARM_STRSH,
+	ARM_SUB,		// Rd1 (Rd) = R1 - Op2ARM_TST,		// R1 (Rn) & Op2
+	ARM_TEQ,		// R1 (Rn) ^ Op2
+	ARM_TST,		// R1 (Rn) & Op2
+	ARM_UMLAL,		// Unsigned, Rd1 (RdHi), Rd2 (RdLo) = R1 (Rn) * R2 (Rm) + ( Rd1 (RdHi): Rd2 (RdLo) )
+	ARM_UMULL,		// Unsigned, Rd1 (RdHi), Rd2 (RdLo) = R1 (Rn) * R2 (Rm)
 
 	// VFP Instructions
 
@@ -538,7 +555,6 @@ typedef enum _Instruction_e {
 	//---------------------------
 	// Next Instruction Set ...
 	//---------------------------
-
 
 	sizeof_mips_op_t
 } Instruction_e;
@@ -608,13 +624,15 @@ typedef struct _Instruction
 	reg_t R1;  // Input 1
 	reg_t R2;  // Input 2
 	reg_t R3;  // Input 3
-
+	reg_t R4;  // Input 4
 #if USE_INSTRUCTION_INIT_REGS
 	reg_t Rd1_init;
 	reg_t Rd2_init;
 	reg_t R1_init;
 	reg_t R2_init;
 	reg_t R3_init;
+	reg_t R4_init;
+
 #endif
 	//----------------------- control bits ------------------------
 

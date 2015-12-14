@@ -103,6 +103,8 @@ static void sprintf_reg_t(char* str, const reg_t r)
 	else if (r.regID == REG_FCR31)     sprintf(str, "FCR31 ");
 	else if (r.regID == REG_MULTHI)    sprintf(str, "M_HI  ");
 	else if (r.regID == REG_MULTLO)    sprintf(str, "M_LO  ");
+	else if (r.regID == (REG_MULTHI | REG_WIDE))    sprintf(str, "M_HIw ");
+	else if (r.regID == (REG_MULTLO | REG_WIDE))    sprintf(str, "M_LOw ");
 	else if (r.regID == REG_LLBIT)     sprintf(str, "LLBIT ");
 
 	else if (r.regID >= REG_HOST)		 sprintf(str, "h%-3d  ", r.regID - REG_HOST);
@@ -475,6 +477,7 @@ Instruction_t* newEmptyInstr()
 	newInstr->R1.regID = REG_NOT_USED;
 	newInstr->R2.regID = REG_NOT_USED;
 	newInstr->R3.regID = REG_NOT_USED;
+	newInstr->R4.regID = REG_NOT_USED;
 
 	newInstr->A=0;			// Accumulate
 	newInstr->B=0;			// Byte/Word bit, 1 = byte

@@ -128,7 +128,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 	regID_t Rd1;
 	regID_t	R1;
 	regID_t R2;
-	int32_t	funcTempImm;
+	int32_t	imm;
 	Instruction_t* new_ins;
 	Instruction_t* ins1, *ins2;
 
@@ -137,7 +137,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		Rd1 = ins->Rd1.regID;
 		R1 = ins->R1.regID;
 		R2 = ins->R2.regID;
-		funcTempImm = ins->immediate;
+		imm = ins->immediate;
 
 		switch (ins->instruction)
 		{
@@ -161,14 +161,14 @@ void Translate_Memory(code_seg_t* const codeSegment)
 #if 1
 			Instr(ins, ARM_MOV, AL,REG_TEMP_SCRATCH0, REG_NOT_USED, R1);
 
-			if (funcTempImm < 0)
+			if (imm < 0)
 			{
-				new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -funcTempImm);
+				new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -imm);
 				ADD_LL_NEXT(new_ins, ins);
 			}
-			else if (funcTempImm > 0)
+			else if (imm > 0)
 			{
-				new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, funcTempImm);
+				new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, imm);
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
@@ -192,29 +192,29 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			ins = MoveToMemoryBase(ins, AL_B, REG_TEMP_SCRATCH0); // get to host address if uMemoryBase != 0x80
 
-			if (funcTempImm > 0)
+			if (imm > 0)
 			{
 				//check immediate is not too large for ARM and if it is then add additional imm
-				if (funcTempImm > 0xFFF)
+				if (imm > 0xFFF)
 				{
-					new_ins = newInstrI(ARM_ADD, AL_B, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (funcTempImm)&0xf000);
+					new_ins = newInstrI(ARM_ADD, AL_B, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (imm)&0xf000);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				// now store the value at REG_TEMP_GEN1 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_STR, AL_B, REG_NOT_USED, R2, REG_TEMP_SCRATCH0, funcTempImm&0xfff);
+				new_ins = newInstrI(ARM_STR, AL_B, REG_NOT_USED, R2, REG_TEMP_SCRATCH0, imm&0xfff);
 				new_ins->U = 1;
 				ADD_LL_NEXT(new_ins, ins);
 			}
 			else
 			{
-				if  (funcTempImm < -0xFFF)
+				if  (imm < -0xFFF)
 				{
-					new_ins = newInstrI(ARM_SUB, AL_B, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (-funcTempImm)&0xf000);
+					new_ins = newInstrI(ARM_SUB, AL_B, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (-imm)&0xf000);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 
 				// now store the value at REG_TEMP_GEN1 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_STR, AL_B, REG_NOT_USED, R2, REG_TEMP_SCRATCH0, (-funcTempImm)&0xfff);
+				new_ins = newInstrI(ARM_STR, AL_B, REG_NOT_USED, R2, REG_TEMP_SCRATCH0, (-imm)&0xfff);
 				new_ins->U = 0;
 				ADD_LL_NEXT(new_ins, ins);
 			}
@@ -258,6 +258,36 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		case MIPS_LDL:
 		case MIPS_LDR:
 		case MIPS_LB:
+			if (imm < -0xFF)
+			{
+				InstrI(ins, ARM_SUB, AL, REG_HOST_R0, R1, REG_NOT_USED, (-imm) & 0xFF00U);
+
+				new_ins = newInstrI(ARM_LDRSB, AL, Rd1, REG_NOT_USED, REG_HOST_R0, -(imm & 0xFFU));
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else if (imm > 0xFF)
+			{
+				InstrI(ins, ARM_ADD, AL, REG_HOST_R0, R1, REG_NOT_USED, imm & 0xFF00U);
+
+				new_ins = newInstrI(ARM_LDRSB, AL, Rd1, REG_NOT_USED, REG_HOST_R0, (imm & 0xFFU));
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else
+			{
+				InstrI(ins, ARM_LDRSB, AL, Rd1, REG_NOT_USED, R1, imm);
+			}
+
+			// Fix upper 64 bits
+			new_ins = newInstrI(ARM_CMP, AL, REG_NOT_USED, Rd1, REG_NOT_USED, 0);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstrI(ARM_MVN, MI, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstrI(ARM_MOV, PL, Rd1 | REG_WIDE, REG_NOT_USED, REG_NOT_USED, 0);
+			ADD_LL_NEXT(new_ins, ins);
+
+			break;
 		case MIPS_LH:
 		case MIPS_LWL:
 			TRANSLATE_ABORT();
@@ -266,14 +296,14 @@ void Translate_Memory(code_seg_t* const codeSegment)
 #if 1
 			Instr(ins, ARM_MOV, AL,REG_TEMP_SCRATCH0, REG_NOT_USED, R1);
 
-			if (funcTempImm < 0)
+			if (imm < 0)
 			{
-				new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -funcTempImm);
+				new_ins = newInstrI(ARM_SUB, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, -imm);
 				ADD_LL_NEXT(new_ins, ins);
 			}
-			else if (funcTempImm > 0)
+			else if (imm > 0)
 			{
-				new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, funcTempImm);
+				new_ins = newInstrI(ARM_ADD, AL, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, imm);
 				ADD_LL_NEXT(new_ins, ins);
 			}
 
@@ -298,29 +328,29 @@ void Translate_Memory(code_seg_t* const codeSegment)
 
 			ins = MoveToMemoryBase(ins, AL_B, REG_TEMP_SCRATCH0); // get to host address if uMemoryBase != 0x80
 
-			if (funcTempImm > 0)
+			if (imm > 0)
 			{
 				//check immediate is not too large for ARM and if it is then add additional imm
-				if (funcTempImm > 0xFFF)
+				if (imm > 0xFFF)
 				{
-					new_ins = newInstrI(ARM_ADD, AL_B, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (funcTempImm)&0xf000);
+					new_ins = newInstrI(ARM_ADD, AL_B, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (imm)&0xf000);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 				// now store the value at REG_TEMP_SCRATCH0 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_LDR, AL_B, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0, funcTempImm&0xfff);
+				new_ins = newInstrI(ARM_LDR, AL_B, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0, imm&0xfff);
 				new_ins->U = 1;
 				ADD_LL_NEXT(new_ins, ins);
 			}
 			else
 			{
-				if  (funcTempImm < -0xFFF)
+				if  (imm < -0xFFF)
 				{
-					new_ins = newInstrI(ARM_SUB, AL_B, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (-funcTempImm)&0xf000);
+					new_ins = newInstrI(ARM_SUB, AL_B, REG_TEMP_SCRATCH0, REG_TEMP_SCRATCH0, REG_NOT_USED, (-imm)&0xf000);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 
 				// now store the value at REG_TEMP_SCRATCH0 ( This will be R2 + host base + funcTempImm&0xf000 )
-				new_ins = newInstrI(ARM_LDR, AL_B, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0, (-funcTempImm)&0xfff);
+				new_ins = newInstrI(ARM_LDR, AL_B, Rd1, REG_NOT_USED, REG_TEMP_SCRATCH0, (-imm)&0xfff);
 				new_ins->U = 0U;
 				ADD_LL_NEXT(new_ins, ins);
 			}
@@ -352,6 +382,25 @@ void Translate_Memory(code_seg_t* const codeSegment)
 #endif
 			break;
 		case MIPS_LBU:
+			if (imm < -0xFF)
+			{
+				InstrI(ins, ARM_SUB, AL, REG_HOST_R0, R1, REG_NOT_USED, imm & 0xFF00U);
+
+				new_ins = newInstrI(ARM_LDRB, AL, Rd1, REG_NOT_USED, REG_HOST_R0, -(imm & 0xFFU));
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else if (imm > 0xFF)
+			{
+				InstrI(ins, ARM_ADD, AL, REG_HOST_R0, R1, REG_NOT_USED, imm & 0xFF00U);
+
+				new_ins = newInstrI(ARM_LDRB, AL, Rd1, REG_NOT_USED, REG_HOST_R0, (imm & 0xFFU));
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else
+			{
+				InstrI(ins, ARM_LDRB, AL, Rd1, REG_NOT_USED, R1, imm);
+			}
+			break;
 		case MIPS_LHU:
 		case MIPS_LWR:
 		case MIPS_LWU:

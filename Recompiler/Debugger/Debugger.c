@@ -810,23 +810,26 @@ void DebugRuntimePrintMIPS()
 						, 16U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x+REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_FP)));
 	}
 
-	printf("\n\tBadVaddr 0x%08x  PC     0x%08x\n"
+	printf("\n\tBadVaddr 0x%08x  PC     0x%08x%08x\n"
 			"\tCount    0x%08x  FCR0   0x%08x\n"
 			"\tEntryHi  0x%08x  FCR31  0x%08x\n"
-			"\tCompare  0x%08x  MultHi 0x%08x\n"
-			"\tStatus   0x%08x  MultLo 0x%08x\n"
+			"\tCompare  0x%08x  MultHi 0x%08x%08x\n"
+			"\tStatus   0x%08x  MultLo 0x%08x%08x\n"
 			"\tCause    0x%08x  LLBit  0x%01x\n"
 			"\tContext  0x%08x  EPC    0x%08x\n"
 			,*(uint32_t*)(MMAP_FP_BASE + REG_BADVADDR*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_PC*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_PC*4+4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_COUNT*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_FCR0*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_ENTRYHI*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_FCR31*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_COMPARE*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_MULTHI*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_MULTHI*4+4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_STATUS*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_MULTLO*4)
+			,*(uint32_t*)(MMAP_FP_BASE + REG_MULTLO*4+4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_CAUSE*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_LLBIT*4)
 			,*(uint32_t*)(MMAP_FP_BASE + REG_CONTEXT*4)

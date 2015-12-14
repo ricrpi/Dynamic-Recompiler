@@ -60,7 +60,7 @@
 #define SHOW_CODE_SEG_MAP_CHANGES			(0)
 
 // Print out information on the CompileAt() call. This call finds new code segments
-#define SHOW_COMPILEAT_STEPS				(0)
+#define SHOW_COMPILEAT_STEPS				(1)
 
 #define SHOW_BRANCHUNKNOWN_STEPS			(0)
 

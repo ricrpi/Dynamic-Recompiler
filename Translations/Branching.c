@@ -193,6 +193,7 @@ void Translate_Branch(code_seg_t* const codeSegment)
 	while (ins && ins->nextInstruction)
 	{
 		instruction = ins->nextInstruction->instruction;
+		regID_t Rd1 = ins->nextInstruction->Rd1.regID;
 		regID_t R1 = ins->nextInstruction->R1.regID;
 		regID_t R2 = ins->nextInstruction->R2.regID;
 		offset = ins->nextInstruction->offset;
@@ -205,8 +206,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			// (3)
 			if (0 == R2)
@@ -332,8 +335,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			// (3)
 			if (0 == R2)
@@ -459,14 +464,30 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
 			}
+
+			ins= ins->nextInstruction;
 
 			// (2)
 			InstrI(ins, ARM_BIC, AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
 
+			// ---- Dynamic Recompiler Branching ABI ----
+
+			addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
+			new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstrI(ARM_SUB, AL, REG_HOST_R1, REG_HOST_PC, REG_NOT_USED, 4U);
+			ADD_LL_NEXT(new_ins, ins);
+
+			// ---- End ---------------------------------
+
 			// (3)
 			new_ins = newInstrB(AL, tgt_address, 1U);
+			ADD_LL_NEXT(new_ins, ins);
+
+			// (4)
+			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
 			ADD_LL_NEXT(new_ins, ins);
 
 			return;
@@ -477,33 +498,47 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
 			}
+
+			ins= ins->nextInstruction;
 
 			// (2)
 			InstrI(ins, ARM_BIC, AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
 
-			// (3)
+			// Store the MIPS PC+8 into REG 31
+			addLiteral(codeSegment, &base, &offset, (uint32_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + 1U));
+			new_ins = newInstrI(ARM_LDR_LIT, AL, 31U, REG_NOT_USED, base, offset);
+			ADD_LL_NEXT(new_ins, ins);
+
+			// ---- Dynamic Recompiler Branching ABI ----
+
+			addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
+			new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
+			ADD_LL_NEXT(new_ins, ins);
+
+#if USE_HOST_MANAGED_BRANCHING
+			new_ins = newInstrI(ARM_ADD, AL, REG_HOST_R1, REG_HOST_PC, REG_NOT_USED, 0U);
+			ADD_LL_NEXT(new_ins, ins);
+#else
+			new_ins = newInstrI(ARM_SUB, AL, REG_HOST_R1, REG_HOST_PC, REG_NOT_USED, 4U);
+			ADD_LL_NEXT(new_ins, ins);
+#endif
+			// ---- End ---------------------------------
+
 #if USE_HOST_MANAGED_BRANCHING
 			new_ins = newInstrPUSH(AL, REG_HOST_STM_LR);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins = newInstrBL(AL, tgt_address, 1U);
+			new_ins = newInstrBL(AL, tgt_address, 1);
 			ADD_LL_NEXT(new_ins, ins);
 
 			new_ins = newInstrPOP(AL, REG_HOST_STM_LR);
 			ADD_LL_NEXT(new_ins, ins);
 #else
-			// Store the MIPS PC+8 into REG 31
-			addLiteral(codeSegment, &base, &offset, (uint32_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + 1U));
-
-			// REG 31 is updated regardless of whether the branch is taken
-			new_ins = newInstrI(ARM_LDR_LIT, AL, 31U, REG_NOT_USED, base, offset);
-			ADD_LL_NEXT(new_ins, ins);
-
-			new_ins = newInstrB(AL, tgt_address, 1U);
+			new_ins = newInstrB(AL, tgt_address, 1);
 			ADD_LL_NEXT(new_ins, ins);
 #endif
+
 
 			// (4)
 			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
@@ -536,20 +571,22 @@ void Translate_Branch(code_seg_t* const codeSegment)
 				else
 #endif
 				{
-					Instr(ins, ARM_MOV, AL, REG_HOST_R0, REG_NOT_USED, R1);
+					// ---- Dynamic Recompiler Branching ABI ----
+
+					addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
+					InstrI(ins, ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
+
+					new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R1);
+					ADD_LL_NEXT(new_ins, ins);
+
+					// ---- End ---------------------------------
 
 					tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
 
-					new_ins = newInstrPUSH(AL, REG_HOST_STM_LR);
-					ADD_LL_NEXT(new_ins, ins);
-
-					new_ins = newInstrBL(AL, tgt_address, 1U);
+					new_ins = newInstrB(AL, tgt_address, 1U);
 					ADD_LL_NEXT(new_ins, ins);
 
 					new_ins = newInstrPOP(AL, REG_HOST_STM_LR);
-					ADD_LL_NEXT(new_ins, ins);
-
-					new_ins = newInstr(ARM_BX, AL, REG_NOT_USED, REG_HOST_R0, REG_NOT_USED);
 					ADD_LL_NEXT(new_ins, ins);
 				}
 			}
@@ -560,17 +597,17 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			// (2)
 			InstrI(ins, ARM_BIC, AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
 
-			// Store the MIPS PC+8 into REG 31
+			// Store the MIPS PC+8 into Rd1
 			addLiteral(codeSegment, &base, &offset, (uint32_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + 1U));
-
-			// REG 31
-			new_ins = newInstrI(ARM_LDR_LIT, AL, 31U, REG_NOT_USED, base, offset);
+			new_ins = newInstrI(ARM_LDR_LIT, AL, Rd1, REG_NOT_USED, base, offset);
 			ADD_LL_NEXT(new_ins, ins);
 
 			// we need to lookup the code segment we should be branching to according to the value in the register
@@ -578,43 +615,37 @@ void Translate_Branch(code_seg_t* const codeSegment)
 
 			// ---- Dynamic Recompiler Branching ABI ----
 
-			addLiteral(codeSegment, &base, &offset, (uint32_t)(codeSegment->MIPScode + codeSegment->MIPScodeLen + offset));
+			addLiteral(codeSegment, &base, &offset, (uint32_t)codeSegment);
 			new_ins = newInstrI(ARM_LDR_LIT, AL, REG_HOST_R0, REG_NOT_USED, base, offset);
 			ADD_LL_NEXT(new_ins, ins);
 
-#if USE_HOST_MANAGED_BRANCHING
-			new_ins = newInstrI(ARM_ADD, AL, REG_HOST_R1, REG_HOST_PC, REG_NOT_USED, 8U);
+			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, R1);
 			ADD_LL_NEXT(new_ins, ins);
-#else
-			new_ins = newInstrI(ARM_SUB, AL, REG_HOST_R1, REG_HOST_PC, REG_NOT_USED, 4U);
-			ADD_LL_NEXT(new_ins, ins);
-#endif
+
 			// ---- End ---------------------------------
 
 			tgt_address = *((size_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN));
 
+#if USE_HOST_MANAGED_BRANCHING
 			// (3)
 			new_ins = newInstrPUSH(AL, REG_HOST_STM_LR);
 			ADD_LL_NEXT(new_ins, ins);
 
-			// call branchUnknown() to get arm address in REG_HOST_R0
+			// call branchUnknown()
 			new_ins = newInstrBL(AL, tgt_address, 1U);
-			ADD_LL_NEXT(new_ins, ins);
-
-#if USE_HOST_MANAGED_BRANCHING
-			// now branch to target segment
-			new_ins = newInstr(ARM_BLX, AL, REG_NOT_USED, REG_HOST_R0, REG_NOT_USED);
 			ADD_LL_NEXT(new_ins, ins);
 
 			new_ins = newInstrPOP(AL, REG_HOST_STM_LR);
 			ADD_LL_NEXT(new_ins, ins);
 #else
-			new_ins = newInstrPOP(AL, REG_HOST_STM_LR);
-			ADD_LL_NEXT(new_ins, ins);
-
-			new_ins = newInstr(ARM_BX, AL, REG_NOT_USED, REG_TEMP_SCRATCH0, REG_NOT_USED);
+			new_ins = newInstrB(AL, tgt_address, 1U);
 			ADD_LL_NEXT(new_ins, ins);
 #endif
+
+			// (4)
+			new_ins 	= newInstrI(ARM_ORR,AL, REG_EMU_FLAGS, REG_EMU_FLAGS, REG_NOT_USED, 1U << REG_EMU_FLAG_DS);
+			ADD_LL_NEXT(new_ins, ins);
+
 			return;
 
 		case MIPS_BLTZ:
@@ -623,8 +654,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			// (3)
 			InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
@@ -728,8 +761,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			//change the MIPS_BLTZAL instruction
 			InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
@@ -885,8 +920,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
@@ -985,8 +1022,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 
@@ -1150,8 +1189,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			// (3)
 			InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
@@ -1256,8 +1297,10 @@ void Translate_Branch(code_seg_t* const codeSegment)
 			if (delayInstruction->instruction > DR_NO_OP)
 			{
 				ADD_LL_NEXT(delayInstruction, ins);
-				ins= ins->nextInstruction;
+
 			}
+
+			ins= ins->nextInstruction;
 
 			InstrI(ins, ARM_CMP, AL, REG_NOT_USED, R1 | REG_WIDE, REG_NOT_USED, 0);
 

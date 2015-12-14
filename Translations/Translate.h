@@ -199,8 +199,8 @@ static TranslationsMap Translations[] =
 		{Translate_init,					"init"}						//
 
 		// Hardware related
+		, {Translate_CountRegister,			"CountRegister"}			// Keep before 'Branch'
 
-		, {Translate_CountRegister,			"CountRegister"}			//
 //		, {Translate_Trap,					"Trap"}						// Not seen in DynaRec
 
 		// InstructionSet related Translations

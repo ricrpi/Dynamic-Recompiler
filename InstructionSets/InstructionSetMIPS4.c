@@ -1060,6 +1060,7 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			ins->I = 0;
 			ins->Ln = 1;
 			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 
 		case 0x0C:
@@ -1267,38 +1268,44 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 		case 0x38:
 			ins->instruction =  MIPS_DSLL;
-			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->shiftType = LOGICAL_LEFT;
+			ins->shift = (uiMIPSword >> 6U) & 0x1fU;
+			ins->R1.regID = M_Rt(uiMIPSword);
 			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x3A:
 			ins->instruction =  MIPS_DSRL;
-			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->shiftType = LOGICAL_RIGHT;
+			ins->shift = (uiMIPSword >> 6U) & 0x1fU;
+			ins->R1.regID = M_Rt(uiMIPSword);
 			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x3B:
 			ins->instruction =  MIPS_DSRA;
-			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->shiftType = ARITHMETIC_RIGHT;
+			ins->shift = (uiMIPSword >> 6U) & 0x1fU;
+			ins->R1.regID = M_Rt(uiMIPSword);
 			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x3C:
 			ins->instruction =  MIPS_DSLL32;
-			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->shiftType = LOGICAL_LEFT;
+			ins->shift = (uiMIPSword >> 6U) & 0x1fU;
+			ins->R1.regID = M_Rt(uiMIPSword);
 			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x3E:
 			ins->instruction =  MIPS_DSRL32;
-			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->shiftType = LOGICAL_RIGHT;
+			ins->shift = (uiMIPSword >> 6U) & 0x1fU;
+			ins->R1.regID = M_Rt(uiMIPSword);
 			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		case 0x3F:
 			ins->instruction =  MIPS_DSRA32;
-			ins->R1.regID = M_Rs(uiMIPSword);
-			ins->R2.regID = M_Rt(uiMIPSword);
+			ins->shiftType = ARITHMETIC_RIGHT;
+			ins->shift = (uiMIPSword >> 6U) & 0x1fU;
+			ins->R1.regID = M_Rt(uiMIPSword);
 			ins->Rd1.regID = M_Rd(uiMIPSword);
 			return 0;
 		}

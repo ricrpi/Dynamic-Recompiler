@@ -61,11 +61,16 @@ void invalidateBranch(const code_seg_t* codeSegment)
 #if SHOW_CALLER
 		printf("invalidateBranch(0x%08x) at 0x%08x\n", (uint32_t)codeSegment, (uint32_t)out);
 #endif
-		printf_arm((uint32_t)out, *out);
 
+#if SHOW_BRANCHUNKNOWN_STEPS
+		printf_arm((uint32_t)out, *out);
+#endif
 		//Get MIPS condition code for branch
 		mips_decode(*(codeSegment->MIPScode + codeSegment->MIPScodeLen -1), ins);
+
+#if SHOW_BRANCHUNKNOWN_STEPS
 		printf_Intermediate(ins, 1);
+#endif
 
 		//Set instruction to ARM_BRANCH for new target
 		InstrB(ins, ins->cond, targetAddress, 1);
@@ -280,7 +285,7 @@ code_seg_t* CompileCodeAt(const uint32_t const address[])
 			newSeg->MIPScodeLen = x - segmentStartIndex + 1U;
 
 #if	SHOW_COMPILEAT_STEPS
-				printf("CompiltCodeAt(0x%x) - new external jump segment 0x%x to address 0x%x\n", address, newSeg, newSeg->MIPScode);
+				printf("CompiltCodeAt(0x%x) - new external jump segment 0x%x at address 0x%x\n", address + x * 4U, newSeg, newSeg->MIPScode);
 #endif
 			if (op == MIPS_JR) //only JR can set PC to the Link Register (or other register!)
 			{

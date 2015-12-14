@@ -118,9 +118,13 @@ size_t branchUnknown(code_seg_t* code_seg, size_t* address)
 	if (op & OPS_BRANCH){
 		MIPSaddress =  (uint32_t)(code_seg->MIPScode + code_seg->MIPScodeLen - 1) + 4*ops_BranchOffset(code_seg->MIPScode + code_seg->MIPScodeLen - 1);
 	}
-	else
+	else if (op == MIPS_J || op == MIPS_JAL)
 	{
 		MIPSaddress =  (((size_t)code_seg->MIPScode + code_seg->MIPScodeLen * 4)&0xF0000000U) + ops_JumpAddress(&code_seg->MIPScode[code_seg->MIPScodeLen - 1]);
+	}
+	else if (op == MIPS_JR || op == MIPS_JALR)
+	{
+		MIPSaddress = address;
 	}
 
 #if SHOW_BRANCHUNKNOWN_STEPS

@@ -248,59 +248,76 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 		 //  ARM
 		 // ---------------------------
 	
+	"adc",	 //  Rd1 (Rd) = R1 (Rn) + Op2 + Carry
+	"add",			 //  Rd1 (Rd) = R1 (Rn) + Op2
+	"and",			 //  R1 (Rd) = R2 (Rn) & Op2
+	"asr",			 //  Rd1 (Rd) = R1 (Rn) >> #<imm>
+	"b",				 //  pc = pc+<offset>
 	"bfc",
 	"bfi",
-	"clz",
-	"pkhbt",
-	"pkhtb",
-	"rbit",
-	"rev",
-	"rev16",
-	"revsh",
-	"and",			 //  R1 (Rd) = R2 (Rn) & Op2
-	"b",				 //  pc = pc+<offset>
+	"bic",			 //  Rd1 (Rd) = R1 (Rn) AND ~Op2
 	"bl",				 //  lr = pc-4, pc = pc+<offset>
 	"blx",			 //  lr = pc-4, pc = R1 (Rm)
 	"bx",				 //  pc = R1 (Rm)
-	"eor",
-	"sub",			 //  Rd1 (Rd) = R1 - Op2
-	"rsb",			 //  Rd1 (Rd) = Op2 - R1
-	"add",			 //  Rd1 (Rd) = R1 (Rn) + Op2
-	"adc",			 //  Rd1 (Rd) = R1 (Rn) + Op2 + Carry
-	"asr",			 //  Rd1 (Rd) = R1 (Rn) >> #<imm>
-	"sbc",			 //  Rd1 (Rd) = R1 (Rn) + Op2 + Carry
-	"rsc",
-	"tst",			 //  R1 (Rn) & Op2
-	"teq",			 //  R1 (Rn) ^ Op2
-	"cmp",			 //  R1 (Rn) - Op2
+	"clz",
 	"cmn",			 //  R1 (Rn) + Op2
-	"orr",			 //  Rd1 (Rd) = R1 (Rn) | Op2
-	"mov",			 //  Rd1 (Rd) = Op2
-	"bic",			 //  Rd1 (Rd) = R1 (Rn) AND ~Op2
-	"mvn",			 //  Rd1 (Rd) = ~Op2
-	"ldr",			 //  Rd1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
-	"str",			 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
-	"ldrd",			 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
-	"strd",			 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
-	"ldr",		 //  Rd1 (Rt) = memory[ R2 (Rn) + imm ]
-	"str",		 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
-	"ldrd",		 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
-	"strd",		 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+	"cmp",			 //  R1 (Rn) - Op2
+	"dmb",			 //  ARMv7 Data Memory Barrier
+	"dsb",			 //  ARMv7 Data Synchronization Barrier
+	"eor",
+	"isb",			 //  ARMv7 Instruction Synchronization Barrier
+	
+	"ldc",
 	"ldm",			 //  Rmask (<registers>) = memory [ Rn ], if (W) Rn +-= count of registers  (+ if U, - if ~U)
-	"stm",			 //  memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
-	
-	"ldrh",			 //  Rd1 (Rd
-	"strh",
-	"ldrsh",
-	"strsh",
-	
+	"ldr",			 //  Rd1 (Rt) = memory[ R2 (Rn) + R3 (Rm) ]
+	"ldr",		 //  Rd1 (Rt) = memory[ R2 (Rn) + imm ]
 	"ldrb",
-	"strb",
+	"ldrd",			 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + R3 (Rm) ]
+	"ldrd",		 //  Rd1 (Rt), Rd2 (Rt2) = memory[ R2 (Rn) + imm ]
+	"ldrh",			 //  Rd1 (Rd
 	"ldrsb",
-	"strsb",
-	
-	"mrs",
+	"ldrsh",
+	"mcr",
+	"mcrr",
+	"mla",			 //  Rd1 = R1 (Rn) * R2 (Rm) + R3 (Ra)
+	"mls",			 //  Rd1 = R1 (Ra) - R2 (Rn) * R3 (Rm)
+	"mov",			 //  Rd1 (Rd) = Op2
+	"mrc",		
+	"mrrc",		
+	"mrs",		
 	"msr",
+	"mul",			 //  Rd1 (Rd) = R1 (Rn) * R2 (Rm)
+	"mvn",			 //  Rd1 (Rd) = ~Op2
+	"orr",			 //  Rd1 (Rd) = R1 (Rn) | Op2
+	"pkhbt",
+	"pkhtb",
+	"pld",			 //  ARMv7 Pre-load Data
+	"rbit",		
+	"rev",
+	"rev16",
+	"revsh",
+	"rsb",			 //  Rd1 (Rd) = Op2 - R1
+	"rsc",
+	"sbc",			 //  Rd1 (Rd) = R1 (Rn) + Op2 + Carry
+	"sdiv",			 //  ARMv7VE, optional on ARMv7-A, ARMv7-R
+	"smlal",			 //  Signed, Rd1 (RdHi), Rd2 (RdLo) = R1 (Rn) * R2 (Rm) + ( Rd1 (RdHi): Rd2 (RdLo) )
+	"smull",			 //  Signed, Rd1 (RdHi), Rd2 (RdLo) = R1 (Rn) * R2 (Rm)
+	
+	"stc",			 //  Store Coprocessor
+	"stm",			 //  memory [ Rn ] = Rmask (<registers>), if (W) Rn +-= count of registers  (+ if U, - if ~U)
+	"str",			 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
+	"str",		 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+	"strb",
+	"strd",			 //  memory [ R2 (Rn) + R3 (Rm) ] = R1 (Rt)
+	"strd",		 //  memory [ R2 (Rn) + imm ] = R1 (Rt)
+	"strh",
+	"strsb",
+	"strsh",
+	"sub",			 //  Rd1 (Rd) = R1 - Op2ARM_TST,		 R1 (Rn) & Op2
+	"teq",			 //  R1 (Rn) ^ Op2
+	"tst",			 //  R1 (Rn) & Op2
+	"umlal",			 //  Unsigned, Rd1 (RdHi), Rd2 (RdLo) = R1 (Rn) * R2 (Rm) + ( Rd1 (RdHi): Rd2 (RdLo) )
+	"umull",			 //  Unsigned, Rd1 (RdHi), Rd2 (RdLo) = R1 (Rn) * R2 (Rm)
 	
 		 //  VFP Instructions
 	
@@ -321,7 +338,6 @@ static const char* Instruction_ascii[sizeof_mips_op_t+1] = {
 		 // ---------------------------
 		 //  Next Instruction Set ...
 		 // ---------------------------
-	
 	
 	"sizeof_mips_op_t"
 };

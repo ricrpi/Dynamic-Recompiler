@@ -89,8 +89,7 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 		//goto instruction before a branch or jump
 		if (ins->nextInstruction)
 		{
-			while (ins->nextInstruction->nextInstruction
-					&& !((ins->nextInstruction->instruction & OPS_BRANCH)
+			while (!((ins->nextInstruction->instruction & OPS_BRANCH)
 							|| (ins->nextInstruction->instruction &OPS_JUMP)))
 			{
 				ins = ins->nextInstruction;
@@ -107,29 +106,11 @@ void Translate_CountRegister(code_seg_t* const codeSegment)
 			if (instrCountRemaining > 255)
 			{
 				newInstruction = newInstrI(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff00);
-
-				if (ins == codeSegment->Intermcode)
-				{
-					newInstruction->nextInstruction = codeSegment->Intermcode;
-					codeSegment->Intermcode = ins = newInstruction;
-				}
-				else
-				{
-					ADD_LL_NEXT(newInstruction, ins);
-				}
+				ADD_LL_NEXT(newInstruction, ins);
 			}
 
 			newInstruction = newInstrIS(ARM_ADD, AL, REG_COUNT, REG_COUNT, REG_NOT_USED, instrCountRemaining&0xff);
-
-			if (ins == codeSegment->Intermcode)
-			{
-				newInstruction->nextInstruction = codeSegment->Intermcode;
-				codeSegment->Intermcode = ins = newInstruction;
-			}
-			else
-			{
-				ADD_LL_NEXT(newInstruction, ins);
-			}
+			ADD_LL_NEXT(newInstruction, ins);
 
 			#if USE_INSTRUCTION_COMMENTS
 				currentTranslation = "Call cc_interrupt()";

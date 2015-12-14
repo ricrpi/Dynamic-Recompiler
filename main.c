@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
 #endif
 
 	FILE *fPtr;
-	long romlength = 0;
+	uint32_t romlength = 0U;
 
 #ifndef TEST
 	if (argc <= 1) fPtr = fopen("m64p_test_rom.v64", "rb");
@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
 	romlength = ftell(fPtr);
 	fseek(fPtr, 0L, SEEK_SET);
 #else
-	romlength = 2000;
+	romlength = 2000U;
 #endif
 
 	if (mmap((uint32_t*)(MMAP_BASE)
