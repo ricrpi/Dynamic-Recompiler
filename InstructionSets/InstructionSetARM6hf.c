@@ -106,7 +106,7 @@ int32_t Imm8Shift(uint32_t val)
 	return -1;
 }
 
-uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
+uint32_t arm_encode(const Instruction_t* ins, const uintptr_t addr)
 {
 	uint8_t Rd1=0, Rd2=0, R1=0, R2=0, R3=0, R4=0;
 
@@ -186,6 +186,11 @@ uint32_t arm_encode(const Instruction_t* ins, const size_t addr)
 			return cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
 	case ARM_LDR_LIT:
 		return cond << 28 | 0x1 << 26 | ins->PR << 24 | ins->U << 23 | ins->B << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
+	case ARM_LDRB:
+			if (ins->I)
+				return cond << 28 | 0x2 << 25 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->immediate&0xFFF);
+			else
+				return cond << 28 | 0x3 << 25 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | 1 << 20 | R2 << 16 | Rd1 << 12 | (ins->shift&0x1f << 7) | (ins->shiftType&3 << 5) | (R3&0xf);
 	case ARM_LDRD:
 		if (ins->I)
 			return cond << 28 | ins->PR << 24 | ins->U << 23 | 1 << 22 | ins->W << 21 | Rd1 << 16 | R1 << 12 | ((ins->immediate&0xF0) << 4) | 0xd0 | (ins->immediate&0xF);
@@ -846,8 +851,8 @@ void emit_arm_code(code_seg_t* const codeSeg)
 	//write out code instructions
 	while (ins)
 	{
-		*emit_out = arm_encode(ins, (size_t)emit_out);
-		ins->outputAddress = (size_t)emit_out;
+		*emit_out = arm_encode(ins, (uintptr_t)emit_out);
+		ins->outputAddress = (uintptr_t)emit_out;
 		codeSeg->ARMcodeLen++;
 		emit_out++;
 		ins = ins->nextInstruction;

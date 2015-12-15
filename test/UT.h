@@ -17,26 +17,11 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.    *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef RECOMPILER_MEM_STATE_H_
-#define RECOMPILER_MEM_STATE_H_
+#ifndef UT_H_
+#define UT_H_
 
-#include <stdint.h>
-#include <stddef.h>
-#include "CodeSegments.h"
 
-typedef struct
-{
-	uint64_t address;
-	uint64_t size;
-	code_seg_t** _memStatePtr;
-} memMap_t;
+void Translation_Test();
 
-void initMemState(memMap_t* MemoryBlocks, uint32_t Count);
 
-void freeMemState();
-
-code_seg_t* getSegmentAt(uintptr_t address);
-
-void setMemState(const uintptr_t address, const uint32_t length, const code_seg_t* codeSeg);
-
-#endif /* RECOMPILER_MEM_STATE_H_ */
+#endif /* UT_H_ */

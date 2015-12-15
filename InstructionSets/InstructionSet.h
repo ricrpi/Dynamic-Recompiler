@@ -645,7 +645,7 @@ typedef struct _Instruction
 	uint8_t U:1;			// Up/Down, set for inc, clear for decrement
 	uint8_t W:1;			// Writeback bit set to write to base register
 
-	size_t outputAddress;
+	uintptr_t outputAddress;
 
 #if USE_INSTRUCTION_COMMENTS
 	#define COMMENT_LENGTH (200)

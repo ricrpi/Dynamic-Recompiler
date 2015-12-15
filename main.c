@@ -53,8 +53,8 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 	ucontext_t *ucontext 	= (ucontext_t*)ptr;
 
 	if (sig == SIGSEGV){
-		size_t ins_addr;
-		size_t ins_addr2;
+		uintptr_t ins_addr;
+		uintptr_t ins_addr2;
 		#if __i386__
 			ins_addr = ucontext->uc_mcontext.gregs[14];
 			ins_addr2 = ucontext->uc_mcontext.gregs[14];
@@ -76,7 +76,7 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 	}
 	else if (sig == SIGINT)
 	{
-		printf("Current segment 0x%X\n\n", (uint32_t)segmentData.dbgCurrentSegment);
+		printf("Current segment %P\n\n", segmentData.dbgCurrentSegment);
 		while (Debugger_start(&segmentData, &ucontext->uc_mcontext, NULL));
 		return;
 	}
@@ -89,7 +89,7 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 
 	level++;
 
-	printf("Current segment 0x%X\n\n", (uint32_t)segmentData.dbgCurrentSegment);
+	printf("Current segment %P\n\n", segmentData.dbgCurrentSegment);
 
 	while (Debugger_start(&segmentData, &ucontext->uc_mcontext, NULL));
 

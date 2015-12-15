@@ -1898,9 +1898,17 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 	case 0x1A:
 			ins->instruction =  MIPS_LDL;
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0;
 	case 0x1B:
 			ins->instruction =  MIPS_LDR;
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0;
 	case 0x20:
 			ins->instruction =  MIPS_LB;
@@ -1918,7 +1926,10 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0; 	// Load Halfword
 	case 0x22:
 			ins->instruction =  MIPS_LWL;
-
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0;
 	case 0x23:
 			ins->instruction =  MIPS_LW;
@@ -1996,6 +2007,10 @@ uint32_t mips_decode(const uint32_t uiMIPSword, Instruction_t* const ins)
 			return 0;
 	case 0x37:
 			ins->instruction =  MIPS_LD;
+			ins->Rd1.regID = M_Rt(uiMIPSword);
+			ins->R1.regID = M_Rs(uiMIPSword);
+			ins->immediate = IMM(uiMIPSword, 16);
+			ins->I = 1;
 			return 0;  	// Load Double word
 	case 0x38:
 			ins->instruction =  MIPS_SC;

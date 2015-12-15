@@ -242,6 +242,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 #if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R1;
 #endif
+			ins->U = 1U;
 			ins->nextInstruction = copied_ins;
 
 			ins = copied_ins;
@@ -257,6 +258,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 #if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R2;
 #endif
+			ins->U = 1U;
 			ins->nextInstruction = copied_ins;
 			ins = copied_ins;
 
@@ -271,6 +273,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 #if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R3;
 #endif
+			ins->U = 1U;
 			ins->nextInstruction = copied_ins;
 			ins = copied_ins;
 
@@ -285,6 +288,7 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 #if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R4;
 #endif
+			ins->U = 1U;
 			ins->nextInstruction = copied_ins;
 			ins = copied_ins;
 

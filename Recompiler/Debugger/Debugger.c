@@ -223,7 +223,7 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 		{
 			mips_decode(CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1], &ins);
 
-			branch = getSegmentAt((size_t)&CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1U + ins.offset]);
+			branch = getSegmentAt((uintptr_t)&CurrentCodeSeg->MIPScode[CurrentCodeSeg->MIPScodeLen -1U + ins.offset]);
 
 			if (branch != NULL)
 			{

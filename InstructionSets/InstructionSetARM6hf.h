@@ -50,12 +50,12 @@ const static char* const arm_cond[] = {
 
 int32_t Imm8Shift(uint32_t val);
 
-void printf_arm(const uint32_t addr, const uint32_t word);
+void printf_arm(const uintptr_t addr, const uint32_t word);
 
 void resetEmitAddress();
 
 void emit_arm_code(code_seg_t* const codeSeg);
 
-uint32_t arm_encode(const Instruction_t* ins, const size_t addr);
+uint32_t arm_encode(const Instruction_t* ins, const uintptr_t addr);
 
 #endif /* ARMENCODE_H_ */

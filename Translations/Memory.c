@@ -71,13 +71,13 @@ static Instruction_t* FixOffsetTooLarge(Instruction_t* ins, regID_t Rx)
 	return ins;
 }
 
-static void storeWord(uint32_t b, uint32_t v)
+static void storeWord(uintptr_t b, uint32_t v)
 {
 	uint32_t* addr = (uint32_t*)(b);
 
 	if ((((uint32_t)addr)&0xD0000000) == 0x80000000)
 	{
-		addr = (uint32_t*)((uint32_t)addr&0xD0000000);
+		addr = (uint32_t*)((uint32_t)addr&0xDFFFFFFF);
 		*addr = v;
 	}
 	else
@@ -87,13 +87,13 @@ static void storeWord(uint32_t b, uint32_t v)
 	}
 }
 
-static uint32_t loadWord(uint32_t b)
+static uint32_t loadWord(uintptr_t b)
 {
 	uint32_t* addr = (uint32_t*)(b);
 
 	if ((((uint32_t)addr)&0xD0000000) == 0x80000000)
 	{
-		addr = (uint32_t*)((uint32_t)addr&0xD0000000);
+		addr = (uint32_t*)((uint32_t)addr&0xDFFFFFFF);
 		return *addr;
 	}
 	else
@@ -102,6 +102,33 @@ static uint32_t loadWord(uint32_t b)
 		abort();
 	}
 	return NULL;
+}
+
+static uint64_t C_ldl(uintptr_t b, uint32_t r1, uint32_t r2)
+{
+	uint32_t* addr = (uint32_t*)(b);
+	uint64_t v;
+	uint64_t old_v = (uint64_t)r1 << 32U | r2;
+	uint64_t mask;
+
+	mask = ((uint64_t)(-1LL)) >> (1 + ((uint32_t)addr&7));
+
+	if ((((uintptr_t)addr)&0xD0000000U) == 0x80000000U)
+	{
+		addr = (uint32_t*)(((uintptr_t)addr) & 0xDFFFFFFFU);
+
+		// swap words
+		v = ((uint64_t)addr[1] << 32U) | addr[0];
+
+		return (v << (7U - (((uintptr_t)addr) & 7U))) | (old_v & mask);
+	}
+	else
+	{
+		printf("ldl() virtual address 0x%x\n", (uintptr_t)addr);
+		abort();
+	}
+
+	return 0;
 }
 
 /*
@@ -146,6 +173,36 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		case MIPS_LLD:
 		case MIPS_LDC1:
 		case MIPS_LD:
+			if (imm < -0xFFF)
+			{
+				InstrI(ins, ARM_SUB, AL, REG_HOST_R0, R1, REG_NOT_USED, (-imm) & 0xFF00U);
+
+				new_ins = newInstrI(ARM_LDR, AL, Rd1, REG_NOT_USED, REG_HOST_R0, ((-imm) & 0x0FFU) + 4U);
+				new_ins->U = 0U;
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_LDR, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_HOST_R0, -(imm & 0xFFU));
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else if (imm > 0xFFF + 4)
+			{
+				InstrI(ins, ARM_ADD, AL, REG_HOST_R0, R1, REG_NOT_USED, imm & 0xFF00U);
+
+				new_ins = newInstrI(ARM_LDR, AL, Rd1, REG_NOT_USED, REG_HOST_R0, (imm & 0x0FFU) + 4U);
+				ADD_LL_NEXT(new_ins, ins);
+
+				new_ins = newInstrI(ARM_LDR, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_HOST_R0, (imm & 0xFFU));
+				ADD_LL_NEXT(new_ins, ins);
+			}
+			else
+			{
+				InstrI(ins, ARM_LDR, AL, Rd1, REG_NOT_USED, R1, imm + 4U);
+
+				new_ins = newInstrI(ARM_LDR, AL, Rd1 | REG_WIDE, REG_NOT_USED, R1, imm);
+				ADD_LL_NEXT(new_ins, ins);
+			}
+
+			break;
 		case MIPS_SC:
 		case MIPS_SWC1:
 		case MIPS_SCD:
@@ -255,8 +312,50 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		case MIPS_SDL:
 		case MIPS_SDR:
 		case MIPS_SWR:
+			TRANSLATE_ABORT();
+			break;
 		case MIPS_LDL:
+		{
+			if (imm < 0)
+			{
+				InstrI(ins, ARM_SUB, AL, REG_HOST_R0, R1, REG_NOT_USED, (-imm)&0xFF);
+
+				if (imm < -0xFF)
+				{
+					new_ins = newInstrI(ARM_SUB, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_R0, (-imm)&0xFF00);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+			}
+			else
+			{
+				InstrI(ins, ARM_ADD, AL, REG_HOST_R0, R1, REG_NOT_USED, imm&0xFF);
+
+				if (imm > 0xFF)
+				{
+					new_ins = newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_R0, (imm)&0xFF00);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+			}
+
+			new_ins = newInstr(ARM_ADD, AL, REG_HOST_R2, REG_NOT_USED, Rd1 | REG_WIDE);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstr(ARM_ADD, AL, REG_HOST_R3, REG_NOT_USED, Rd1);
+			ADD_LL_NEXT(new_ins, ins);
+
+			ins = insertCall_To_C(codeSegment, ins, AL, (uint32_t)&C_ldl, 0);
+
+			new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_HOST_R0);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstr(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_HOST_R1);
+			ADD_LL_NEXT(new_ins, ins);
+		}
+		break;
+
 		case MIPS_LDR:
+			TRANSLATE_ABORT();
+			break;
 		case MIPS_LB:
 			if (imm < -0xFF)
 			{
@@ -384,7 +483,7 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		case MIPS_LBU:
 			if (imm < -0xFF)
 			{
-				InstrI(ins, ARM_SUB, AL, REG_HOST_R0, R1, REG_NOT_USED, imm & 0xFF00U);
+				InstrI(ins, ARM_SUB, AL, REG_HOST_R0, R1, REG_NOT_USED, (-imm) & 0xFF00U);
 
 				new_ins = newInstrI(ARM_LDRB, AL, Rd1, REG_NOT_USED, REG_HOST_R0, -(imm & 0xFFU));
 				ADD_LL_NEXT(new_ins, ins);

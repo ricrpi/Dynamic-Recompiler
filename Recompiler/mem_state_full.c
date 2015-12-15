@@ -72,7 +72,7 @@ void freeMemState()
 	free(Blocks);
 }
 
-code_seg_t* getSegmentAt(size_t address)
+code_seg_t* getSegmentAt(uintptr_t address)
 {
 	int x;
 
@@ -89,7 +89,7 @@ code_seg_t* getSegmentAt(size_t address)
 	return NULL;
 }
 
-void setMemState(size_t address, uint32_t length, code_seg_t* codeSeg)
+void setMemState(const uintptr_t address, const uint32_t length, const code_seg_t* codeSeg)
 {
 	int x;
 
@@ -123,6 +123,6 @@ void setMemState(size_t address, uint32_t length, code_seg_t* codeSeg)
 		}
 	}
 
-		printf("setMemState(0x%08x, %d, 0x%08x)\n", address, length, (uint32_t)codeSeg);
+		printf("setMemState(0x%08x, %d, 0x%08x)\n", address, length, (uintptr_t)codeSeg);
 		abort();
 }
