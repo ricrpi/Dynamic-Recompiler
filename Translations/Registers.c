@@ -239,6 +239,14 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			copied_ins = newInstrCopy(ins);
 
 			ins = InstrI(ins, ARM_LDR, AL, R1, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R1));
+
+#if USE_INSTRUCTION_COMMENTS
+			if (currentTranslation)
+			{
+				strcpy(ins->comment, currentTranslation);
+			}
+#endif
+
 #if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R1;
 #endif
@@ -255,6 +263,12 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			copied_ins = newInstrCopy(ins);
 
 			ins = InstrI(ins, ARM_LDR, AL, R2, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R2));
+#if USE_INSTRUCTION_COMMENTS
+			if (currentTranslation)
+			{
+				strcpy(ins->comment, currentTranslation);
+			}
+#endif
 #if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R2;
 #endif
@@ -270,6 +284,13 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			copied_ins = newInstrCopy(ins);
 
 			ins = InstrI(ins, ARM_LDR, AL, R3, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R3));
+#if USE_INSTRUCTION_COMMENTS
+			if (currentTranslation)
+			{
+				strcpy(ins->comment, currentTranslation);
+			}
+#endif
+
 #if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R3;
 #endif
@@ -285,6 +306,12 @@ void Translate_LoadCachedRegisters(code_seg_t* const codeSegment)
 			copied_ins = newInstrCopy(ins);
 
 			ins = InstrI(ins, ARM_LDR, AL, R4, REG_NOT_USED, REG_EMU_FP, RegMemByteOffset(R4));
+#if USE_INSTRUCTION_COMMENTS
+			if (currentTranslation)
+			{
+				strcpy(ins->comment, currentTranslation);
+			}
+#endif
 #if USE_INSTRUCTION_INIT_REGS
 			ins->Rd1_init.regID = R4;
 #endif

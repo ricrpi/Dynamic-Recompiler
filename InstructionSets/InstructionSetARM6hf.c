@@ -800,7 +800,7 @@ static uint32_t* emit_out = NULL;
 
 void resetEmitAddress()
 {
-	//emit_out = *((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START));
+	//emit_out = *((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START));
 }
 
 void emit_arm_code(code_seg_t* const codeSeg)

@@ -109,9 +109,9 @@ static uint64_t C_ldl(uintptr_t b, uint32_t r1, uint32_t r2)
 	uint32_t* addr = (uint32_t*)(b);
 	uint64_t v;
 	uint64_t old_v = (uint64_t)r1 << 32U | r2;
-	uint64_t mask;
+	uint64_t update_mask;
 
-	mask = ((uint64_t)(-1LL)) >> (1 + ((uint32_t)addr&7));
+	update_mask = ((uint64_t)(-1LL)) << (((uint32_t)addr&7) * 8U);
 
 	if ((((uintptr_t)addr)&0xD0000000U) == 0x80000000U)
 	{
@@ -120,11 +120,40 @@ static uint64_t C_ldl(uintptr_t b, uint32_t r1, uint32_t r2)
 		// swap words
 		v = ((uint64_t)addr[1] << 32U) | addr[0];
 
-		return (v << (7U - (((uintptr_t)addr) & 7U))) | (old_v & mask);
+		return (v & update_mask) | (old_v & ~update_mask);
 	}
 	else
 	{
 		printf("ldl() virtual address 0x%x\n", (uintptr_t)addr);
+		abort();
+	}
+
+	return 0;
+}
+
+static uint64_t C_ldr(uintptr_t b, uint32_t r1, uint32_t r2)
+{
+	uint32_t* addr = (uint32_t*)(b);
+	uint64_t v;
+	uint64_t old_v = (uint64_t)r1 << 32U | r2;
+	uint64_t update_mask;
+
+	update_mask = ((uint64_t)(-1LL)) >> ((7U - ((uint32_t)addr & 7U)) * 8U);
+
+	if ((((uintptr_t)addr)&0xD0000000U) == 0x80000000U)
+	{
+		addr = (uint32_t*)(((uintptr_t)addr) & 0xDFFFFFFFU);
+
+		// swap words
+		v = ((uint64_t)addr[1] << 32U) | addr[0];
+
+		printf("    0x%016llX    0x%016llX    0x%016llX\n", update_mask, old_v, v);
+
+		return (v & update_mask) | (old_v & ~update_mask);
+	}
+	else
+	{
+		printf("ldr() virtual address 0x%x\n", (uintptr_t)addr);
 		abort();
 	}
 
@@ -337,10 +366,10 @@ void Translate_Memory(code_seg_t* const codeSegment)
 				}
 			}
 
-			new_ins = newInstr(ARM_ADD, AL, REG_HOST_R2, REG_NOT_USED, Rd1 | REG_WIDE);
+			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, Rd1 | REG_WIDE);
 			ADD_LL_NEXT(new_ins, ins);
 
-			new_ins = newInstr(ARM_ADD, AL, REG_HOST_R3, REG_NOT_USED, Rd1);
+			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R2, REG_NOT_USED, Rd1);
 			ADD_LL_NEXT(new_ins, ins);
 
 			ins = insertCall_To_C(codeSegment, ins, AL, (uint32_t)&C_ldl, 0);
@@ -354,7 +383,40 @@ void Translate_Memory(code_seg_t* const codeSegment)
 		break;
 
 		case MIPS_LDR:
-			TRANSLATE_ABORT();
+			if (imm < 0)
+			{
+				InstrI(ins, ARM_SUB, AL, REG_HOST_R0, R1, REG_NOT_USED, (-imm)&0xFF);
+
+				if (imm < -0xFF)
+				{
+					new_ins = newInstrI(ARM_SUB, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_R0, (-imm)&0xFF00);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+			}
+			else
+			{
+				InstrI(ins, ARM_ADD, AL, REG_HOST_R0, R1, REG_NOT_USED, imm&0xFF);
+
+				if (imm > 0xFF)
+				{
+					new_ins = newInstrI(ARM_ADD, AL, REG_HOST_R0, REG_NOT_USED, REG_HOST_R0, (imm)&0xFF00);
+					ADD_LL_NEXT(new_ins, ins);
+				}
+			}
+
+			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R1, REG_NOT_USED, Rd1 | REG_WIDE);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstr(ARM_MOV, AL, REG_HOST_R2, REG_NOT_USED, Rd1);
+			ADD_LL_NEXT(new_ins, ins);
+
+			ins = insertCall_To_C(codeSegment, ins, AL, (uint32_t)&C_ldr, 0);
+
+			new_ins = newInstr(ARM_MOV, AL, Rd1, REG_NOT_USED, REG_HOST_R0);
+			ADD_LL_NEXT(new_ins, ins);
+
+			new_ins = newInstr(ARM_MOV, AL, Rd1 | REG_WIDE, REG_NOT_USED, REG_HOST_R1);
+			ADD_LL_NEXT(new_ins, ins);
 			break;
 		case MIPS_LB:
 			if (imm < -0xFF)

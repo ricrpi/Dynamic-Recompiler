@@ -74,9 +74,9 @@ void freeMemState()
 
 code_seg_t* getSegmentAt(uintptr_t address)
 {
-	int x;
+	uint32_t x;
 
-	for (x=0; x < memMapCount; x++)
+	for (x=0U; x < memMapCount; x++)
 	{
 		if (Blocks[x].address <= address && Blocks[x].address + Blocks[x].size > address)
 		{
@@ -91,15 +91,15 @@ code_seg_t* getSegmentAt(uintptr_t address)
 
 void setMemState(const uintptr_t address, const uint32_t length, const code_seg_t* codeSeg)
 {
-	int x;
+	uint32_t x;
 
-	for (x=0; x < memMapCount; x++)
+	for (x=0U; x < memMapCount; x++)
 	{
 		if (Blocks[x].address <= address && Blocks[x].address + Blocks[x].size > address)
 		{
-			int i;
+			uint32_t i;
 
-			for (i=0; i < length; i++)
+			for (i=0U; i < length; i++)
 			{
 				code_seg_t* Blockcurrent = Blocks[x]._memStatePtr[(address - Blocks[x].address)/sizeof(code_seg_t*) + i];
 				if (!codeSeg && Blockcurrent)

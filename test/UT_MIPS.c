@@ -35,10 +35,13 @@
 #define TEST_TRAP 		(0)
 #define TEST_COPROCESSOR (0)
 
-#define EXPECT_EQ(EXPECTED, ACTUAL) \
-		if (EXPECTED != ACTUAL) \
-		printf("%s:%d\n\t" #EXPECTED " != " #ACTUAL "\n\tExpected %llu, Actual %llu\n" , __FUNCTION__, __LINE__, (uint64_t)(EXPECTED), (uint64_t)(ACTUAL));
-
+#define EXPECT_EQ(ACTUAL, EXPECTED) \
+		if ((ACTUAL) != (EXPECTED)){ \
+			printf("%s:%d\n\t" #EXPECTED " != " #ACTUAL "\n\tExpected %lld (0x%llx), Actual %lld (0x%llx)\n" , __FUNCTION__, __LINE__, (uint64_t)(EXPECTED), (uint64_t)(EXPECTED), (uint64_t)(ACTUAL), (uint64_t)(ACTUAL)); \
+			CodeSeg_print(seg);\
+			if (seg->pContinueNext != NULL){ printf("------------ seg->pContinueNext (0x%x) ------------\n", (uint32_t)seg->pContinueNext); CodeSeg_print(seg->pContinueNext);} \
+			if (seg->pBranchNext != NULL)  { printf("------------ seg->pBranchNext (0x%x) --------------\n", (uint32_t)seg->pBranchNext);   CodeSeg_print(seg->pBranchNext);} \
+		}
 #define ASSERT_EQ(ACTUAL, EXPECTED) \
 		if ((ACTUAL) != (EXPECTED)){ \
 			printf("%s:%d\n\t" #EXPECTED " != " #ACTUAL "\n\tExpected %lld (0x%llx), Actual %lld (0x%llx)\n" , __FUNCTION__, __LINE__, (uint64_t)(EXPECTED), (uint64_t)(EXPECTED), (uint64_t)(ACTUAL), (uint64_t)(ACTUAL)); \
@@ -80,7 +83,7 @@ static void TranslationTest_ADD(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -111,7 +114,7 @@ static void TranslationTest_ADD(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x00000020 + (1 << 21) + (2 << 16) + (1 << 11);
 
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x01234567U;
 	reg[2] = 0x07654321U;
@@ -126,7 +129,7 @@ static void TranslationTest_ADD(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x00000020 + (2 << 21) + (1 << 16) + (1 << 11);
 
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x01234567U;
 	reg[2] = 0x07654321U;
@@ -165,7 +168,7 @@ static void TranslationTest_ADDI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -187,7 +190,7 @@ static void TranslationTest_ADDI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -204,7 +207,7 @@ static void TranslationTest_ADDI(code_segment_data_t* segmentData)
 	imm = 0x8000U;
 	mipsCode[0] = 0x20000000 + (rs << 21U) + (rt << 16U) + imm;
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[rs] = 0x11111111U;
 
@@ -217,7 +220,7 @@ static void TranslationTest_ADDI(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x20000000 + (1 << 21U) + (1 << 16U) + 2U;
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x00000001U;
 
@@ -233,7 +236,7 @@ static void TranslationTest_ADDI(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x20000000 + (1 << 21U) + (1 << 16U) + imm;
 
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x01234567U;
 
@@ -275,7 +278,7 @@ static void TranslationTest_ADDIU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -297,7 +300,7 @@ static void TranslationTest_ADDIU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[rs] = 0x11110000;
 	reg[rt] = 0x0;
@@ -312,7 +315,7 @@ static void TranslationTest_ADDIU(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x24000000 + (1 << 21) + (1 << 16) + (uint16_t)imm ;
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x11110000;
 
@@ -348,7 +351,7 @@ static void TranslationTest_ADDU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 
 	//---------------------------------------
@@ -366,7 +369,7 @@ static void TranslationTest_ADDU(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x00000021 + (2 << 21) + (1 << 16) + (2 << 11);
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x56780000U;
 	reg[2] = 0x32101111U;
@@ -381,7 +384,7 @@ static void TranslationTest_ADDU(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x00000021 + (1 << 21) + (2 << 16) + (2 << 11);
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x56780000U;
 	reg[2] = 0x32101111U;
@@ -418,7 +421,7 @@ static void TranslationTest_AND(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -434,7 +437,7 @@ static void TranslationTest_AND(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x00000024 + (2 << 21) + (1 << 16) + (2 << 11);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000101000001010;
 	reg[2] = 0x0000110000001100;
@@ -448,7 +451,7 @@ static void TranslationTest_AND(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x00000024 + (1 << 21) + (2 << 16) + (2 << 11);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000101000001010;
 	reg[2] = 0x0000110000001100;
@@ -485,7 +488,7 @@ static void TranslationTest_ANDI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -501,7 +504,7 @@ static void TranslationTest_ANDI(code_segment_data_t* segmentData)
 	imm = 0xFFFFU;
 	mipsCode[0] = 0x30000000U + (rs << 21U) + (rt << 16U) + (uint16_t)imm;
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[rs] = 0x1111111111111111U;
 
@@ -515,7 +518,7 @@ static void TranslationTest_ANDI(code_segment_data_t* segmentData)
 	imm = 0xFFFFU;
 	mipsCode[0] = 0x30000000U + (1 << 21U) + (1 << 16U) + (uint16_t)imm;
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x1111111111111111U;
 
@@ -549,7 +552,7 @@ static void TranslationTest_BEQ(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -605,7 +608,7 @@ static void TranslationTest_BEQ(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -667,7 +670,7 @@ static void TranslationTest_BEQL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -736,7 +739,7 @@ static void TranslationTest_BGEZ(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -814,7 +817,7 @@ static void TranslationTest_BGEZAL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -905,7 +908,7 @@ static void TranslationTest_BGEZALL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -995,7 +998,7 @@ static void TranslationTest_BGEZL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1073,7 +1076,7 @@ static void TranslationTest_BGTZ(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1151,7 +1154,7 @@ static void TranslationTest_BGTZL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1229,7 +1232,7 @@ static void TranslationTest_BLEZ(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1307,7 +1310,7 @@ static void TranslationTest_BLEZL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1385,7 +1388,7 @@ static void TranslationTest_BLTZ(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1463,7 +1466,7 @@ static void TranslationTest_BLTZAL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1554,7 +1557,7 @@ static void TranslationTest_BLTZALL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1644,7 +1647,7 @@ static void TranslationTest_BLTZL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1722,7 +1725,7 @@ static void TranslationTest_BNE(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1792,7 +1795,7 @@ static void TranslationTest_BNEL(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1865,7 +1868,7 @@ static void TranslationTest_BREAK(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1896,7 +1899,7 @@ static void TranslationTest_DADD(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1925,7 +1928,7 @@ static void TranslationTest_DADD(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000002C + (1U << 21U) + (2U << 16U) + (2U << 11U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000000100000001U;
 	reg[2] = 0x0000000300000003U;
@@ -1939,7 +1942,7 @@ static void TranslationTest_DADD(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000002C + (2U << 21U) + (1U << 16U) + (2U << 11U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000000100000001U;
 	reg[2] = 0x0000000300000003U;
@@ -1977,7 +1980,7 @@ static void TranslationTest_DADDI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -1999,7 +2002,7 @@ static void TranslationTest_DADDI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2016,7 +2019,7 @@ static void TranslationTest_DADDI(code_segment_data_t* segmentData)
 	imm = 0x8000U;
 	mipsCode[0] = 0x60000000 + (rs << 21U) + (rt << 16U) + imm;
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[rs] = 0x111111111111U;
 
@@ -2031,7 +2034,7 @@ static void TranslationTest_DADDI(code_segment_data_t* segmentData)
 	imm = 0x8000U;
 	mipsCode[0] = 0x60000000 + (1 << 21U) + (1 << 16U) + imm;
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x111111111111U;
 
@@ -2074,7 +2077,7 @@ static void TranslationTest_DADDIU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2096,7 +2099,7 @@ static void TranslationTest_DADDIU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[rs] = 0x111111110000U;
 	reg[rt] = 0x0U;
@@ -2117,7 +2120,7 @@ static void TranslationTest_DADDIU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x111111110000U;
 
@@ -2153,7 +2156,7 @@ static void TranslationTest_DADDU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 
 	//---------------------------------------
@@ -2170,7 +2173,7 @@ static void TranslationTest_DADDU(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000002D + (1 << 21) + (2 << 16) + (2 << 11);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x123456780000;
 	reg[2] = 0x765432101111;
@@ -2184,7 +2187,7 @@ static void TranslationTest_DADDU(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000002D + (2 << 21) + (1 << 16) + (2 << 11);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x123456780000;
 	reg[2] = 0x765432101111;
@@ -2220,7 +2223,7 @@ static void TranslationTest_DDIV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2269,7 +2272,7 @@ static void TranslationTest_DDIVU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2316,7 +2319,7 @@ static void TranslationTest_DIV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2355,7 +2358,7 @@ static void TranslationTest_DIVU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2393,7 +2396,7 @@ static void TranslationTest_DMULT(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2472,7 +2475,7 @@ static void TranslationTest_DMULTU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2538,7 +2541,7 @@ static void TranslationTest_DSLL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2566,7 +2569,7 @@ static void TranslationTest_DSLL(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x00000038 + (1U << 16U) + (1U << 11U) + (3U << 6U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x1000000080000001U;
 
@@ -2599,7 +2602,7 @@ static void TranslationTest_DSLL32(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2627,7 +2630,7 @@ static void TranslationTest_DSLL32(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000003C + (1U << 16U) + (1U << 11U) + (3U << 6U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0003000000030000U;
 
@@ -2659,7 +2662,7 @@ static void TranslationTest_DSLLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2707,7 +2710,7 @@ static void TranslationTest_DSLLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 
 	reg[1] = 0x0000000000000001U;
@@ -2725,7 +2728,7 @@ static void TranslationTest_DSLLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000000000000001U;
 	reg[2] = 0x0000000000000020U;
@@ -2742,7 +2745,7 @@ static void TranslationTest_DSLLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000000000000001U;
 	reg[2] = 0x0000000000000002U;
@@ -2759,7 +2762,7 @@ static void TranslationTest_DSLLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000000000000001U;
 	reg[2] = 0x0000000000000002U;
@@ -2798,7 +2801,7 @@ static void TranslationTest_DSRA(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2815,7 +2818,7 @@ static void TranslationTest_DSRA(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x0000003B + (1 << 16U) + (1 << 11U) + (imm << 6U);
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 
 	reg[1] = (uint64_t)-753;
@@ -2853,7 +2856,7 @@ static void TranslationTest_DSRA32(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2868,7 +2871,7 @@ static void TranslationTest_DSRA32(code_segment_data_t* segmentData)
 	// register writeback
 	mipsCode[0] = 0x0000003FU + (1 << 16U) + (1 << 11U) + (imm << 6U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = (uint64_t)(-95LL << 35);
 
@@ -2900,7 +2903,7 @@ static void TranslationTest_DSRAV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -2933,7 +2936,7 @@ static void TranslationTest_DSRAV(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x00000017 + (1 << 21U) + (2 << 16U) + (2 << 11U);
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = (uint64_t)-16;
 	reg[1] = 0x3U;
@@ -2949,7 +2952,7 @@ static void TranslationTest_DSRAV(code_segment_data_t* segmentData)
 	mipsCode[0] = 0x00000017 + (2 << 21U) + (1 << 16U) + (2 << 11U);
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = (uint64_t)-16LL;
 	reg[2] = 3U;
@@ -2983,7 +2986,7 @@ static void TranslationTest_DSRL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3009,7 +3012,7 @@ static void TranslationTest_DSRL(code_segment_data_t* segmentData)
 	// register writeback
 	mipsCode[0] = 0x0000003AU + (2 << 16U) + (2 << 11U) + (3U << 6U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0x0000001600000016ULL;
 
@@ -3041,7 +3044,7 @@ static void TranslationTest_DSRL32(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3068,7 +3071,7 @@ static void TranslationTest_DSRL32(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000003E + (1 << 16U) + (1 << 11U) + (3U << 6U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0100000001000000ULL;
 
@@ -3100,7 +3103,7 @@ static void TranslationTest_DSRLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3133,7 +3136,7 @@ static void TranslationTest_DSRLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 
 	reg[2] = 0x0100000001000000ULL;
@@ -3152,7 +3155,7 @@ static void TranslationTest_DSRLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0100000001000000ULL;
 	reg[2] = 3U;
@@ -3185,7 +3188,7 @@ static void TranslationTest_DSUB(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3215,7 +3218,7 @@ static void TranslationTest_DSUB(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000002E + (1U << 21U) + (2U << 16U) + (2U << 11U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0x0000000100000001U;
 	reg[1] = 0x0000000300000003U;
@@ -3229,7 +3232,7 @@ static void TranslationTest_DSUB(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000002E + (2U << 21U) + (1U << 16U) + (2U << 11U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000000100000001U;
 	reg[2] = 0x0000000300000003U;
@@ -3262,7 +3265,7 @@ static void TranslationTest_DSUBU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3292,7 +3295,7 @@ static void TranslationTest_DSUBU(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000002F + (1U << 21U) + (2U << 16U) + (2U << 11U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0x0000000100000001U;
 	reg[1] = 0x0000000300000003U;
@@ -3306,7 +3309,7 @@ static void TranslationTest_DSUBU(code_segment_data_t* segmentData)
 
 	mipsCode[0] = 0x0000002F + (2U << 21U) + (1U << 16U) + (2U << 11U);
 	Translate(seg);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = 0x0000000100000001U;
 	reg[2] = 0x0000000300000003U;
@@ -3348,7 +3351,7 @@ static void TranslationTest_J(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3395,7 +3398,7 @@ static void TranslationTest_JAL(code_segment_data_t* segmentData)
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3451,7 +3454,7 @@ static void TranslationTest_JALR(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3474,7 +3477,7 @@ static void TranslationTest_JALR(code_segment_data_t* segmentData)
 	//---------------------------------------
 
 	delSegment(seg);
-	delSegment(getSegmentAt(&mipsCode[(imm&0xFFU) + 0U]));
+	delSegment(getSegmentAt((uintptr_t)&mipsCode[(imm&0xFFU) + 0U]));
 
 	printf("JALR    translated successfully\n");
 }
@@ -3497,7 +3500,7 @@ static void TranslationTest_JR(code_segment_data_t* segmentData)
 	segmentData->dbgCurrentSegment = seg;
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3512,7 +3515,7 @@ static void TranslationTest_JR(code_segment_data_t* segmentData)
 	//---------------------------------------
 
 	delSegment(seg);
-	delSegment(getSegmentAt(&mipsCode[(imm&0xFFU) + 0U]));
+	delSegment(getSegmentAt((uintptr_t)&mipsCode[(imm&0xFFU) + 0U]));
 
 	printf("JR      translated successfully\n");
 }
@@ -3529,7 +3532,7 @@ static void TranslationTest_LB(code_segment_data_t* segmentData)
 	code_seg_t* seg = CompileCodeAt(&mipsCode[64]);
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = (uint32_t)seg->MIPScode;
 
@@ -3558,7 +3561,7 @@ static void TranslationTest_LB(code_segment_data_t* segmentData)
 
 	delSegment(seg);
 	seg = CompileCodeAt(&mipsCode[64]);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0U;
 
@@ -3573,7 +3576,7 @@ static void TranslationTest_LB(code_segment_data_t* segmentData)
 
 	delSegment(seg);
 	seg = CompileCodeAt(&mipsCode[64]);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0U;
 
@@ -3597,7 +3600,7 @@ static void TranslationTest_LBU(code_segment_data_t* segmentData)
 	code_seg_t* seg = CompileCodeAt(&mipsCode[64]);
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = (uint32_t)seg->MIPScode;
 
@@ -3626,7 +3629,7 @@ static void TranslationTest_LBU(code_segment_data_t* segmentData)
 
 	delSegment(seg);
 	seg = CompileCodeAt(&mipsCode[64]);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0U;
 
@@ -3642,7 +3645,7 @@ static void TranslationTest_LBU(code_segment_data_t* segmentData)
 
 	delSegment(seg);
 	seg = CompileCodeAt(&mipsCode[64]);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0U;
 
@@ -3667,7 +3670,7 @@ static void TranslationTest_LD(code_segment_data_t* segmentData)
 	code_seg_t* seg = CompileCodeAt(&mipsCode[64]);
 
 	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[1] = (uint32_t)seg->MIPScode;
 
@@ -3688,7 +3691,7 @@ static void TranslationTest_LD(code_segment_data_t* segmentData)
 
 	delSegment(seg);
 	seg = CompileCodeAt(&mipsCode[64]);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0U;
 
@@ -3704,7 +3707,7 @@ static void TranslationTest_LD(code_segment_data_t* segmentData)
 
 	delSegment(seg);
 	seg = CompileCodeAt(&mipsCode[64]);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	reg[2] = 0U;
 
@@ -3740,7 +3743,7 @@ static void TranslationTest_LDCz(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3761,102 +3764,84 @@ static void TranslationTest_LDCz(code_segment_data_t* segmentData)
 static void TranslationTest_LDL(code_segment_data_t* segmentData)
 {
 	// MIPS LDL Instruction
-	mipsCode[64] = 0x68000000U + (1U << 21U) + (2U << 16U) + (uint16_t)17;
+	mipsCode[64] = 0x68000000U + (1U << 21U) + (2U << 16U) + (uint16_t)16;
 	mipsCode[65] = 0x60000000U + (2U << 21U) + (2U << 16U) + 0;				// DADDI R2 = R2 + 0 (Force register save)
 	mipsCode[66] = 0x00000008U;	// JR to Rs(0)
 	mipsCode[67] = 0x00000000U;	// Delay Slot
-	mipsCode[68] = 0x12345678U;	// Data to load
-	mipsCode[69] = 0x9ABCDEF0U;	// Data to load
 
-	code_seg_t* seg = CompileCodeAt(&mipsCode[64]);
+	mipsCode[68] = 0x04030201U;	// Data to load
+	mipsCode[69] = 0x08070605U;	// Data to load
+	mipsCode[70] = 0x0C0B0A09U;	// Data to load
+	mipsCode[71] = 0x000F0E0DU;	// Data to load
 
-	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	uint32_t i;
 
-	reg[1] = (uint32_t)seg->MIPScode;
+	for (i = 0U; i < 8U; i++)
+	{
+		mipsCode[64] = 0x68000000U + (1U << 21U) + (2U << 16U) + (uint16_t)(16U + i);
 
-	//---------------------------------------
+		code_seg_t* seg = CompileCodeAt(&mipsCode[64]);
 
-	reg[2] = 0U;
+		*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
+		*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
-	run();
+		reg[1] = (uint32_t)seg->MIPScode;
+		reg[2] = 0x7060504030201000ULL;
 
-	ASSERT_EQ(reg[2], 0x123456789ABCDEF0ULL);
+		run();
 
-	//---------------------------------------
+		uint64_t update_mask= ((uint64_t)(-1) << (i * 8U));
+		uint8_t* data = (uint8_t*)&mipsCode[68];
+		uint64_t mem_data = *((uint64_t*)&data[i]);
 
-	mipsCode[128] = 0x00000134U;	// Data to load
-	mipsCode[129] = 0x00000432U;	// Data to load
-	mipsCode[64] = 0x68000000U + (1U << 21U) + (2U << 16U) + (uint16_t)256;
+		ASSERT_EQ(reg[2], (0x7060504030201000ULL & ~update_mask) | (mem_data & update_mask));
 
+		delSegment(seg);
+	}
 
-	delSegment(seg);
-	seg = CompileCodeAt(&mipsCode[64]);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
-
-	reg[2] = 0U;
-
-	run();
-
-	ASSERT_EQ(reg[2], 0x0000013400000432ULL);
-
-	//---------------------------------------
-
-	mipsCode[0] = 0x00000145U;	// Data to load
-	mipsCode[1] = 0x00000541U;	// Data to load
-	mipsCode[64] = 0x68000000U + (1U << 21U) + (2U << 16U) + (((uint16_t)-256)&0xFFFFU);
-
-	delSegment(seg);
-	seg = CompileCodeAt(&mipsCode[64]);
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
-
-	reg[2] = 0U;
-
-	run();
-
-	ASSERT_EQ(reg[2], 0x0000014500000541ULL);
-
-	delSegment(seg);
 	printf("LDL     translated successfully\n");
 }
 
 static void TranslationTest_LDR(code_segment_data_t* segmentData)
 {
-	code_seg_t* seg = newSegment();
-	segmentData->dbgCurrentSegment = seg;
-
-	uint8_t rs = 1;
-	uint8_t rt = 2;
-
-	uint16_t imm = 0x10U;
-
-	seg->MIPScode = mipsCode;
-	seg->MIPScodeLen = 2U;
-	seg->Type = SEG_ALONE;
-
 	// MIPS LDR Instruction
-	mipsCode[0] = 0x30000000 + (rs << 21U) + (rt << 16U) + (uint16_t)imm;
-	mipsCode[1] = 0x00000008;	// JR to Rs(0)
-	mipsCode[2] = 0x00000000;	// Delay Slot
+	mipsCode[64] = 0x6C000000U + (1U << 21U) + (2U << 16U) + (uint16_t)16;
+	mipsCode[65] = 0x60000000U + (2U << 21U) + (2U << 16U) + 0;				// DADDI R2 = R2 + 0 (Force register save)
+	mipsCode[66] = 0x00000008U;	// JR to Rs(0)
+	mipsCode[67] = 0x00000000U;	// Delay Slot
 
-	*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
+	mipsCode[68] = 0x04030201U;	// Data to load
+	mipsCode[69] = 0x08070605U;	// Data to load
+	mipsCode[70] = 0x0C0B0A09U;	// Data to load
+	mipsCode[71] = 0x000F0E0DU;	// Data to load
 
-	Translate(seg);
+	uint32_t i;
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	for (i = 0U; i < 8U; i++)
+	{
+		mipsCode[64] = 0x6C000000U + (1U << 21U) + (2U << 16U) + (uint16_t)(16U + i);
 
-	//---------------------------------------
+		code_seg_t* seg = CompileCodeAt(&mipsCode[64]);
 
-	reg[rs] = 0x1111111111111111U;
+		*((volatile int32_t*)MMAP_FP_BASE + REG_COUNT) = -100;
+		*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
-	run();
+		reg[1] = (uint32_t)seg->MIPScode;
+		reg[2] = 0x7060504030201000ULL;
 
-	ASSERT_EQ(1, 0);
+		uint64_t update_mask= ((uint64_t)(-1) >> ((7 - i) * 8U));
+		uint8_t* data = (uint8_t*)&mipsCode[68];
+		uint64_t mem_data = *((uint64_t*)&data[7 - i]);
 
+		printf("%d    0x%016llX    0x%016llX\n", i, mem_data, update_mask);
 
-	//---------------------------------------
+		run();
 
-	delSegment(seg);
+		ASSERT_EQ(reg[2], (0x7060504030201000ULL & ~update_mask) | (mem_data & update_mask));
+
+		delSegment(seg);
+	}
+
 	printf("LDR     translated successfully\n");
 }
 
@@ -3883,7 +3868,7 @@ static void TranslationTest_LH(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3923,7 +3908,7 @@ static void TranslationTest_LHU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -3963,7 +3948,7 @@ static void TranslationTest_LL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4003,7 +3988,7 @@ static void TranslationTest_LLD(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4043,7 +4028,7 @@ static void TranslationTest_LUI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4083,7 +4068,7 @@ static void TranslationTest_LW(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4124,7 +4109,7 @@ static void TranslationTest_LWCz(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4165,7 +4150,7 @@ static void TranslationTest_LWL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4205,7 +4190,7 @@ static void TranslationTest_LWR(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4245,7 +4230,7 @@ static void TranslationTest_LWU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4280,7 +4265,7 @@ static void TranslationTest_MFHI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 	// 32-bit move
@@ -4326,7 +4311,7 @@ static void TranslationTest_MFLO(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 	// 32-bit move
@@ -4372,7 +4357,7 @@ static void TranslationTest_MOVN(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4418,7 +4403,7 @@ static void TranslationTest_MOVZ(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4464,7 +4449,7 @@ static void TranslationTest_MTHI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 	// 32-bit move
@@ -4506,7 +4491,7 @@ static void TranslationTest_MTLO(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 	// 32-bit move
@@ -4553,7 +4538,7 @@ static void TranslationTest_MULT(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4602,7 +4587,7 @@ static void TranslationTest_MULTU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4636,7 +4621,7 @@ static void TranslationTest_NOR(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4672,7 +4657,7 @@ static void TranslationTest_OR(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4713,7 +4698,7 @@ static void TranslationTest_ORI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4754,7 +4739,7 @@ static void TranslationTest_PREF(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4792,12 +4777,12 @@ static void TranslationTest_SB(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
 	reg[1] = 0x3U;
-	reg[2] = (uint64_t)&mipsCode[3];
+	reg[2] = (uintptr_t)&mipsCode[3];
 
 	run();
 
@@ -4832,7 +4817,7 @@ static void TranslationTest_SC(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4872,7 +4857,7 @@ static void TranslationTest_SCD(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4912,7 +4897,7 @@ static void TranslationTest_SD(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4953,7 +4938,7 @@ static void TranslationTest_SDCz(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -4994,7 +4979,7 @@ static void TranslationTest_SDL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5034,7 +5019,7 @@ static void TranslationTest_SDR(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5074,7 +5059,7 @@ static void TranslationTest_SH(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5114,7 +5099,7 @@ static void TranslationTest_SLL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5153,7 +5138,7 @@ static void TranslationTest_SLLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5193,7 +5178,7 @@ static void TranslationTest_SLT(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5233,7 +5218,7 @@ static void TranslationTest_SLTI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5273,7 +5258,7 @@ static void TranslationTest_SLTIU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5313,7 +5298,7 @@ static void TranslationTest_SLTU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5353,7 +5338,7 @@ static void TranslationTest_SRA(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5393,7 +5378,7 @@ static void TranslationTest_SRAV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5433,7 +5418,7 @@ static void TranslationTest_SRL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5473,7 +5458,7 @@ static void TranslationTest_SRLV(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5513,7 +5498,7 @@ static void TranslationTest_SUB(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5553,7 +5538,7 @@ static void TranslationTest_SUBU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5593,7 +5578,7 @@ static void TranslationTest_SW(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5634,7 +5619,7 @@ static void TranslationTest_SWCz(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5675,7 +5660,7 @@ static void TranslationTest_SWL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5712,12 +5697,12 @@ static void TranslationTest_SWR(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
 	reg[1] = 0x000000000004080CU;
-	reg[2] = (uint64_t)&mipsCode[3];
+	reg[2] = (uintptr_t)&mipsCode[3];
 
 	run();
 
@@ -5750,7 +5735,7 @@ static void TranslationTest_SYNC(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5787,7 +5772,7 @@ static void TranslationTest_SYSCALL(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5826,7 +5811,7 @@ static void TranslationTest_TEQ(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5865,7 +5850,7 @@ static void TranslationTest_TEQI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5904,7 +5889,7 @@ static void TranslationTest_TGE(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5943,7 +5928,7 @@ static void TranslationTest_TGEI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -5982,7 +5967,7 @@ static void TranslationTest_TGEIU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6020,7 +6005,7 @@ static void TranslationTest_TGEU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6058,7 +6043,7 @@ static void TranslationTest_TLT(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6097,7 +6082,7 @@ static void TranslationTest_TLTI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6136,7 +6121,7 @@ static void TranslationTest_TLTIU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6174,7 +6159,7 @@ static void TranslationTest_TLTU(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6213,7 +6198,7 @@ static void TranslationTest_TNE(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6252,7 +6237,7 @@ static void TranslationTest_TNEI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6288,7 +6273,7 @@ static void TranslationTest_XOR(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 
@@ -6329,7 +6314,7 @@ static void TranslationTest_XORI(code_segment_data_t* segmentData)
 
 	Translate(seg);
 
-	*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+	*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 
 	//---------------------------------------
 

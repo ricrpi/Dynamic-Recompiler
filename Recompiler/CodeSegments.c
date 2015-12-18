@@ -480,21 +480,21 @@ code_segment_data_t* GenerateCodeSegmentData(const int32_t ROMsize)
 		emit_arm_code(segmentData.segBranchUnknown);
 		*((uint32_t*)(MMAP_FP_BASE + FUNC_GEN_BRANCH_UNKNOWN)) = (uint32_t)segmentData.segBranchUnknown->ARMEntryPoint;
 
-		*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t*)segmentData.segBranchUnknown->ARMcode + segmentData.segBranchUnknown->ARMcodeLen;
+		*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t*)segmentData.segBranchUnknown->ARMcode + segmentData.segBranchUnknown->ARMcodeLen;
 
 	#ifndef TEST
 		// Compile the First contiguous block of Segments
-		code_seg_t* seg = CompileCodeAt((uint32_t*)0x88000040);
+		code_seg_t* seg = CompileCodeAt(0x88000040U);
 		segmentData.dbgCurrentSegment = seg;
 
-		*((uint32_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uint32_t)seg->ARMEntryPoint;
+		*((uintptr_t*)(MMAP_FP_BASE + RECOMPILED_CODE_START)) = (uintptr_t)seg->ARMEntryPoint;
 	#endif
 
 	#if 0
 		printf("FUNC_GEN_START                   0x%x\n", (uint32_t)segmentData.segStart->ARMEntryPoint);
 		printf("FUNC_GEN_STOP                    0x%x\n", (uint32_t)segmentData.segStop->ARMEntryPoint);
 		printf("FUNC_GEN_BRANCH_UNKNOWN          0x%x\n", (uint32_t)segmentData.segBranchUnknown->ARMEntryPoint);
-		printf("RECOMPILED_CODE_START            0x%x\n", (uint32_t)seg->ARMEntryPoint);
+		printf("RECOMPILED_CODE_START            0x%x\n", (uintptr_t)seg->ARMEntryPoint);
 	#endif
 
 	}
