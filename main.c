@@ -55,7 +55,7 @@ static void handler(int sig, siginfo_t *si, void *ptr)
 	if (sig == SIGSEGV){
 		uintptr_t ins_addr;
 		uintptr_t ins_addr2;
-		#if __i386__
+		#if defined (__i386__) || defined(__x86_64)
 			ins_addr = ucontext->uc_mcontext.gregs[14];
 			ins_addr2 = ucontext->uc_mcontext.gregs[14];
 		#else

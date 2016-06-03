@@ -11,7 +11,6 @@ C_SRCS += \
 ../Translations/Constants.c \
 ../Translations/CountReg.c \
 ../Translations/Debug.c \
-../Translations/DelaySlot.c \
 ../Translations/FPU.c \
 ../Translations/Init.c \
 ../Translations/Literals.c \
@@ -30,7 +29,6 @@ OBJS += \
 ./Translations/Constants.o \
 ./Translations/CountReg.o \
 ./Translations/Debug.o \
-./Translations/DelaySlot.o \
 ./Translations/FPU.o \
 ./Translations/Init.o \
 ./Translations/Literals.o \
@@ -49,7 +47,6 @@ C_DEPS += \
 ./Translations/Constants.d \
 ./Translations/CountReg.d \
 ./Translations/Debug.d \
-./Translations/DelaySlot.d \
 ./Translations/FPU.d \
 ./Translations/Init.d \
 ./Translations/Literals.d \
@@ -65,7 +62,7 @@ C_DEPS += \
 Translations/%.o: ../Translations/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -I"/home/rjhender/git/Dynamic-Recompiler" -I"/home/rjhender/git/Dynamic-Recompiler/InstructionSets" -I"/home/rjhender/git/Dynamic-Recompiler/Recompiler" -I"/home/rjhender/git/Dynamic-Recompiler/Recompiler/Debugger" -I"/home/rjhender/git/Dynamic-Recompiler/Translations" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -I"/home/richard/git/Dynamic-Recompiler" -I"/home/richard/git/Dynamic-Recompiler/InstructionSets" -I"/home/richard/git/Dynamic-Recompiler/Recompiler" -I"/home/richard/git/Dynamic-Recompiler/Recompiler/Debugger" -I"/home/richard/git/Dynamic-Recompiler/Translations" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

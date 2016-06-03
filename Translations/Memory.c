@@ -104,21 +104,17 @@ static uint32_t loadWord(uintptr_t b)
 	return NULL;
 }
 
-static uint64_t C_ldl(uintptr_t b, uint32_t r1, uint32_t r2)
+static uint64_t C_ldl(const uintptr_t addr, const uint32_t r1, const uint32_t r2)
 {
-	uint32_t* addr = (uint32_t*)(b);
-	uint64_t v;
-	uint64_t old_v = (uint64_t)r1 << 32U | r2;
-	uint64_t update_mask;
+	const uint64_t old_v = (((uint64_t)r1) << 32U) | r2;
+	const uint64_t update_mask = ((uint64_t)(-1LL)) << ((addr & 7) * 8U);
 
-	update_mask = ((uint64_t)(-1LL)) << (((uint32_t)addr&7) * 8U);
-
-	if ((((uintptr_t)addr)&0xD0000000U) == 0x80000000U)
+	if ((addr & 0xD0000000U) == 0x80000000U)
 	{
-		addr = (uint32_t*)(((uintptr_t)addr) & 0xDFFFFFFFU);
+		const uint32_t* const a = (uint32_t*)(addr & 0xDFFFFFFFU);
 
 		// swap words
-		v = ((uint64_t)addr[1] << 32U) | addr[0];
+		const uint64_t v = ((uint64_t)a[1] << 32U) | a[0];
 
 		return (v & update_mask) | (old_v & ~update_mask);
 	}
@@ -131,21 +127,17 @@ static uint64_t C_ldl(uintptr_t b, uint32_t r1, uint32_t r2)
 	return 0;
 }
 
-static uint64_t C_ldr(uintptr_t b, uint32_t r1, uint32_t r2)
+static uint64_t C_ldr(const uintptr_t addr, const uint32_t r1, const uint32_t r2)
 {
-	uint32_t* addr = (uint32_t*)(b);
-	uint64_t v;
-	uint64_t old_v = (uint64_t)r1 << 32U | r2;
-	uint64_t update_mask;
+	const uint64_t old_v = (((uint64_t)r1) << 32U) | r2;
+	const uint64_t update_mask = ((uint64_t)(-1LL)) >> ((7U - (addr & 7U)) * 8U);
 
-	update_mask = ((uint64_t)(-1LL)) >> ((7U - ((uint32_t)addr & 7U)) * 8U);
-
-	if ((((uintptr_t)addr)&0xD0000000U) == 0x80000000U)
+	if ((addr & 0xD0000000U) == 0x80000000U)
 	{
-		addr = (uint32_t*)(((uintptr_t)addr) & 0xDFFFFFFFU);
+		const uint32_t* a = (uint32_t*)(addr & 0xDFFFFFFFU);
 
 		// swap words
-		v = ((uint64_t)addr[1] << 32U) | addr[0];
+		const uint64_t v = ((uint64_t)a[1] << 32U) | a[0];
 
 		printf("    0x%016llX    0x%016llX    0x%016llX\n", update_mask, old_v, v);
 
@@ -153,7 +145,7 @@ static uint64_t C_ldr(uintptr_t b, uint32_t r1, uint32_t r2)
 	}
 	else
 	{
-		printf("ldr() virtual address 0x%x\n", (uintptr_t)addr);
+		printf("ldr() virtual address 0x%x\n", addr);
 		abort();
 	}
 

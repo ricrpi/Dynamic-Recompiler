@@ -57,26 +57,26 @@ static unsigned long int Mstrtoul(char* addr, char** tailPointer, int base)
 	if (!strncmp("fp",addr,2))
 	{
 		for (x = 0; x < strnlen(addr, LINE_LEN); x++)
+		{
+			switch (addr[x])
 			{
-				switch (addr[x])
-				{
-				case '+':
-					addr[x] = '\0';
-					return MMAP_FP_BASE + strtoul(&addr[x+1], tailPointer, base);
-				case '-':
-					addr[x] = '\0';
-					return MMAP_FP_BASE - strtoul(&addr[x+1], tailPointer, base);
-				case '*':
-					addr[x] = '\0';
-					return MMAP_FP_BASE * strtoul(&addr[x+1], tailPointer, base);
-				case '/':
-					addr[x] = '\0';
-					return MMAP_FP_BASE / strtoul(&addr[x+1], tailPointer, base);
-				default:
-					break;
-				}
+			case '+':
+				addr[x] = '\0';
+				return MMAP_FP_BASE + strtoul(&addr[x+1], tailPointer, base);
+			case '-':
+				addr[x] = '\0';
+				return MMAP_FP_BASE - strtoul(&addr[x+1], tailPointer, base);
+			case '*':
+				addr[x] = '\0';
+				return MMAP_FP_BASE * strtoul(&addr[x+1], tailPointer, base);
+			case '/':
+				addr[x] = '\0';
+				return MMAP_FP_BASE / strtoul(&addr[x+1], tailPointer, base);
+			default:
+				break;
 			}
-			return MMAP_FP_BASE;
+		}
+		return MMAP_FP_BASE;
 	}
 	else
 	{
@@ -135,8 +135,8 @@ void getCmd() {
 	c=d=0;
 
 	//pushback history
-//	memmove(&cmdHistory[0], &cmdHistory[1], (HISTORY_LEN - 1) * LINE_LEN);
-//	memcpy(cmdHistory, line, LINE_LEN);
+	//	memmove(&cmdHistory[0], &cmdHistory[1], (HISTORY_LEN - 1) * LINE_LEN);
+	//	memcpy(cmdHistory, line, LINE_LEN);
 
 	//clear user input so it doesn't corrupt
 	memset(userInput, '\0', sizeof(userInput));
@@ -168,21 +168,8 @@ static void printLine()
 
 static void printregs(mcontext_t* context, size_t* regs)
 {
-	if (context)
-	{
-	#ifndef __i386
-			printf("\n\tr0 0x%08lx\t r8  0x%08lx\n", context->arm_r0, context->arm_r8);
-			printf("\tr1 0x%08lx\t r9  0x%08lx\n", context->arm_r1, context->arm_r9);
-			printf("\tr2 0x%08lx\t r10 0x%08lx\n", context->arm_r2, context->arm_r10);
-			printf("\tr3 0x%08lx\t fp  0x%08lx\n", context->arm_r3, context->arm_fp);
-			printf("\tr4 0x%08lx\t ip  0x%08lx\n", context->arm_r4, context->arm_ip);
-			printf("\tr5 0x%08lx\t sp  0x%08lx\n", context->arm_r5, context->arm_sp);
-			printf("\tr6 0x%08lx\t lr  0x%08lx\n", context->arm_r6, context->arm_lr);
-			printf("\tr7 0x%08lx\t pc  0x%08lx\n", context->arm_r7, context->arm_pc);
-			printf("\tcpsr 0x%08lx\n", context->arm_cpsr);
-	#endif
-	}
-	else if (regs)
+#if defined(__x86_64) || defined(__i386)
+	if (regs)
 	{
 		printf("\n\tr0 0x%08x\t r8  0x%08x\n", regs[0], regs[8]);
 		printf("\tr1 0x%08x\t r9  0x%08x\n", regs[1], regs[9]);
@@ -193,6 +180,20 @@ static void printregs(mcontext_t* context, size_t* regs)
 		printf("\tr6 0x%08x\t lr  0x%08x\n", regs[6], regs[14]);
 		printf("\tr7 0x%08x\n", regs[7]);
 	}
+#else
+	if (context)
+	{
+		printf("\n\tr0 0x%08lx\t r8  0x%08lx\n", context->arm_r0, context->arm_r8);
+		printf("\tr1 0x%08lx\t r9  0x%08lx\n", context->arm_r1, context->arm_r9);
+		printf("\tr2 0x%08lx\t r10 0x%08lx\n", context->arm_r2, context->arm_r10);
+		printf("\tr3 0x%08lx\t fp  0x%08lx\n", context->arm_r3, context->arm_fp);
+		printf("\tr4 0x%08lx\t ip  0x%08lx\n", context->arm_r4, context->arm_ip);
+		printf("\tr5 0x%08lx\t sp  0x%08lx\n", context->arm_r5, context->arm_sp);
+		printf("\tr6 0x%08lx\t lr  0x%08lx\n", context->arm_r6, context->arm_lr);
+		printf("\tr7 0x%08lx\t pc  0x%08lx\n", context->arm_r7, context->arm_pc);
+		printf("\tcpsr 0x%08lx\n", context->arm_cpsr);
+	}
+#endif
 	else
 	{
 		printf("Cannot print registers\n");
@@ -230,16 +231,16 @@ static void Debugger_seg_returnAddr(const code_segment_data_t* const segmentData
 				if (CurrentCodeSeg->MIPScode == branch->MIPScode)	//Loops on itself
 				{
 					printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Loop)\n"
-						, (uint32_t)branch
-						, (uint32_t)branch->MIPScode
-						, (uint32_t)branch->ARMcode);
+							, (uint32_t)branch
+							, (uint32_t)branch->MIPScode
+							, (uint32_t)branch->ARMcode);
 				}
 				else
 				{
 					printf(" (2) 0x%08x  \t0x%08x\t0x%08x\t (Branch)\n"
-						, (uint32_t)branch
-						, (uint32_t)branch->MIPScode
-						, (uint32_t)branch->ARMcode);
+							, (uint32_t)branch
+							, (uint32_t)branch->MIPScode
+							, (uint32_t)branch->ARMcode);
 				}
 			}
 		}
@@ -302,7 +303,7 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 
 			for (x=0; x< count; x++)
 			{
-					printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
+				printf_arm((uint32_t)((uint32_t*)addr + x), *((uint32_t*)addr + x));
 			}
 			printLine();
 			return 1;
@@ -395,10 +396,10 @@ static int Debugger_print(const code_segment_data_t* const segmentData, mcontext
 				fprintf_mips(stdout, (uint32_t)(CurrentCodeSeg->MIPScode + x), *(CurrentCodeSeg->MIPScode + x));
 			}
 			printf("\naddr 0x%x, len %d, return reg %d\n"
-				"0x%08X %08X %02X (%d)\n"
-				, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen, CurrentCodeSeg->MIPSReturnRegister
-				, CurrentCodeSeg->MIPSRegistersUsed[0], CurrentCodeSeg->MIPSRegistersUsed[1], CurrentCodeSeg->MIPSRegistersUsed[2]
-				, CurrentCodeSeg->MIPSRegistersUsedCount);
+					"0x%08X %08X %02X (%d)\n"
+					, (uint32_t)CurrentCodeSeg->MIPScode, CurrentCodeSeg->MIPScodeLen, CurrentCodeSeg->MIPSReturnRegister
+					, CurrentCodeSeg->MIPSRegistersUsed[0], CurrentCodeSeg->MIPSRegistersUsed[1], CurrentCodeSeg->MIPSRegistersUsed[2]
+																																	, CurrentCodeSeg->MIPSRegistersUsedCount);
 		}
 	}
 	else if (!CMD_CMP(1, "value"))
@@ -624,27 +625,27 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 
 	for (x = 0U; x < COUNTOF(bounds); x++)
 	{
-			if (!strlen(userInput[1+x])) break;
+		if (!strlen(userInput[1+x])) break;
 
-			val = Mstrtoul(userInput[1+x], &tailPointer, 0);
+		val = Mstrtoul(userInput[1+x], &tailPointer, 0);
 
-			//test for numbers
-			if (tailPointer != userInput[1+x])
+		//test for numbers
+		if (tailPointer != userInput[1+x])
+		{
+			bounds[x] = val;
+		}
+		else
+		{
+			// scan for names
+			for (y = 0U; y < COUNTOF(Translations); y++)
 			{
-				bounds[x] = val;
-			}
-			else
-			{
-				// scan for names
-				for (y = 0U; y < COUNTOF(Translations); y++)
-				{
-					if (!CMD_CMP(1 + x, Translations[y].name)){
-						bounds[x] = y;
-						break;
-					}
-
+				if (!CMD_CMP(1 + x, Translations[y].name)){
+					bounds[x] = y;
+					break;
 				}
+
 			}
+		}
 	}
 
 	if (!strlen(userInput[1]))
@@ -707,7 +708,7 @@ static int Debugger_translate(const code_segment_data_t* const segmentData)
 static code_seg_t* breakpoints[] = {NULL, NULL, NULL, NULL, NULL};
 
 static Debugger_breakpoint()
-{
+		{
 	uint32_t x;
 	char* tailPointer;
 
@@ -760,7 +761,7 @@ static Debugger_breakpoint()
 			}
 		}
 	}
-}
+		}
 
 
 void ServiceBreakPoint(code_seg_t* codeSeg, size_t* regs)
@@ -806,8 +807,8 @@ void DebugRuntimePrintMIPS()
 	for (x=0U; x < 16U; x++)
 	{
 		printf( "\tf%-2d 0x%08x%08x\tf%-2d 0x%08x%08x\n"
-						,  0U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_FP))
-						, 16U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x+REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_FP)));
+				,  0U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(x + REG_FP))
+				, 16U + x, *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x+REG_WIDE + REG_FP)), *(uint32_t*)(MMAP_FP_BASE + RegMemByteOffset(16 + x + REG_FP)));
 	}
 
 	printf("\n\tBadVaddr 0x%08x  PC     0x%08x%08x\n"

@@ -8,12 +8,8 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include test/subdir.mk
 -include Translations/subdir.mk
--include Remote\ Debug/Translations/subdir.mk
--include Remote\ Debug/Recompiler/Debugger/subdir.mk
--include Remote\ Debug/Recompiler/subdir.mk
--include Remote\ Debug/InstructionSets/subdir.mk
--include Remote\ Debug/subdir.mk
 -include Recompiler/Debugger/subdir.mk
 -include Recompiler/subdir.mk
 -include InstructionSets/subdir.mk

@@ -310,7 +310,7 @@ static void opsh(char* str, uint32_t word)
 	else str[0] = 0;
 }
 
-void printf_arm(const uint32_t addr, const uint32_t word)
+void printf_arm(const uintptr_t addr, const uint32_t word)
 {
 	printf("0x%08x", addr);
 #if SHOW_PRINT_ARM_VALUE
